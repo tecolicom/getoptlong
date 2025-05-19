@@ -16,7 +16,7 @@ table() {
 	for h in ${H[@]}
 	do
 	    opts+=("(h=$h, s=$s)")
-	    for l in $(seq 5 5 99)
+	    for l in $(seq 0 5 99)
 	    do
 		col=$(printf "hsl(%03d,%03d,%03d)" $h $s $l)
 		arg="$col$mod/$col"
@@ -28,7 +28,8 @@ table() {
     done
 }
 
-for mod in %l50 %y51 %y50+h180 %y50+r180 %y50+h30 %y50+r30
+mods=(%l50 %y51 %y50+h180 %y50+r180)
+for mod in ${mods[@]}
 do
     table $mod
 done
