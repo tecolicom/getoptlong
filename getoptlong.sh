@@ -2,87 +2,106 @@
 
 export PERL5LIB=$(pwd)/lib:$PERL5LIB
 
+note() { [[ ${opt[quiet]} ]] && return ; echo ${1+"$@"} ; }
+warn() { note ${1+"$@"} >&2 ; }
+die()  { warn ${1+"$@"} ; exit 1 ; }
+
 ansiecho=ansiecho
 
-declare -A opt=(
-      [format]=hsl
-        [mods]="+r180%y50"
-         [pkg]=
-        [lead]="██  "
-           [X]=
-           [Y]=
-           [Z]=
-       [order]=
-       [quiet]=
-       [label]=
-     [reverse]=
-      [column]=
-     [verbose]=
-       [debug]=
+declare -A opt_desc=(
+      [format|f:]=hsl
+        [mods|m:]="+r180%y50"
+         [pkg|M:]=
+        [lead|l:]="██  "
+             [X:]=
+             [Y:]=
+             [Z:]=
+         [order:]=
+        [terse|t]=
+        [quiet|q]=
+       [label|l:]=
+      [reverse|r]=
+      [column|C:]=
+      [verbose|v]=
+       [dryrun|n]=
+        [debug|d]=
 )
-
-#
-# ! が付いていると引数を取らない
-#
-declare -A alias=(
-    [C]=column
-    [M]=pkg
-    [m]=mods
-    [r]=reverse!
-    [q]=quiet!
-    [l]=label
-    [o]=order
-    [f]=format
-    [v]=verbose!
-    [d]=debug!
-)
+declare -A opt opt_type alias
+for key in ${!opt_desc[@]}
+do
+    if [[ $key =~ ^([-_[:alnum:]]+)(([|][[:alnum:]])*)([:@]*)$ ]]
+    then
+	name=${BASH_REMATCH[1]}
+	aliases=${BASH_REMATCH[2]}
+	mark=${BASH_REMATCH[4]}
+	opt[$name]=${opt_desc[$key]}
+	opt_type[$name]=$mark
+	if [[ $aliases ]]
+	then
+	    IFS='|' read -a _aliases <<<$aliases
+	    for a in ${_aliases[@]}
+	    do
+		alias[$a]=$name
+	    done
+	fi
+    else
+	die "$key -- option description error"
+    fi
+done
 
 format() {
    [[ $# == 0 ]] && return
     case $1 in
     hsl)
         opt[order]="x z y"
-        opt[X]="$(seq -s, 0 60 359)" # Hue
-        opt[Y]="$(seq -s, 0 5 99)"   # Lightness
-        opt[Z]="20,80,100"       # Saturation
+        opt[X]="$(seq -s, 0 60 359)"  # Hue
+        opt[Y]="$(seq -s, 0 5 99)"    # Lightness
+        opt[Z]="20,80,100"            # Saturation
 	;;
     rgb)
 	opt[order]="x y z"
 	opt[X]="0 51 102 153 204 255" # Red
-	opt[Y]="$(seq -s, 0 15 255)"      # Green
+	opt[Y]="$(seq -s, 0 15 255)"  # Green
 	opt[Z]="0,128,255"            # Blue
 	;;
     lch)
 	opt[order]="y z x"
-	opt[X]="$(seq -s, 0 60 359)" # Hue
-	opt[Y]="$(seq -s, 0 5 99)"   # Luminance
-	opt[Z]="20,60,100"       # Chroma
+	opt[X]="$(seq -s, 0 60 359)"  # Hue
+	opt[Y]="$(seq -s, 0 5 99)"    # Luminance
+	opt[Z]="20,60,100"            # Chroma
 	;;
     *)
 	die "$1: unknown format"
     esac
 }
 
-opt() { [[ ${opt[$1]} ]] ; }
+opt()  { [[ ${opt[$1]} ]] ; }
 opts() { echo ${opt[$1]} ; }
-note() { [[ ${opt[quiet]} ]] && return ; echo ${1+"$@"} ; }
-warn() { note ${1+"$@"} >&2; }
-die() { warn ${1+"$@"}; exit 1; }
 
-declare -a option
+is_single() { [[ $1 =~ ^.$ ]] ; }
+#has_arg()   { [[ ! ${alias[$1]} =~ ! ]] ; }
+has_arg()   {
+    local alias=${alias[$1]}
+    if [[ $alias ]]
+    then
+	[[ ${opt_type[${alias[$1]}]} ]]
+    else
+	[[ ${opt_type[$1]} ]]
+    fi
+}
 
 for key in ${!opt[@]} ${!alias[@]}
 do
-    [[ $key =~ ^.$ ]] || continue
-    if [[ ${alias[$key]} =~ ^(.+)!$ ]]
+    is_single $key || continue
+    if has_arg $key
     then
-	optdef+=$key
-    else
 	optdef+="${key}:"
+    else
+	optdef+=$key
     fi
 done
 
-[[ ${opt[format]} ]] && format ${opt[format]}
+opt format && format $(opts format)
 
 while getopts "${optdef}x-:" OPT
 do
@@ -90,29 +109,44 @@ do
     case $OPT in
 	x) set -x ;;
 	-)
-	    if [[ $OPTARG =~ ^(no-)?([-_.a-zA-Z]+)(=(.*))? ]]
+	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
+		|| die "$OPTARG: unrecognized option"
+	    neg="${BASH_REMATCH[1]}" name="${BASH_REMATCH[2]}" param="${BASH_REMATCH[3]}" val="${BASH_REMATCH[4]}"
+	    [[ ${opt[$name]+_} ]] || { die "--$name: no such option"; }
+	    if [[ ! $param ]]
 	    then
-		name="${BASH_REMATCH[2]}" val="${BASH_REMATCH[4]}"
-		[[ ${BASH_REMATCH[3]} ]] && val="${BASH_REMATCH[4]}" || val=yes
-		[[ ${opt[$name]+_} ]] || { echo "--$name: no such option"; exit 1; }
-		opt[$name]="$val"
-	    else
-		die "$OPTARG: unrecognized option"
+		if [[ ${opt_type[$name]} == : ]]
+		then
+		    (( OPTIND <= $# )) || die "option requires an argument -- $name"
+		    val=${@:$((OPTIND)):1}
+		    (( OPTIND++ ))
+		else
+		    [[ $neg ]] && val= || val=yes ;
+		fi
 	    fi
+	    opt[$name]="$val"
 	    ;;
 	*)
-	    if [[ ${alias[$OPT]} =~ ^([^!]+)(!?)$ ]]
+	    if [[ ! ${alias[$OPT]} ]]
 	    then
-		name=${BASH_REMATCH[1]}
-		opt[$name]=${OPTARG:-yes}
-	    else
 		opt[$OPT]=${OPTARG:-yes}
+	    else
+		if [[ ${alias[$OPT]} =~ ^(.+)!$ ]]
+		then
+		    name=${BASH_REMATCH[1]}
+		    opt[$name]=${OPTARG:-yes}
+		else
+		    name=${alias[$OPT]}
+		    opt[$name]=${OPTARG:-yes}
+		fi
 	    fi
 	    ;;
     esac
     [[ $name == format ]] && format ${opt[format]}
 done
 shift $((OPTIND - 1))
+
+opt debug && declare -p opt opt_type alias
 
 opt pkg && export TAC_COLOR_PACKAGE=${opt[pkg]}
 
@@ -122,7 +156,7 @@ declare -A xyz=(
 )
 reorder() {
     local orig=(${1+"$@"}) ans p n
-    for p in ${opt[order]}
+    for p in $(opts order)
     do
 	n=${xyz[$p]}
 	ans+=(${orig[$n]})
@@ -133,17 +167,17 @@ reorder() {
 table() {
     local mod=$1
     local IFS=$' \t\n,'
-    Z=(${opt[Z]})
+    Z=($(opts Z))
     for z in ${Z[@]}
     do
-	option=(--separate $'\n')
-	X=(${opt[X]})
+	local option=(--separate $'\n')
+	X=($(opts X))
 	for x in ${X[@]}
 	do
-	    Y=(${opt[Y]})
+	    Y=($(opts Y))
 	    local ys=${Y[0]} ye=${Y[$(( ${#Y[@]} - 1 ))]}
-	    [[ ${opt[quiet]} ]] || option+=("x=$x,y=$ys..$ye,z=$z")
-	    for y in ${opt[Y]}
+	    opt terse || option+=("x=$x,y=$ys..$ye,z=$z")
+	    for y in ${Y[@]}
 	    do
 		col=$(printf "%s(%03d,%03d,%03d)" ${opt[format]} $(reorder $x $y $z))
 		opt reverse && arg="$col/$col$mod" \
@@ -152,11 +186,16 @@ table() {
 		option+=(-c "$arg" "$label")
 	    done
 	done
-	$ansiecho "${option[@]}" | ansicolumn -C ${opt[column]:-${#X[@]}} --cu=1 --margin=0
+	if opt dryrun
+	then
+	    echo ansiecho "${option[@]}"
+	else
+	    $ansiecho "${option[@]}" | ansicolumn -C ${opt[column]:-${#X[@]}} --cu=1 --margin=0
+	fi
     done
 }
 
-for mod in ${opt[mods]}
+for mod in $(IFS=, opts mods)
 do
     table $mod
 done
