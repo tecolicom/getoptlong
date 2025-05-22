@@ -1,6 +1,110 @@
 #!/usr/bin/env bash
 
-#set -e
+################################################################################
+################################################################################
+##
+## TECOLI Getopt Library for Bash Script
+##
+################################################################################
+################################################################################
+
+tgl_warn() { echo ${1+"$@"} >&2 ; }
+tgl_die()  { tgl_warn ${1+"$@"} ; exit 1 ; }
+tgl_dump() {
+    declare -p $1 \
+    | perl -nE 'say(${^MATCH})while/\[(".*?"|.)*?\]=".*?"/pg' \
+    | sort
+}
+tgl_setup() {
+    declare -n _opts=$1
+    local key
+
+    for key in "${!_opts[@]}"
+    do
+	[[ $key =~ ^[:@=] ]] && continue
+	if [[ $key =~ ^([-_ \|[:alnum:]]+)([:@]*)( *)$ ]]
+	then
+	    local names=${BASH_REMATCH[1]}
+	    local type=${BASH_REMATCH[2]}
+	    local aliases alias
+	    IFS=' |' read -a aliases <<<$names
+	    local name=${aliases[0]}
+	    [[ $name != $key ]] && _opts[$name]=${_opts[$key]}
+	    _opts[:$name]=$type
+	    for alias in "${aliases[@]:1}"
+	    do
+		_opts[=$alias]=$name
+		_opts[:$alias]=$type
+	    done
+	else
+	    tgl_warn "[$key] -- option description error"
+	    exit 1
+	fi
+    done
+}
+tgl_string() {
+    declare -n _opts=$1
+    local key string
+    for key in ${!_opts[@]}
+    do
+	[[ $key =~ ^:.$ ]] || continue
+	if [[ ${_opts[$key]} == : ]]
+	then
+	    string+="${key#:}:"
+	else
+	    string+=${key#:}
+	fi
+    done
+    string+="-:"
+    echo "${string}"
+}
+tgl_getopts() {
+    declare -n _opts=$1; shift
+    local opt="$1"; shift;
+    local name val
+    case $opt in
+	-)
+	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
+		|| die "$OPTARG: unrecognized option"
+	    local    no="${BASH_REMATCH[1]}"
+	    local _name="${BASH_REMATCH[2]}"
+	    local param="${BASH_REMATCH[3]}"
+	            val="${BASH_REMATCH[4]}"
+	    name=${_opts[=$_name]:-$_name}
+	    [[ ${_opts[$name]+_} ]] || { tgl_die "--$name: no such option"; }
+	    if [[ ! $param ]]
+	    then
+		if [[ ${_opts[:$name]} == : ]]
+		then
+		    (( OPTIND > $# )) && tgl_die "option requires an argument -- $name"
+		    val=${@:$((OPTIND)):1}
+		    (( OPTIND++ ))
+		else
+		    [[ $no ]] && val= || val=yes ;
+		fi
+	    fi
+	    ;;
+	*)
+	    name=${_opts[=$opt]:-$opt}
+	    val=${OPTARG:-yes}
+	    ;;
+    esac
+    _opts[$name]="$val"
+    [[ ${_opts[!$name]} ]] && ${_opts[!$name]} "$val"
+}
+tgl_hook() {
+    declare -n _opts=$1; shift
+    while (($# >= 2))
+    do
+	_opts[!$1]="$2"
+	shift 2
+    done
+}
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 define() { IFS='\n' read -r -d '' ${1} || true ; }
 
@@ -50,85 +154,7 @@ help() {
 	<<< $pod
 }
 
-##
-## Option handling library
-##
-opt_setup() {
-    declare -n _desc=$1 _table=$2 _type=$3 _alias=$4
-    local key
-
-    for key in "${!_desc[@]}"
-    do
-	if [[ $key =~ ^([-_ \|[:alnum:]]+)([:@]*)( *)$ ]]
-	then
-	    local names=${BASH_REMATCH[1]}
-	    local type=${BASH_REMATCH[2]}
-	    local _names a
-	    IFS=' |' read -a _names <<<$names
-	    local name=${_names[0]}
-	    _table[$name]=${_desc[$key]}
-	    _type[$name]=$type
-	    for a in "${_names[@]:1}"
-	    do
-		_alias[$a]=$name
-		_type[$a]=$type
-	    done
-	else
-	    die "[$key] -- option description error"
-	fi
-    done
-}
-opt_string() {
-    declare -n _desc=$1 _table=$2 _type=$3 _alias=$4
-    local string
-    for key in ${!_table[@]} ${!_alias[@]}
-    do
-	[[ $key =~ ^.$ ]] || continue
-	if [[ ${_type[$key]} == : ]]
-	then
-	    string+="${key}:"
-	else
-	    string+=$key
-	fi
-    done
-    echo $string
-}
-opt_process() {
-    local OPT=$1; shift
-    declare -n _table=$1 _type=$2 _alias=$3 _argv=$4 _hook=$5
-
-    local neg name param val
-    case $OPT in
-    -)
-	[[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
-	    || die "$OPTARG: unrecognized option"
-	neg="${BASH_REMATCH[1]}" \
-	name="${BASH_REMATCH[2]}" \
-	param="${BASH_REMATCH[3]}" \
-	val="${BASH_REMATCH[4]}"
-	[[ ${_table[$name]+_} ]] || { die "--$name: no such option"; }
-	if [[ ! $param ]]
-	then
-	    if [[ ${_type[$name]} == : ]]
-	    then
-		(( OPTIND <= ${#_argv[@]} )) || die "option requires an argument -- $name"
-		val=${_argv[$((OPTIND-1))]}
-		(( OPTIND++ ))
-	    else
-		[[ $neg ]] && val= || val=yes ;
-	    fi
-	fi
-	;;
-    *)
-	name=${_alias[$OPT]:-$OPT}
-	val=${OPTARG:-yes}
-	;;
-    esac
-    _table[$name]="$val"
-    [[ -n ${_hook[$name]:-} ]] && "${_hook[$name]}" "$val"
-}
-
-declare -A OPTDESC=(
+declare -A OPTS=(
     [  format | f : ]=hsl
     [    mods | m : ]="+r180%y50"
     [     pkg | M : ]=
@@ -145,18 +171,17 @@ declare -A OPTDESC=(
     [ verbose | v   ]=
     [  dryrun | n   ]=
     [   debug | d   ]=
+    [   trace | x   ]=
     [    help | h   ]=
-    [ include | I   ]=./lib
+    [ include | I : ]=./lib
 )
-declare -A OPTHOOK=(
-    [format]=format
-)
-declare -A OPTS OPTTYPE OPTALIAS
-opt_setup OPTDESC OPTS OPTTYPE OPTALIAS
-opt_string=$(opt_string OPTDESC OPTS OPTTYPE OPTALIAS)
+tgl_setup OPTS
+tgl_hook  OPTS format format trace trace
 
-opt()  { [[ ${OPTS[$1]} ]] ; }
-opts() { echo ${OPTS[$1]} ; }
+opt()   { [[ ${OPTS[$1]} ]] ; }
+type()  { echo ${OPTS[:$1]} ; }
+opts()  { echo ${OPTS[$1]} ; }
+trace() { [[ $1 ]] && set -x || set +x ; }
 
 format() {
    [[ $# == 0 ]] && return
@@ -186,25 +211,10 @@ format() {
 
 opt format && format $(opts format)
 
-#
-# 引数として与えられた連想配列に、残りの要素の前半をキー、後半を値として設定する
-#
-zipto() {
-    declare -n ref=$1; shift
-    local param=("$@") half=$((${#param[@]} / 2))
-    for ((i = 0; i < $half; i++))
-    do
-	ref["${param[$i]}"]="${param[$((i+half))]}"
-    done
-}
-
-declare -a ARGV=(${1+"$@"})
-while getopts "${opt_string}x-:" OPT
+opt_string=$(tgl_string OPTS)
+while getopts ${opt_string} myOPT
 do
-    case $OPT in
-	x) set -x ;;
-	*) opt_process $OPT OPTS OPTTYPE OPTALIAS ARGV OPTHOOK ;;
-    esac
+    tgl_getopts OPTS $myOPT "$@"
 done
 shift $((OPTIND - 1))
 
@@ -215,7 +225,7 @@ then
     export PERL5LIB=${OPTS[include]}:$PERL5LIB
 fi
 
-opt debug && declare -p OPTS OPTTYPE OPTALIAS
+opt debug && tgl_dump OPTS | column
 
 opt pkg && export TAC_COLOR_PACKAGE=${OPTS[pkg]}
 
