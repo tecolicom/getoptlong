@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+#set -e
 
 define() { IFS='\n' read -r -d '' ${1} || true ; }
 
@@ -37,7 +37,7 @@ define pod <<"=cut"
 
 =cut
 
-note()   { [[ ${opt[quiet]} ]] && return ; echo ${1+"$@"} ; }
+note()   { opt quiet && return ; echo ${1+"$@"} ; }
 warn()   { note ${1+"$@"} >&2 ; }
 die()    { warn ${1+"$@"} ; exit 1 ; }
 
@@ -50,19 +50,9 @@ help() {
 	<<< $pod
 }
 
-ansiecho=ansiecho
-
-is_single() { [[ $1 =~ ^.$ ]] ; }
-has_arg()   {
-    local alias=${alias[$1]}
-    if [[ $alias ]]
-    then
-	[[ ${opt_type[${alias[$1]}]} ]]
-    else
-	[[ ${opt_type[$1]} ]]
-    fi
-}
-
+##
+## Option handling library
+##
 opt_setup() {
     declare -n _desc=$1 _table=$2 _type=$3 _alias=$4
     local key
@@ -103,41 +93,42 @@ opt_string() {
     done
     echo $string
 }
-opt_longopt() {
-    declare -n _table=$1 _type=$2 _alias=$3 _argv=$4
-    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
-	|| die "$OPTARG: unrecognized option"
-    local \
+opt_process() {
+    local OPT=$1; shift
+    declare -n _table=$1 _type=$2 _alias=$3 _argv=$4 _hook=$5
+
+    local neg name param val
+    case $OPT in
+    -)
+	[[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
+	    || die "$OPTARG: unrecognized option"
 	neg="${BASH_REMATCH[1]}" \
 	name="${BASH_REMATCH[2]}" \
 	param="${BASH_REMATCH[3]}" \
 	val="${BASH_REMATCH[4]}"
-    [[ ${_table[$name]+_} ]] || { die "--$name: no such option"; }
-    if [[ ! $param ]]
-    then
-	if [[ ${_type[$name]} == : ]]
+	[[ ${_table[$name]+_} ]] || { die "--$name: no such option"; }
+	if [[ ! $param ]]
 	then
-	    (( OPTIND <= ${#_argv[@]} )) || die "option requires an argument -- $name"
-	    val=${_argv[$((OPTIND-1))]}
-	    (( OPTIND++ ))
-	else
-	    [[ $neg ]] && val= || val=yes ;
+	    if [[ ${_type[$name]} == : ]]
+	    then
+		(( OPTIND <= ${#_argv[@]} )) || die "option requires an argument -- $name"
+		val=${_argv[$((OPTIND-1))]}
+		(( OPTIND++ ))
+	    else
+		[[ $neg ]] && val= || val=yes ;
+	    fi
 	fi
-    fi
+	;;
+    *)
+	name=${_alias[$OPT]:-$OPT}
+	val=${OPTARG:-yes}
+	;;
+    esac
     _table[$name]="$val"
-}
-opt_singleopt() {
-    declare -n _table=$1 _type=$2 _alias=$3 _argv=$4
-    local alias=${_alias[$OPT]}
-    if [[ ! $alias ]]
-    then
-	opt[$OPT]=${OPTARG:-yes}
-    else
-	opt[$alias]=${OPTARG:-yes}
-    fi
+    [[ -n ${_hook[$name]:-} ]] && "${_hook[$name]}" "$val"
 }
 
-declare -A opt_desc=(
+declare -A OPTDESC=(
     [  format | f : ]=hsl
     [    mods | m : ]="+r180%y50"
     [     pkg | M : ]=
@@ -157,33 +148,36 @@ declare -A opt_desc=(
     [    help | h   ]=
     [ include | I   ]=./lib
 )
-declare -A opt opt_type alias
-opt_setup opt_desc opt opt_type alias
-opt_string=$(opt_string opt_desc opt opt_type alias)
+declare -A OPTHOOK=(
+    [format]=format
+)
+declare -A OPTS OPTTYPE OPTALIAS
+opt_setup OPTDESC OPTS OPTTYPE OPTALIAS
+opt_string=$(opt_string OPTDESC OPTS OPTTYPE OPTALIAS)
 
-opt()  { [[ ${opt[$1]} ]] ; }
-opts() { echo ${opt[$1]} ; }
+opt()  { [[ ${OPTS[$1]} ]] ; }
+opts() { echo ${OPTS[$1]} ; }
 
 format() {
    [[ $# == 0 ]] && return
     case $1 in
     hsl)
-        opt[order]="x z y"
-        opt[X]="$(seq -s, 0 60 359)"  # Hue
-        opt[Y]="$(seq -s, 0 5 99)"    # Lightness
-        opt[Z]="20,80,100"            # Saturation
+        OPTS[order]="x z y"
+        OPTS[X]="$(seq -s, 0 60 359)"  # Hue
+        OPTS[Y]="$(seq -s, 0 5 99)"    # Lightness
+        OPTS[Z]="20,80,100"            # Saturation
 	;;
     rgb)
-	opt[order]="x y z"
-	opt[X]="0 51 102 153 204 255" # Red
-	opt[Y]="$(seq -s, 0 15 255)"  # Green
-	opt[Z]="0,128,255"            # Blue
+	OPTS[order]="x y z"
+	OPTS[X]="0 51 102 153 204 255" # Red
+	OPTS[Y]="$(seq -s, 0 15 255)"  # Green
+	OPTS[Z]="0,128,255"            # Blue
 	;;
     lch)
-	opt[order]="y z x"
-	opt[X]="$(seq -s, 0 60 359)"  # Hue
-	opt[Y]="$(seq -s, 0 5 99)"    # Luminance
-	opt[Z]="20,60,100"            # Chroma
+	OPTS[order]="y z x"
+	OPTS[X]="$(seq -s, 0 60 359)"  # Hue
+	OPTS[Y]="$(seq -s, 0 5 99)"    # Luminance
+	OPTS[Z]="20,60,100"            # Chroma
 	;;
     *)
 	die "$1: unknown format"
@@ -204,16 +198,13 @@ zipto() {
     done
 }
 
-ARGV=(${1+"$@"})
+declare -a ARGV=(${1+"$@"})
 while getopts "${opt_string}x-:" OPT
 do
-    old_format=${opt[format]}
     case $OPT in
 	x) set -x ;;
-	-) opt_longopt   opt opt_type alias ARGV ;;
-	*) opt_singleopt opt opt_type alias ARGV ;;
+	*) opt_process $OPT OPTS OPTTYPE OPTALIAS ARGV OPTHOOK ;;
     esac
-    [[ ${opt[format]} != $old_format ]] && format ${opt[format]}
 done
 shift $((OPTIND - 1))
 
@@ -221,12 +212,12 @@ opt help && { help; exit 0; }
 
 if opt include
 then
-    export PERL5LIB=${opt[include]}:$PERL5LIB
+    export PERL5LIB=${OPTS[include]}:$PERL5LIB
 fi
 
-opt debug && declare -p opt opt_type alias
+opt debug && declare -p OPTS OPTTYPE OPTALIAS
 
-opt pkg && export TAC_COLOR_PACKAGE=${opt[pkg]}
+opt pkg && export TAC_COLOR_PACKAGE=${OPTS[pkg]}
 
 declare -A xyz=(
     [x]=0 [y]=1 [z]=2
@@ -257,10 +248,10 @@ table() {
 	    opt terse || option+=("x=$x,y=$ys-$ye,z=$z")
 	    for y in ${Y[@]}
 	    do
-		col=$(printf "%s(%03d,%03d,%03d)" ${opt[format]} $(reorder $x $y $z))
+		col=$(printf "%s(%03d,%03d,%03d)" ${OPTS[format]} $(reorder $x $y $z))
 		opt reverse && arg="$col/$col$mod" \
 		            || arg="$col$mod/$col"
-		label="${opt[lead]}${opt[label]:-$col$mod}"
+		label="${OPTS[lead]}${OPTS[label]:-$col$mod}"
 		option+=(-c "$arg" "$label")
 	    done
 	done
@@ -268,7 +259,7 @@ table() {
 	then
 	    echo ansiecho "${option[@]}"
 	else
-	    $ansiecho "${option[@]}" | ansicolumn -C ${opt[column]:-${#X[@]}} --cu=1 --margin=0
+	    ansiecho "${option[@]}" | ansicolumn -C ${OPTS[column]:-${#X[@]}} --cu=1 --margin=0
 	fi
     done
 }
