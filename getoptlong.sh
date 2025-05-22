@@ -1,51 +1,119 @@
 #!/usr/bin/env bash
 
-export PERL5LIB=$(pwd)/lib:$PERL5LIB
+set -e
 
-note() { [[ ${opt[quiet]} ]] && return ; echo ${1+"$@"} ; }
-warn() { note ${1+"$@"} >&2 ; }
-die()  { warn ${1+"$@"} ; exit 1 ; }
+define() { IFS='\n' read -r -d '' ${1} || true ; }
+
+myname="${0##*/}"
+
+define pod <<"=cut"
+
+=encoding utf-8
+
+=head1 NAME
+
+    noname - Term::ANSIColor::Concise demo/test script
+
+=head1 SYNOPSIS
+
+    noname [ options ]
+
+        -f # , --format    specify color format (*hsl, rgb, lch)
+        -m # , --mod       set color modifier (ex. +r180%y50)
+        -r   , --reverse   flip foreground/background color
+        -l # , --lead      set leader string
+        -l # , --label     set label string
+        -C # , --column    set column number
+        -o # , --order     set X,Y,Z order
+        -[XYZ] #           set X,Y,Z values
+
+        -h   , --help      show help
+        -d   , --debug     debug
+        -n   , --dryrun    dry-run
+        -t   , --terse     terse message
+        -q   , --quiet     quiet mode
+        -v   , --verbose   verbose mode
+        -I # , --include   include Perl module path
+
+=cut
+
+note()   { [[ ${opt[quiet]} ]] && return ; echo ${1+"$@"} ; }
+warn()   { note ${1+"$@"} >&2 ; }
+die()    { warn ${1+"$@"} ; exit 1 ; }
+
+help() {
+    sed -r \
+	-e '/^$/N' \
+	-e '/^\n*(#|=encoding)/d' \
+	-e 's/^(\n*)=[a-z]+[0-9]* */\1/' \
+	-e '/Version/q' \
+	<<< $pod
+}
 
 ansiecho=ansiecho
 
 declare -A opt_desc=(
-      [format|f:]=hsl
-        [mods|m:]="+r180%y50"
-         [pkg|M:]=
-        [lead|l:]="██  "
-             [X:]=
-             [Y:]=
-             [Z:]=
-         [order:]=
-        [terse|t]=
-        [quiet|q]=
-       [label|l:]=
-      [reverse|r]=
-      [column|C:]=
-      [verbose|v]=
-       [dryrun|n]=
-        [debug|d]=
+    [  format | f : ]=hsl
+    [    mods | m : ]="+r180%y50"
+    [     pkg | M : ]=
+    [    lead | l : ]="██  "
+    [           X : ]=
+    [           Y : ]=
+    [           Z : ]=
+    [   order | o : ]=
+    [   terse | t   ]=
+    [   quiet | q   ]=
+    [   label | l : ]=
+    [ reverse | r   ]=
+    [  column | C : ]=
+    [ verbose | v   ]=
+    [  dryrun | n   ]=
+    [   debug | d   ]=
+    [    help | h   ]=
+    [ include | I   ]=./lib
 )
 declare -A opt opt_type alias
-for key in ${!opt_desc[@]}
+for key in "${!opt_desc[@]}"
 do
-    if [[ $key =~ ^([-_[:alnum:]]+)(([|][[:alnum:]])*)([:@]*)$ ]]
+    if [[ $key =~ ^([-_ \|[:alnum:]]+)([:@]*)( *)$ ]]
     then
-	name=${BASH_REMATCH[1]}
-	aliases=${BASH_REMATCH[2]}
-	mark=${BASH_REMATCH[4]}
+	names=${BASH_REMATCH[1]}
+	type=${BASH_REMATCH[2]}
+	IFS=' |' read -a _names <<<$names
+	name=${_names[0]}
 	opt[$name]=${opt_desc[$key]}
-	opt_type[$name]=$mark
-	if [[ $aliases ]]
-	then
-	    IFS='|' read -a _aliases <<<$aliases
-	    for a in ${_aliases[@]}
-	    do
-		alias[$a]=$name
-	    done
-	fi
+	opt_type[$name]=$type
+	for a in "${_names[@]:1}"
+	do
+	    alias[$a]=$name
+	done
     else
-	die "$key -- option description error"
+	die "[$key] -- option description error"
+    fi
+done
+
+opt()  { [[ ${opt[$1]} ]] ; }
+opts() { echo ${opt[$1]} ; }
+
+is_single() { [[ $1 =~ ^.$ ]] ; }
+has_arg()   {
+    local alias=${alias[$1]}
+    if [[ $alias ]]
+    then
+	[[ ${opt_type[${alias[$1]}]} ]]
+    else
+	[[ ${opt_type[$1]} ]]
+    fi
+}
+
+for key in ${!opt[@]} ${!alias[@]}
+do
+    is_single $key || continue
+    if has_arg $key
+    then
+	optdef+="${key}:"
+    else
+	optdef+=$key
     fi
 done
 
@@ -75,33 +143,19 @@ format() {
     esac
 }
 
-opt()  { [[ ${opt[$1]} ]] ; }
-opts() { echo ${opt[$1]} ; }
-
-is_single() { [[ $1 =~ ^.$ ]] ; }
-#has_arg()   { [[ ! ${alias[$1]} =~ ! ]] ; }
-has_arg()   {
-    local alias=${alias[$1]}
-    if [[ $alias ]]
-    then
-	[[ ${opt_type[${alias[$1]}]} ]]
-    else
-	[[ ${opt_type[$1]} ]]
-    fi
-}
-
-for key in ${!opt[@]} ${!alias[@]}
-do
-    is_single $key || continue
-    if has_arg $key
-    then
-	optdef+="${key}:"
-    else
-	optdef+=$key
-    fi
-done
-
 opt format && format $(opts format)
+
+#
+# 引数として与えられた連想配列に、残りの要素の前半をキー、後半を値として設定する
+#
+zipto() {
+    declare -n ref=$1; shift
+    local param=("$@") half=$((${#param[@]} / 2))
+    for ((i = 0; i < $half; i++))
+    do
+	ref["${param[$i]}"]="${param[$((i+half))]}"
+    done
+}
 
 while getopts "${optdef}x-:" OPT
 do
@@ -111,7 +165,10 @@ do
 	-)
 	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
 		|| die "$OPTARG: unrecognized option"
-	    neg="${BASH_REMATCH[1]}" name="${BASH_REMATCH[2]}" param="${BASH_REMATCH[3]}" val="${BASH_REMATCH[4]}"
+	    neg="${BASH_REMATCH[1]}"
+	    name="${BASH_REMATCH[2]}"
+	    param="${BASH_REMATCH[3]}"
+	    val="${BASH_REMATCH[4]}"
 	    [[ ${opt[$name]+_} ]] || { die "--$name: no such option"; }
 	    if [[ ! $param ]]
 	    then
@@ -146,6 +203,13 @@ do
 done
 shift $((OPTIND - 1))
 
+opt help && { help; exit 0; }
+
+if opt include
+then
+    export PERL5LIB=${opt[include]}:$PERL5LIB
+fi
+
 opt debug && declare -p opt opt_type alias
 
 opt pkg && export TAC_COLOR_PACKAGE=${opt[pkg]}
@@ -176,7 +240,7 @@ table() {
 	do
 	    Y=($(opts Y))
 	    local ys=${Y[0]} ye=${Y[$(( ${#Y[@]} - 1 ))]}
-	    opt terse || option+=("x=$x,y=$ys..$ye,z=$z")
+	    opt terse || option+=("x=$x,y=$ys-$ye,z=$z")
 	    for y in ${Y[@]}
 	    do
 		col=$(printf "%s(%03d,%03d,%03d)" ${opt[format]} $(reorder $x $y $z))
