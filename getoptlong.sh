@@ -52,6 +52,91 @@ help() {
 
 ansiecho=ansiecho
 
+is_single() { [[ $1 =~ ^.$ ]] ; }
+has_arg()   {
+    local alias=${alias[$1]}
+    if [[ $alias ]]
+    then
+	[[ ${opt_type[${alias[$1]}]} ]]
+    else
+	[[ ${opt_type[$1]} ]]
+    fi
+}
+
+opt_setup() {
+    declare -n _desc=$1 _table=$2 _type=$3 _alias=$4
+    local key
+
+    for key in "${!_desc[@]}"
+    do
+	if [[ $key =~ ^([-_ \|[:alnum:]]+)([:@]*)( *)$ ]]
+	then
+	    local names=${BASH_REMATCH[1]}
+	    local type=${BASH_REMATCH[2]}
+	    local _names a
+	    IFS=' |' read -a _names <<<$names
+	    local name=${_names[0]}
+	    _table[$name]=${_desc[$key]}
+	    _type[$name]=$type
+	    for a in "${_names[@]:1}"
+	    do
+		_alias[$a]=$name
+		_type[$a]=$type
+	    done
+	else
+	    die "[$key] -- option description error"
+	fi
+    done
+}
+opt_string() {
+    declare -n _desc=$1 _table=$2 _type=$3 _alias=$4
+    local string
+    for key in ${!_table[@]} ${!_alias[@]}
+    do
+	[[ $key =~ ^.$ ]] || continue
+	if [[ ${_type[$key]} == : ]]
+	then
+	    string+="${key}:"
+	else
+	    string+=$key
+	fi
+    done
+    echo $string
+}
+opt_longopt() {
+    declare -n _table=$1 _type=$2 _alias=$3 _argv=$4
+    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
+	|| die "$OPTARG: unrecognized option"
+    local \
+	neg="${BASH_REMATCH[1]}" \
+	name="${BASH_REMATCH[2]}" \
+	param="${BASH_REMATCH[3]}" \
+	val="${BASH_REMATCH[4]}"
+    [[ ${_table[$name]+_} ]] || { die "--$name: no such option"; }
+    if [[ ! $param ]]
+    then
+	if [[ ${_type[$name]} == : ]]
+	then
+	    (( OPTIND <= ${#_argv[@]} )) || die "option requires an argument -- $name"
+	    val=${_argv[$((OPTIND-1))]}
+	    (( OPTIND++ ))
+	else
+	    [[ $neg ]] && val= || val=yes ;
+	fi
+    fi
+    _table[$name]="$val"
+}
+opt_singleopt() {
+    declare -n _table=$1 _type=$2 _alias=$3 _argv=$4
+    local alias=${_alias[$OPT]}
+    if [[ ! $alias ]]
+    then
+	opt[$OPT]=${OPTARG:-yes}
+    else
+	opt[$alias]=${OPTARG:-yes}
+    fi
+}
+
 declare -A opt_desc=(
     [  format | f : ]=hsl
     [    mods | m : ]="+r180%y50"
@@ -73,49 +158,11 @@ declare -A opt_desc=(
     [ include | I   ]=./lib
 )
 declare -A opt opt_type alias
-for key in "${!opt_desc[@]}"
-do
-    if [[ $key =~ ^([-_ \|[:alnum:]]+)([:@]*)( *)$ ]]
-    then
-	names=${BASH_REMATCH[1]}
-	type=${BASH_REMATCH[2]}
-	IFS=' |' read -a _names <<<$names
-	name=${_names[0]}
-	opt[$name]=${opt_desc[$key]}
-	opt_type[$name]=$type
-	for a in "${_names[@]:1}"
-	do
-	    alias[$a]=$name
-	done
-    else
-	die "[$key] -- option description error"
-    fi
-done
+opt_setup opt_desc opt opt_type alias
+opt_string=$(opt_string opt_desc opt opt_type alias)
 
 opt()  { [[ ${opt[$1]} ]] ; }
 opts() { echo ${opt[$1]} ; }
-
-is_single() { [[ $1 =~ ^.$ ]] ; }
-has_arg()   {
-    local alias=${alias[$1]}
-    if [[ $alias ]]
-    then
-	[[ ${opt_type[${alias[$1]}]} ]]
-    else
-	[[ ${opt_type[$1]} ]]
-    fi
-}
-
-for key in ${!opt[@]} ${!alias[@]}
-do
-    is_single $key || continue
-    if has_arg $key
-    then
-	optdef+="${key}:"
-    else
-	optdef+=$key
-    fi
-done
 
 format() {
    [[ $# == 0 ]] && return
@@ -157,49 +204,16 @@ zipto() {
     done
 }
 
-while getopts "${optdef}x-:" OPT
+ARGV=(${1+"$@"})
+while getopts "${opt_string}x-:" OPT
 do
-    name=
+    old_format=${opt[format]}
     case $OPT in
 	x) set -x ;;
-	-)
-	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
-		|| die "$OPTARG: unrecognized option"
-	    neg="${BASH_REMATCH[1]}"
-	    name="${BASH_REMATCH[2]}"
-	    param="${BASH_REMATCH[3]}"
-	    val="${BASH_REMATCH[4]}"
-	    [[ ${opt[$name]+_} ]] || { die "--$name: no such option"; }
-	    if [[ ! $param ]]
-	    then
-		if [[ ${opt_type[$name]} == : ]]
-		then
-		    (( OPTIND <= $# )) || die "option requires an argument -- $name"
-		    val=${@:$((OPTIND)):1}
-		    (( OPTIND++ ))
-		else
-		    [[ $neg ]] && val= || val=yes ;
-		fi
-	    fi
-	    opt[$name]="$val"
-	    ;;
-	*)
-	    if [[ ! ${alias[$OPT]} ]]
-	    then
-		opt[$OPT]=${OPTARG:-yes}
-	    else
-		if [[ ${alias[$OPT]} =~ ^(.+)!$ ]]
-		then
-		    name=${BASH_REMATCH[1]}
-		    opt[$name]=${OPTARG:-yes}
-		else
-		    name=${alias[$OPT]}
-		    opt[$name]=${OPTARG:-yes}
-		fi
-	    fi
-	    ;;
+	-) opt_longopt   opt opt_type alias ARGV ;;
+	*) opt_singleopt opt opt_type alias ARGV ;;
     esac
-    [[ $name == format ]] && format ${opt[format]}
+    [[ ${opt[format]} != $old_format ]] && format ${opt[format]}
 done
 shift $((OPTIND - 1))
 
