@@ -8,15 +8,29 @@
 ################################################################################
 ################################################################################
 
+declare -A TGL_CONFIG=(
+    [SILENT]=
+    [TRUE]=yes
+    [FALSE]=
+    [EXIT_ON_ERROR]=yes
+)
 tgl_warn() { echo ${1+"$@"} >&2 ; }
 tgl_die()  { tgl_warn ${1+"$@"} ; exit 1 ; }
 tgl_dump() {
-    declare -p $1 \
-    | perl -nE 'say(${^MATCH})while/\[(".*?"|.)*?\]=".*?"/pg' \
-    | sort
+    local declare="$(declare -p TGL_OPTS)"
+    if [[ "$declare" =~ \"(.+)\" ]]
+    then
+	declare -p ${BASH_REMATCH[1]} \
+	| grep -o -E '\[[^]]*\]="[^"]*"' \
+	| sort
+    fi
 }
 tgl_setup() {
-    declare -n _opts=$1
+    declare -ng TGL_OPTS=$1
+    _tgl_setup ${1+"$@"}
+}
+_tgl_setup() {
+    declare -n _opts=$1; shift
     local key
 
     for key in "${!_opts[@]}"
@@ -41,9 +55,41 @@ tgl_setup() {
 	    exit 1
 	fi
     done
+    ##
+    ## set config parameters
+    ##
+    for key in "${!TGL_CONFIG[@]}"
+    do
+	_opts["&$key"]=${TGL_CONFIG[$key]}
+    done
+    (( $# > 0 )) && tgl_configure ${1+"$@"}
 }
-tgl_string() {
-    declare -n _opts=$1
+tgl_configure() { _tgl_configure TGL_OPTS ${1+"$@"} ; }
+_tgl_configure() {
+    declare -n _opts=$1; shift
+    for param in ${1+"$@"}
+    do
+	[[ $param =~ ^[[:alnum:]] ]] || tgl_die "$param -- invalid config parameter"
+	local key val
+	if [[ $param =~ = ]]
+	then
+	    key="&${param%%=*}"
+	    val="${param#*=}"
+	else
+	    key="&${param}"
+	    val="${_opts[&TRUE]}"
+	fi
+	if [[ ${_opts[$key]+_} ]]
+	then
+	    _opts[$key]="$val"
+	else
+	    tgl_die "$param -- invalid config parameter"
+	fi
+    done
+}
+tgl_string() { _tgl_string TGL_OPTS ${1+"$@"} ; }
+_tgl_string() {
+    declare -n _opts=$1; shift
     local key string
     for key in ${!_opts[@]}
     do
@@ -55,14 +101,21 @@ tgl_string() {
 	    string+=${key#:}
 	fi
     done
+    [[ ${_opts[&SILENT]} ]] && string=":$string"
     string+="-:"
     echo "${string}"
 }
-tgl_getopts() {
+tgl_getopts() { _tgl_getopts TGL_OPTS ${1+"$@"} ; }
+_tgl_getopts() {
     declare -n _opts=$1; shift
     local opt="$1"; shift;
     local name val
     case $opt in
+	\?|:)
+	    [[ ${_opts[!$opt]} ]] && ${_opts[!$opt]} "$OPTARG"
+	    [[ ${_opts[&EXIT_ON_ERROR]} ]] && exit 1
+	    return
+	    ;;
 	-)
 	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
 		|| die "$OPTARG: unrecognized option"
@@ -80,24 +133,34 @@ tgl_getopts() {
 		    val=${@:$((OPTIND)):1}
 		    (( OPTIND++ ))
 		else
-		    [[ $no ]] && val= || val=yes ;
+		    [[ $no ]] && val=${_opts[&FALSE]} || val=${_opts[&TRUE]} ;
 		fi
 	    fi
 	    ;;
 	*)
 	    name=${_opts[=$opt]:-$opt}
-	    val=${OPTARG:-yes}
+	    val=${OPTARG:-${_opts[&TRUE]}}
 	    ;;
     esac
     _opts[$name]="$val"
     [[ ${_opts[!$name]} ]] && ${_opts[!$name]} "$val"
 }
-tgl_hook() {
+tgl_hook() { _tgl_hook TGL_OPTS ${1+"$@"} ; }
+_tgl_hook() {
     declare -n _opts=$1; shift
     while (($# >= 2))
     do
 	_opts[!$1]="$2"
 	shift 2
+    done
+}
+tgl_getoptions() { _tgl_getoptions TGL_OPTS ${1+"$@"} ; }
+_tgl_getoptions() {
+    declare -n _opts=$1; shift
+    local OPT
+    while getopts "$(tgl_string)" OPT
+    do
+	tgl_getopts "$OPT" ${1+"$@"}
     done
 }
 
@@ -152,6 +215,7 @@ help() {
 	-e 's/^(\n*)=[a-z]+[0-9]* */\1/' \
 	-e '/Version/q' \
 	<<< $pod
+    [[ $1 ]] && exit 0
 }
 
 declare -A OPTS=(
@@ -175,8 +239,11 @@ declare -A OPTS=(
     [    help | h   ]=
     [ include | I : ]=./lib
 )
-tgl_setup OPTS
-tgl_hook  OPTS format format trace trace
+tgl_setup OPTS EXIT_ON_ERROR
+tgl_hook \
+    format format \
+    trace trace\
+    help help
 
 opt()   { [[ ${OPTS[$1]} ]] ; }
 type()  { echo ${OPTS[:$1]} ; }
@@ -187,10 +254,10 @@ format() {
    [[ $# == 0 ]] && return
     case $1 in
     hsl)
-        OPTS[order]="x z y"
-        OPTS[X]="$(seq -s, 0 60 359)"  # Hue
-        OPTS[Y]="$(seq -s, 0 5 99)"    # Lightness
-        OPTS[Z]="20,80,100"            # Saturation
+	OPTS[order]="x z y"
+	OPTS[X]="$(seq -s, 0 60 359)"  # Hue
+	OPTS[Y]="$(seq -s, 0 5 99)"    # Lightness
+	OPTS[Z]="20,80,100"            # Saturation
 	;;
     rgb)
 	OPTS[order]="x y z"
@@ -211,21 +278,15 @@ format() {
 
 opt format && format $(opts format)
 
-opt_string=$(tgl_string OPTS)
-while getopts ${opt_string} myOPT
-do
-    tgl_getopts OPTS $myOPT "$@"
-done
+tgl_getoptions ${1+"$@"}
 shift $((OPTIND - 1))
-
-opt help && { help; exit 0; }
 
 if opt include
 then
     export PERL5LIB=${OPTS[include]}:$PERL5LIB
 fi
 
-opt debug && tgl_dump OPTS | column
+opt debug && tgl_dump | column
 
 opt pkg && export TAC_COLOR_PACKAGE=${OPTS[pkg]}
 
