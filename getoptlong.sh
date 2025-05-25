@@ -34,7 +34,7 @@ tgl_setup() {
 	[DEBUG]=
 	[SAVETO]=
 	[MARKS]=':=!&' [IS_TYPE]=':' [IS_ALIAS]='=' [IS_CALLBACK]='!' [IS_CONF]='&'
-	[TYPES]=':@+' [TYPE_ARGS]=':@' [TYPE_ARG]=':' [TYPE_ARRAY]='@' [TYPE_INCR]='+'
+	[TYPES]=':@+?' [TYPE_ARGS]=':@' [TYPE_NEED]=':' [TYPE_ARRAY]='@' [TYPE_INCR]='+' [TYPE_MAY]='?'
     )
     if (( $# == 0 )) ; then
 	echo 'local TGL_OPTS OPTIND=1'
@@ -66,6 +66,7 @@ tgl_setup_() {
 		$type_array)
 		    declare -n array=$name
 		    [[ ${_opts[$key]} ]] && array=("${_opts[$key]}") || array=()
+		    _opts[$name]=$name
 		    ;;
 		*) 
 		    [[ $name != $key ]] && _opts[$name]=${_opts[$key]}
@@ -109,7 +110,7 @@ tgl_string () { tgl_redirect "$@" ; }
 tgl_string_() {
     declare -n _opts=$1; shift
     local key string mark=$(tgl_conf IS_TYPE)
-    local type_args="$(tgl_conf TYPE_ARG)$(tgl_conf TYPE_ARRAY)"
+    local type_args="$(tgl_conf TYPE_NEED)$(tgl_conf TYPE_ARRAY)"
     for key in ${!_opts[@]} ; do
 	[[ $key =~ ^${mark}.$ ]] || continue
 	[[ ${_opts[$key]} =~ [$type_args] ]] && string+="${key#:}:" || string+=${key#:}
@@ -125,7 +126,7 @@ tgl_getopts_() {
     local opt="$1"; shift;
     local name val type
     local type_args="$(tgl_conf TYPE_ARGS)" \
-          type_arg="$(tgl_conf TYPE_ARG)" type_array="$(tgl_conf TYPE_ARRAY)" type_incr=$(tgl_conf TYPE_INCR)
+          type_need="$(tgl_conf TYPE_NEED) " type_may="$(tgl_conf TYPE_MAY)" type_array="$(tgl_conf TYPE_ARRAY)" type_incr=$(tgl_conf TYPE_INCR)
     case $opt in
 	[:?])
 	    local hook=$(tgl_hook "$opt")
@@ -142,12 +143,14 @@ tgl_getopts_() {
 		    val="${BASH_REMATCH[4]}"
 	    name=$(tgl_alias $_name) || name=$_name
 	    type=$(tgl_type $name)
-	    [[ -v _opts[$name] ]] || tgl_die "--$name: no such option"
-	    if [[ ! $param ]] ; then
+	    [[ -v _opts[$name] ]] || { tgl_die "--$name: no such option" ; }
+	    if [[ $param ]] ; then
+		[[ $type =~ [${type_args}${type_may}] ]] || die "does not take an argument -- $name"
+	    else
 		case $type in
-		    $type_incr)
-			val=$(( _opts[$name] + 1 )) ;;
-		    $type_args)
+		    [$type_may])  ;;
+		    [$type_incr]) val=$(( _opts[$name] + 1 )) ;;
+		    [$type_args])
 			(( OPTIND > $# )) && tgl_die "option requires an argument -- $name"
 			val=${@:$((OPTIND)):1}
 			(( OPTIND++ ))
@@ -161,12 +164,9 @@ tgl_getopts_() {
 	*)
 	    name=$(tgl_alias $opt) || name=$opt
 	    case ${type:=$(tgl_type "$name")} in
-		[$type_incr])
-		    val=$(( _opts[$name] + 1 )) ;;
-		[$type_args])
-		    val="${OPTARG}" ;;
-		*)
-		    val=$(tgl_conf TRUE) ;;
+		[$type_incr]) val=$(( _opts[$name] + 1 )) ;;
+		[$type_args]) val="${OPTARG}" ;;
+		*)            val=$(tgl_conf TRUE) ;;
 	    esac
 	    ;;
     esac
@@ -292,7 +292,7 @@ declare -A OPTS=(
     [   order | o : ]=
     [   terse | t   ]=
     [   quiet | q   ]=
-    [   label | l : ]=
+    [   label | l ? ]=
     [ reverse | r   ]=
     [  column | C : ]=
     [ verbose | v   ]=
@@ -304,7 +304,7 @@ declare -A OPTS=(
     [     man       ]=
     [ include | I : ]=./lib
 )
-tgl_setup OPTS EXIT_ON_ERROR DEBUG=1 SAVETO=ARGV
+tgl_setup OPTS EXIT_ON_ERROR DEBUG= SAVETO=ARGV
 tgl_callback help  'help --help'
 tgl_callback man   'help --man'
 tgl_callback usage 'help --usage'
@@ -312,6 +312,9 @@ tgl_callback usage 'help --usage'
 opt()   { [[ ${OPTS[$1]} ]] ; }
 type()  { echo ${OPTS[:$1]} ; }
 opts()  { echo ${OPTS[$1]} ; }
+
+label() { [[ $1 ]] || OPTS[label]='hasta la vista  '; }
+tgl_callback label -
 
 trace() { [[ $1 ]] && set -x || set +x ; }
 tgl_callback trace -
