@@ -8,31 +8,35 @@
 ################################################################################
 ################################################################################
 
-declare -A TGL_CONFIG=(
-    [SILENT]=
-    [TRUE]=yes
-    [FALSE]=
-    [EXIT_ON_ERROR]=yes
-)
-tgl_warn() { echo ${1+"$@"} >&2 ; }
-tgl_die()  { tgl_warn ${1+"$@"} ; exit 1 ; }
+tgl_warn() { echo "$@" >&2 ; }
+tgl_die()  { tgl_warn "$@" ; exit 1 ; }
 tgl_dump() {
     local declare="$(declare -p TGL_OPTS)"
     if [[ "$declare" =~ \"(.+)\" ]]
     then
-	declare -p ${BASH_REMATCH[1]} \
-	| grep -o -E '\[[^]]*\]="[^"]*"' \
-	| sort
+	declare -p ${BASH_REMATCH[1]} | grep -o -E '\[[^]]*\]="[^"]*"' | sort
     fi
 }
 tgl_setup() {
-    declare -ng TGL_OPTS=$1
-    _tgl_setup ${1+"$@"}
+    declare -A TGL_CONFIG=(
+	[SILENT]=
+	[TRUE]=yes
+	[FALSE]=
+	[EXIT_ON_ERROR]=yes
+	[DEBUG]=
+    )
+    if (( $# == 0 ))
+    then
+	echo 'local TGL_OPTS OPTIND=1'
+    else
+	TGL_OPTS=$1
+	tgl_setup_ "$@"
+    fi
 }
-_tgl_setup() {
+tgl_setup_() {
     declare -n _opts=$1; shift
-    local key
 
+    local key
     for key in "${!_opts[@]}"
     do
 	[[ $key =~ ^[:@=] ]] && continue
@@ -62,12 +66,18 @@ _tgl_setup() {
     do
 	_opts["&$key"]=${TGL_CONFIG[$key]}
     done
-    (( $# > 0 )) && tgl_configure ${1+"$@"}
+    (( $# > 0 )) && tgl_configure "$@"
+    return 0
 }
-tgl_configure() { _tgl_configure TGL_OPTS ${1+"$@"} ; }
-_tgl_configure() {
+tgl_redirect() {
+    declare -n _opts=$TGL_OPTS
+    [[ ${_opts[&DEBUG]} ]] && { echo "DEBUG: ${FUNCNAME[1]}($@)" ; }
+    "${FUNCNAME[1]}_" $TGL_OPTS "$@"
+}
+tgl_configure () { tgl_redirect "$@" ; }
+tgl_configure_() {
     declare -n _opts=$1; shift
-    for param in ${1+"$@"}
+    for param in "$@"
     do
 	[[ $param =~ ^[[:alnum:]] ]] || tgl_die "$param -- invalid config parameter"
 	local key val
@@ -86,9 +96,10 @@ _tgl_configure() {
 	    tgl_die "$param -- invalid config parameter"
 	fi
     done
+    return 0
 }
-tgl_string() { _tgl_string TGL_OPTS ${1+"$@"} ; }
-_tgl_string() {
+tgl_string () { tgl_redirect "$@" ; }
+tgl_string_() {
     declare -n _opts=$1; shift
     local key string
     for key in ${!_opts[@]}
@@ -101,66 +112,86 @@ _tgl_string() {
 	    string+=${key#:}
 	fi
     done
-    [[ ${_opts[&SILENT]} ]] && string=":$string"
-    string+="-:"
-    echo "${string}"
+#   [[ ${_opts[&SILENT]} ]] && string=":$string"
+#   string+="-:"
+#   echo "${string}"
+    echo "${_opts[&SILENT]+:}${string}-:"
 }
-tgl_getopts() { _tgl_getopts TGL_OPTS ${1+"$@"} ; }
-_tgl_getopts() {
+tgl_getopts () { tgl_redirect "$@" ; }
+tgl_getopts_() {
     declare -n _opts=$1; shift
     local opt="$1"; shift;
-    local name val
+    local name val type
     case $opt in
-	\?|:)
-	    [[ ${_opts[!$opt]} ]] && ${_opts[!$opt]} "$OPTARG"
-	    [[ ${_opts[&EXIT_ON_ERROR]} ]] && exit 1
-	    return
-	    ;;
-	-)
-	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
-		|| die "$OPTARG: unrecognized option"
-	    local    no="${BASH_REMATCH[1]}"
-	    local _name="${BASH_REMATCH[2]}"
-	    local param="${BASH_REMATCH[3]}"
-	            val="${BASH_REMATCH[4]}"
-	    name=${_opts[=$_name]:-$_name}
-	    [[ ${_opts[$name]+_} ]] || { tgl_die "--$name: no such option"; }
-	    if [[ ! $param ]]
-	    then
-		if [[ ${_opts[:$name]} == : ]]
-		then
-		    (( OPTIND > $# )) && tgl_die "option requires an argument -- $name"
-		    val=${@:$((OPTIND)):1}
-		    (( OPTIND++ ))
-		else
-		    [[ $no ]] && val=${_opts[&FALSE]} || val=${_opts[&TRUE]} ;
-		fi
-	    fi
+    :|\?)
+	[[ ${_opts[!$opt]} ]] && ${_opts[!$opt]} "$OPTARG"
+	[[ ${_opts[&EXIT_ON_ERROR]} ]] && exit 1
+	return
+	;;
+    -)
+	[[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
+	    || die "$OPTARG: unrecognized option"
+	local    no="${BASH_REMATCH[1]}"
+	local _name="${BASH_REMATCH[2]}"
+	local param="${BASH_REMATCH[3]}"
+		val="${BASH_REMATCH[4]}"
+	name=${_opts[=$_name]:-$_name}
+	[[ ${_opts[$name]+_} ]] || { tgl_die "--$name: no such option" ; }
+	if [[ ! $param ]]
+	then
+	    type=${_opts[:$name]}
+	    case  $type in
+	    [:@])
+		(( OPTIND > $# )) && tgl_die "option requires an argument -- $name"
+		val=${@:$((OPTIND)):1}
+		(( OPTIND++ ))
+		;;
+	    *)
+		[[ $no ]] && val=${_opts[&FALSE]} || val=${_opts[&TRUE]}
+		;;
+	    esac
+	fi
+	;;
+    *)
+	name=${_opts[=$opt]:-$opt}
+	type=${_opts[:$name]}
+	case $type in
+	[:@])
+	    val="${OPTARG}"
 	    ;;
 	*)
-	    name=${_opts[=$opt]:-$opt}
-	    val=${OPTARG:-${_opts[&TRUE]}}
+	    val=${_opts[&TRUE]}
 	    ;;
+	esac
+	;;
+    esac
+    case $type in
+    @) val="${_opts[$name]+${_opts[$name]} }${OPTARG}" ;;
     esac
     _opts[$name]="$val"
     [[ ${_opts[!$name]} ]] && ${_opts[!$name]} "$val"
+    return 0
 }
-tgl_hook() { _tgl_hook TGL_OPTS ${1+"$@"} ; }
-_tgl_hook() {
+tgl_callback () { tgl_redirect "$@" ; }
+tgl_callback_() {
     declare -n _opts=$1; shift
-    while (($# >= 2))
+    declare -a config=("$@")
+    while (($# > 0))
     do
-	_opts[!$1]="$2"
-	shift 2
+	local name=$1 callback=${2:-$1}
+	[[ $callback == - ]] && callback=$name
+	_opts[!$name]="$callback"
+	shift $(( $# >= 2 ? 2 : 1 ))
     done
+    return 0
 }
-tgl_getoptions() { _tgl_getoptions TGL_OPTS ${1+"$@"} ; }
-_tgl_getoptions() {
+tgl_getoptions () { tgl_redirect "$@" ; }
+tgl_getoptions_() {
     declare -n _opts=$1; shift
-    local OPT
-    while getopts "$(tgl_string)" OPT
+    local OPT optstring="$(tgl_string)"
+    while getopts "$optstring" OPT
     do
-	tgl_getopts "$OPT" ${1+"$@"}
+	tgl_getopts "$OPT" "$@"
     done
 }
 
@@ -168,6 +199,8 @@ _tgl_getoptions() {
 ################################################################################
 ################################################################################
 ################################################################################
+
+set -e
 
 define() { IFS='\n' read -r -d '' ${1} || true ; }
 
@@ -179,11 +212,11 @@ define pod <<"=cut"
 
 =head1 NAME
 
-    noname - Term::ANSIColor::Concise demo/test script
+    ... - Term::ANSIColor::Concise demo/test script
 
 =head1 SYNOPSIS
 
-    noname [ options ]
+    ... [ options ]
 
         -f # , --format    specify color format (*hsl, rgb, lch)
         -m # , --mod       set color modifier (ex. +r180%y50)
@@ -200,22 +233,39 @@ define pod <<"=cut"
         -t   , --terse     terse message
         -q   , --quiet     quiet mode
         -v   , --verbose   verbose mode
+        -M # , --pkg       select color handling package
         -I # , --include   include Perl module path
 
 =cut
 
-note()   { opt quiet && return ; echo ${1+"$@"} ; }
-warn()   { note ${1+"$@"} >&2 ; }
-die()    { warn ${1+"$@"} ; exit 1 ; }
+note()   { opt quiet && return ; echo "$@" ; }
+warn()   { note "$@" >&2 ; }
+die()    { warn "$@" ; exit 1 ; }
 
 help() {
-    sed -r \
-	-e '/^$/N' \
-	-e '/^\n*(#|=encoding)/d' \
-	-e 's/^(\n*)=[a-z]+[0-9]* */\1/' \
-	-e '/Version/q' \
-	<<< $pod
-    [[ $1 ]] && exit 0
+    eval $(tgl_setup)
+    declare -A OPTS=(
+	[      man|m ]=
+       	[     help|h ]=
+       	[    usage|u ]=
+       	[ continue|c ]=
+    )
+    tgl_setup OPTS
+    tgl_getoptions "$@"
+    shift $((OPTIND - 1))
+    if [[ ${OPTS[man]} ]]
+    then
+	perldoc $0
+    else
+	sed -r \
+	    -e '/^$/N' \
+	    -e '/^\n*(#|=encoding)/d' \
+	    -e 's/^(\n*)=[a-z]+[0-9]* */\1/' \
+	    -e '/Version/q' \
+	    <<< $pod
+    fi
+    [[ $1 && ! ${OPTS[continue]} ]] && exit 0
+    return 0
 }
 
 declare -A OPTS=(
@@ -237,21 +287,24 @@ declare -A OPTS=(
     [   debug | d   ]=
     [   trace | x   ]=
     [    help | h   ]=
+    [   usage | u   ]=
+    [     man       ]=
     [ include | I : ]=./lib
 )
-tgl_setup OPTS EXIT_ON_ERROR
-tgl_hook \
-    format format \
-    trace trace\
-    help help
+tgl_setup OPTS EXIT_ON_ERROR DEBUG=
+tgl_callback help  'help --help'
+tgl_callback man   'help --man'
+tgl_callback usage 'help --usage'
 
 opt()   { [[ ${OPTS[$1]} ]] ; }
 type()  { echo ${OPTS[:$1]} ; }
 opts()  { echo ${OPTS[$1]} ; }
+
 trace() { [[ $1 ]] && set -x || set +x ; }
+tgl_callback trace -
 
 format() {
-   [[ $# == 0 ]] && return
+    [[ $# == 0 ]] && return
     case $1 in
     hsl)
 	OPTS[order]="x z y"
@@ -265,6 +318,17 @@ format() {
 	OPTS[Y]="$(seq -s, 0 15 255)"  # Green
 	OPTS[Z]="0,128,255"            # Blue
 	;;
+    rgb-chart)
+	OPTS[format]=rgb
+	OPTS[order]="x y z"
+	OPTS[X]="$(seq -s, 0 2 255)"   # Red
+	OPTS[Y]="$(seq -s, 0 15 255)"  # Green
+	OPTS[Z]="0,128,255"            # Blue
+	OPTS[label]=" "
+	OPTS[terse]=yes
+	OPTS[lead]=
+	OPTS[mod]=";"
+	;;
     lch)
 	OPTS[order]="y z x"
 	OPTS[X]="$(seq -s, 0 60 359)"  # Hue
@@ -275,27 +339,22 @@ format() {
 	die "$1: unknown format"
     esac
 }
-
+tgl_callback format -
 opt format && format $(opts format)
 
-tgl_getoptions ${1+"$@"}
+tgl_getoptions "$@"
 shift $((OPTIND - 1))
 
-if opt include
-then
-    export PERL5LIB=${OPTS[include]}:$PERL5LIB
-fi
-
-opt debug && tgl_dump | column
-
-opt pkg && export TAC_COLOR_PACKAGE=${OPTS[pkg]}
+opt pkg     && export TAC_COLOR_PACKAGE=${OPTS[pkg]}
+opt include && export PERL5LIB=${OPTS[include]}:$PERL5LIB
+opt debug   && tgl_dump | column
 
 declare -A xyz=(
     [x]=0 [y]=1 [z]=2
     [0]=0 [1]=1 [2]=2
 )
 reorder() {
-    local orig=(${1+"$@"}) ans p n
+    local orig=("$@") ans p n
     for p in $(opts order)
     do
 	n=${xyz[$p]}
