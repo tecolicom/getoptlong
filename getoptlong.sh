@@ -34,7 +34,7 @@ tgl_setup() {
 	[DEBUG]=
 	[SAVETO]=
 	[MARKS]=':=!&' [IS_TYPE]=':' [IS_ALIAS]='=' [IS_CALLBACK]='!' [IS_CONF]='&'
-	[TYPES]=':@' [TYPE_ARGS]=':@' [TYPE_ARG]=':' [TYPE_ARRAY]='@'
+	[TYPES]=':@+' [TYPE_ARGS]=':@' [TYPE_ARG]=':' [TYPE_ARRAY]='@' [TYPE_INCR]='+'
     )
     if (( $# == 0 )) ; then
 	echo 'local TGL_OPTS OPTIND=1'
@@ -124,15 +124,14 @@ tgl_getopts_() {
     declare -n _opts=$1; shift
     local opt="$1"; shift;
     local name val type
-    local type_arg="$(tgl_conf TYPE_ARG)"
-    local type_array="$(tgl_conf TYPE_ARRAY)"
-    local type_args="$(tgl_conf TYPE_ARGS)"
+    local type_args="$(tgl_conf TYPE_ARGS)" \
+          type_arg="$(tgl_conf TYPE_ARG)" type_array="$(tgl_conf TYPE_ARRAY)" type_incr=$(tgl_conf TYPE_INCR)
     case $opt in
 	[:?])
 	    local hook=$(tgl_hook "$opt")
 	    [[ $hook ]] && $hook "$OPTARG"
-	    [[ ${_opts[&EXIT_ON_ERROR]} ]] && exit 1
-	    return
+	    [[ $(tgl_conf EXIT_ON_ERROR) ]] && exit 1
+	    return 0
 	    ;;
 	-)
 	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
@@ -142,10 +141,13 @@ tgl_getopts_() {
 	    local param="${BASH_REMATCH[3]}"
 		    val="${BASH_REMATCH[4]}"
 	    name=$(tgl_alias $_name) || name=$_name
-	    [[ ${_opts[$name]+_} ]] || { tgl_die "--$name: no such option" ; }
+	    type=$(tgl_type $name)
+	    [[ -v _opts[$name] ]] || tgl_die "--$name: no such option"
 	    if [[ ! $param ]] ; then
-		case ${type:=$(tgl_type "$name")} in
-		    [$type_args])
+		case $type in
+		    $type_incr)
+			val=$(( _opts[$name] + 1 )) ;;
+		    $type_args)
 			(( OPTIND > $# )) && tgl_die "option requires an argument -- $name"
 			val=${@:$((OPTIND)):1}
 			(( OPTIND++ ))
@@ -159,6 +161,8 @@ tgl_getopts_() {
 	*)
 	    name=$(tgl_alias $opt) || name=$opt
 	    case ${type:=$(tgl_type "$name")} in
+		[$type_incr])
+		    val=$(( _opts[$name] + 1 )) ;;
 		[$type_args])
 		    val="${OPTARG}" ;;
 		*)
@@ -293,7 +297,7 @@ declare -A OPTS=(
     [  column | C : ]=
     [ verbose | v   ]=
     [  dryrun | n   ]=
-    [   debug | d   ]=
+    [   debug | d + ]=
     [   trace | x   ]=
     [    help | h   ]=
     [   usage | u   ]=
