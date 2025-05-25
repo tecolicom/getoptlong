@@ -10,10 +10,18 @@
 
 tgl_warn() { echo "$@" >&2 ; }
 tgl_die()  { tgl_warn "$@" ; exit 1 ; }
+tgl_opts() {
+    (($# == 2)) && { _opts["$1"]="$2" ; return 0 ; }
+    [[ -v _opts[$1] ]] && echo "${_opts[$1]}" || return 1
+}
+tgl_conf()  { tgl_opts \&"$1" "${@:2}" ; }
+tgl_type()  { tgl_opts \:"$1" "${@:2}" ; }
+tgl_alias() { tgl_opts \="$1" "${@:2}" ; }
+tgl_hook()  { tgl_opts \!"$1" "${@:2}" ; }
+tgl_debug() { [[ ${_opts["&DEBUG"]} ]] || return 0; tgl_warn DEBUG: "$@" ; }
 tgl_dump() {
     local declare="$(declare -p TGL_OPTS)"
-    if [[ "$declare" =~ \"(.+)\" ]]
-    then
+    if [[ "$declare" =~ \"(.+)\" ]] ; then
 	declare -p ${BASH_REMATCH[1]} | grep -o -E '\[[^]]*\]="[^"]*"' | sort
     fi
 }
@@ -24,9 +32,11 @@ tgl_setup() {
 	[FALSE]=
 	[EXIT_ON_ERROR]=yes
 	[DEBUG]=
+	[SAVETO]=
+	[MARKS]=':=!&' [IS_TYPE]=':' [IS_ALIAS]='=' [IS_CALLBACK]='!' [IS_CONF]='&'
+	[TYPES]=':@' [TYPE_ARGS]=':@' [TYPE_ARG]=':' [TYPE_ARRAY]='@'
     )
-    if (( $# == 0 ))
-    then
+    if (( $# == 0 )) ; then
 	echo 'local TGL_OPTS OPTIND=1'
     else
 	TGL_OPTS=$1
@@ -35,62 +45,59 @@ tgl_setup() {
 }
 tgl_setup_() {
     declare -n _opts=$1; shift
-
-    local key
-    for key in "${!_opts[@]}"
-    do
-	[[ $key =~ ^[:@=] ]] && continue
-	if [[ $key =~ ^([-_ \|[:alnum:]]+)([:@]*)( *)$ ]]
-	then
+    # set default config parameters
+    for key in "${!TGL_CONFIG[@]}" ; do tgl_conf "$key" "${TGL_CONFIG[$key]}" ; done
+    local key marks="$(tgl_conf MARKS)" type_array=$(tgl_conf TYPE_ARRAY)
+    local types=$(tgl_conf TYPES)
+    for key in "${!_opts[@]}" ; do
+	[[ $key =~ ^[$marks] ]] && continue
+	if [[ $key =~ ^([-_ \|[:alnum:]]+)([$types]*)( *)$ ]] ; then
 	    local names=${BASH_REMATCH[1]}
 	    local type=${BASH_REMATCH[2]}
 	    local aliases alias
 	    IFS=' |' read -a aliases <<<$names
 	    local name=${aliases[0]}
-	    [[ $name != $key ]] && _opts[$name]=${_opts[$key]}
-	    _opts[:$name]=$type
-	    for alias in "${aliases[@]:1}"
-	    do
-		_opts[=$alias]=$name
-		_opts[:$alias]=$type
+	    tgl_type "$name" "$type"
+	    for alias in "${aliases[@]:1}" ; do
+		tgl_alias "$alias" "$name"
+		tgl_type  "$alias" "$type"
 	    done
+	    case $type in
+		$type_array)
+		    declare -n array=$name
+		    [[ ${_opts[$key]} ]] && array=("${_opts[$key]}") || array=()
+		    ;;
+		*) 
+		    [[ $name != $key ]] && _opts[$name]=${_opts[$key]}
+		    ;;
+	    esac
 	else
 	    tgl_warn "[$key] -- option description error"
 	    exit 1
 	fi
-    done
-    ##
-    ## set config parameters
-    ##
-    for key in "${!TGL_CONFIG[@]}"
-    do
-	_opts["&$key"]=${TGL_CONFIG[$key]}
     done
     (( $# > 0 )) && tgl_configure "$@"
     return 0
 }
 tgl_redirect() {
     declare -n _opts=$TGL_OPTS
-    [[ ${_opts[&DEBUG]} ]] && { echo "DEBUG: ${FUNCNAME[1]}($@)" ; }
+    tgl_debug "${FUNCNAME[1]}($@)"
     "${FUNCNAME[1]}_" $TGL_OPTS "$@"
 }
 tgl_configure () { tgl_redirect "$@" ; }
 tgl_configure_() {
     declare -n _opts=$1; shift
-    for param in "$@"
-    do
+    for param in "$@" ; do
 	[[ $param =~ ^[[:alnum:]] ]] || tgl_die "$param -- invalid config parameter"
 	local key val
-	if [[ $param =~ = ]]
-	then
+	if [[ $param =~ = ]] ; then
 	    key="&${param%%=*}"
 	    val="${param#*=}"
 	else
 	    key="&${param}"
-	    val="${_opts[&TRUE]}"
+	    val="$(tgl_conf TRUE)"
 	fi
-	if [[ ${_opts[$key]+_} ]]
-	then
+	if [[ ${_opts[$key]+_} ]] ; then
 	    _opts[$key]="$val"
 	else
 	    tgl_die "$param -- invalid config parameter"
@@ -101,98 +108,100 @@ tgl_configure_() {
 tgl_string () { tgl_redirect "$@" ; }
 tgl_string_() {
     declare -n _opts=$1; shift
-    local key string
-    for key in ${!_opts[@]}
-    do
-	[[ $key =~ ^:.$ ]] || continue
-	if [[ ${_opts[$key]} == : ]]
-	then
-	    string+="${key#:}:"
-	else
-	    string+=${key#:}
-	fi
+    local key string mark=$(tgl_conf IS_TYPE)
+    local type_args="$(tgl_conf TYPE_ARG)$(tgl_conf TYPE_ARRAY)"
+    for key in ${!_opts[@]} ; do
+	[[ $key =~ ^${mark}.$ ]] || continue
+	[[ ${_opts[$key]} =~ [$type_args] ]] && string+="${key#:}:" || string+=${key#:}
     done
-#   [[ ${_opts[&SILENT]} ]] && string=":$string"
-#   string+="-:"
-#   echo "${string}"
-    echo "${_opts[&SILENT]+:}${string}-:"
+    [[ $(tgl_conf SILENT) ]] && string=":$string"
+    string+="-:"
+    tgl_debug "Return $string"
+    echo "$string"
 }
 tgl_getopts () { tgl_redirect "$@" ; }
 tgl_getopts_() {
     declare -n _opts=$1; shift
     local opt="$1"; shift;
     local name val type
+    local type_arg="$(tgl_conf TYPE_ARG)"
+    local type_array="$(tgl_conf TYPE_ARRAY)"
+    local type_args="$(tgl_conf TYPE_ARGS)"
     case $opt in
-    :|\?)
-	[[ ${_opts[!$opt]} ]] && ${_opts[!$opt]} "$OPTARG"
-	[[ ${_opts[&EXIT_ON_ERROR]} ]] && exit 1
-	return
-	;;
-    -)
-	[[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
-	    || die "$OPTARG: unrecognized option"
-	local    no="${BASH_REMATCH[1]}"
-	local _name="${BASH_REMATCH[2]}"
-	local param="${BASH_REMATCH[3]}"
-		val="${BASH_REMATCH[4]}"
-	name=${_opts[=$_name]:-$_name}
-	[[ ${_opts[$name]+_} ]] || { tgl_die "--$name: no such option" ; }
-	if [[ ! $param ]]
-	then
-	    type=${_opts[:$name]}
-	    case  $type in
-	    [:@])
-		(( OPTIND > $# )) && tgl_die "option requires an argument -- $name"
-		val=${@:$((OPTIND)):1}
-		(( OPTIND++ ))
-		;;
-	    *)
-		[[ $no ]] && val=${_opts[&FALSE]} || val=${_opts[&TRUE]}
-		;;
-	    esac
-	fi
-	;;
-    *)
-	name=${_opts[=$opt]:-$opt}
-	type=${_opts[:$name]}
-	case $type in
-	[:@])
-	    val="${OPTARG}"
+	[:?])
+	    local hook=$(tgl_hook "$opt")
+	    [[ $hook ]] && $hook "$OPTARG"
+	    [[ ${_opts[&EXIT_ON_ERROR]} ]] && exit 1
+	    return
+	    ;;
+	-)
+	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] \
+		|| die "$OPTARG: unrecognized option"
+	    local    no="${BASH_REMATCH[1]}"
+	    local _name="${BASH_REMATCH[2]}"
+	    local param="${BASH_REMATCH[3]}"
+		    val="${BASH_REMATCH[4]}"
+	    name=$(tgl_alias $_name) || name=$_name
+	    [[ ${_opts[$name]+_} ]] || { tgl_die "--$name: no such option" ; }
+	    if [[ ! $param ]] ; then
+		case ${type:=$(tgl_type "$name")} in
+		    [$type_args])
+			(( OPTIND > $# )) && tgl_die "option requires an argument -- $name"
+			val=${@:$((OPTIND)):1}
+			(( OPTIND++ ))
+			;;
+		    *)
+			[[ $no ]] && val=$(tgl_conf FALSE) || val=$(tgl_conf TRUE)
+			;;
+		esac
+	    fi
 	    ;;
 	*)
-	    val=${_opts[&TRUE]}
+	    name=$(tgl_alias $opt) || name=$opt
+	    case ${type:=$(tgl_type "$name")} in
+		[$type_args])
+		    val="${OPTARG}" ;;
+		*)
+		    val=$(tgl_conf TRUE) ;;
+	    esac
 	    ;;
-	esac
-	;;
     esac
     case $type in
-    @) val="${_opts[$name]+${_opts[$name]} }${OPTARG}" ;;
+	[$type_array])
+	    declare -n array=${_opts[@$name]:-$name}; array+=($val) ;;
+	*)
+	    _opts[$name]="$val" ;;
     esac
-    _opts[$name]="$val"
-    [[ ${_opts[!$name]} ]] && ${_opts[!$name]} "$val"
+    # callback
+    local callback
+    callback="$(tgl_hook $name)" && $callback "$val"
     return 0
 }
 tgl_callback () { tgl_redirect "$@" ; }
 tgl_callback_() {
     declare -n _opts=$1; shift
     declare -a config=("$@")
-    while (($# > 0))
-    do
+    while (($# > 0)) ; do
 	local name=$1 callback=${2:-$1}
 	[[ $callback == - ]] && callback=$name
-	_opts[!$name]="$callback"
+	tgl_hook "$name" "$callback"
 	shift $(( $# >= 2 ? 2 : 1 ))
     done
     return 0
 }
-tgl_getoptions () { tgl_redirect "$@" ; }
-tgl_getoptions_() {
+tgl_getoptlong () { tgl_redirect "$@" ; }
+tgl_getoptlong_() {
     declare -n _opts=$1; shift
     local OPT optstring="$(tgl_string)"
-    while getopts "$optstring" OPT
-    do
+    while getopts "$optstring" OPT ; do
 	tgl_getopts "$OPT" "$@"
     done
+    shift $(( OPTIND - 1 ))
+    [[ ${_opts[&DEBUG]} ]] && echo "DEBUG: ARGV=$@"
+    # save result
+    local array="$(tgl_conf SAVETO)"
+    [[ $array ]] && { declare -n argv=$array ; argv=("$@") ; }
+    return 0
 }
 
 ################################################################################
@@ -200,7 +209,7 @@ tgl_getoptions_() {
 ################################################################################
 ################################################################################
 
-set -e
+set -eu
 
 define() { IFS='\n' read -r -d '' ${1} || true ; }
 
@@ -251,10 +260,9 @@ help() {
        	[ continue|c ]=
     )
     tgl_setup OPTS
-    tgl_getoptions "$@"
+    tgl_getoptlong "$@"
     shift $((OPTIND - 1))
-    if [[ ${OPTS[man]} ]]
-    then
+    if [[ ${OPTS[man]} ]] ; then
 	perldoc $0
     else
 	sed -r \
@@ -270,7 +278,8 @@ help() {
 
 declare -A OPTS=(
     [  format | f : ]=hsl
-    [    mods | m : ]="+r180%y50"
+    [ default | D : ]="+r180%y50"
+    [    mods | m @ ]=
     [     pkg | M : ]=
     [    lead | l : ]="██  "
     [           X : ]=
@@ -291,7 +300,7 @@ declare -A OPTS=(
     [     man       ]=
     [ include | I : ]=./lib
 )
-tgl_setup OPTS EXIT_ON_ERROR DEBUG=
+tgl_setup OPTS EXIT_ON_ERROR DEBUG=1 SAVETO=ARGV
 tgl_callback help  'help --help'
 tgl_callback man   'help --man'
 tgl_callback usage 'help --usage'
@@ -342,8 +351,9 @@ format() {
 tgl_callback format -
 opt format && format $(opts format)
 
-tgl_getoptions "$@"
-shift $((OPTIND - 1))
+tgl_getoptlong "$@"
+# shift $((OPTIND - 1))
+set -- "${ARGV[@]}"
 
 opt pkg     && export TAC_COLOR_PACKAGE=${OPTS[pkg]}
 opt include && export PERL5LIB=${OPTS[include]}:$PERL5LIB
@@ -355,8 +365,7 @@ declare -A xyz=(
 )
 reorder() {
     local orig=("$@") ans p n
-    for p in $(opts order)
-    do
+    for p in $(opts order) ; do
 	n=${xyz[$p]}
 	ans+=(${orig[$n]})
     done
@@ -367,17 +376,14 @@ table() {
     local mod=$1
     local IFS=$' \t\n,'
     Z=($(opts Z))
-    for z in ${Z[@]}
-    do
+    for z in ${Z[@]} ; do
 	local option=(--separate $'\n')
 	X=($(opts X))
-	for x in ${X[@]}
-	do
+	for x in ${X[@]} ; do
 	    Y=($(opts Y))
 	    local ys=${Y[0]} ye=${Y[$(( ${#Y[@]} - 1 ))]}
 	    opt terse || option+=("x=$x,y=$ys-$ye,z=$z")
-	    for y in ${Y[@]}
-	    do
+	    for y in ${Y[@]} ; do
 		col=$(printf "%s(%03d,%03d,%03d)" ${OPTS[format]} $(reorder $x $y $z))
 		opt reverse && arg="$col/$col$mod" \
 		            || arg="$col$mod/$col"
@@ -385,8 +391,7 @@ table() {
 		option+=(-c "$arg" "$label")
 	    done
 	done
-	if opt dryrun
-	then
+	if opt dryrun ; then
 	    echo ansiecho "${option[@]}"
 	else
 	    ansiecho "${option[@]}" | ansicolumn -C ${OPTS[column]:-${#X[@]}} --cu=1 --margin=0
@@ -394,7 +399,9 @@ table() {
     done
 }
 
-for mod in $(IFS=, opts mods)
-do
+(( $# > 0 )) && echo "$@"
+[[ ${#mods[@]} == 0 ]] && mods=(${OPTS[default]})
+
+for mod in "${mods[@]}" ; do
     table $mod
 done
