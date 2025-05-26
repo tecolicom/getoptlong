@@ -36,15 +36,14 @@ gol_setup() {
 }
 gol_redirect() {
     declare -n _opts=$GOL_OPTIONS
+    declare -n MATCH=BASH_REMATCH
     gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS=':=!&' MK_TYPE=':' MK_ALIAS='=' MK_HOOK='!' MK_CONF='&' \
 	  TYPES=':@+?' TP_ARGS=":@" TP_NEED=":" TP_MAY="?" TP_ARRAY="@" TP_INCR="+"
     local TRUE=${_opts[${MK_CONF}TRUE]} FALSE=${_opts[${MK_CONF}FALSE]}
-    declare -n MATCH=BASH_REMATCH
-    "${FUNCNAME[1]}_" $GOL_OPTIONS "$@"
+    "${FUNCNAME[1]}_" "$@"
 }
 gol_setup_() {
-    declare -n _opts=$1; shift
     (( $# > 0 )) && gol_configure "$@"
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
@@ -76,7 +75,6 @@ gol_setup_() {
 }
 gol_configure () { gol_redirect "$@" ; }
 gol_configure_() {
-    declare -n _opts=$1; shift
     for param in "$@" ; do
 	[[ $param =~ ^[[:alnum:]] ]] || gol_die "$param -- invalid config parameter"
 	local key val
@@ -94,7 +92,6 @@ gol_configure_() {
 }
 gol_string () { gol_redirect "$@" ; }
 gol_string_() {
-    declare -n _opts=$1; shift
     local key string
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^${MK_TYPE}(.)$ ]] || continue
@@ -108,7 +105,6 @@ gol_string_() {
 }
 gol_getopts () { gol_redirect "$@" ; }
 gol_getopts_() {
-    declare -n _opts=$1; shift
     local opt="$1"; shift;
     local name val type
     case $opt in
@@ -161,7 +157,6 @@ gol_getopts_() {
 }
 gol_callback () { gol_redirect "$@" ; }
 gol_callback_() {
-    declare -n _opts=$1; shift
     declare -a config=("$@")
     while (($# > 0)) ; do
 	local name=$1 callback=${2:-$1}
@@ -173,7 +168,6 @@ gol_callback_() {
 }
 gol_export () { gol_redirect "$@" ; }
 gol_export_() {
-    declare -n _opts=$1; shift
     local key
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[[:alnum:]_] ]] || continue
@@ -187,7 +181,6 @@ gol_export_() {
 }
 getoptlong () { gol_redirect "$@" ; }
 getoptlong_() {
-    declare -n _opts=$1; shift
     local gol_OPT optstring="$(gol_string)"
     while getopts "$optstring" gol_OPT ; do
 	gol_getopts "$gol_OPT" "$@"
