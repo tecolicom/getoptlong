@@ -1,7 +1,7 @@
 ################################################################################
 ################################################################################
 ##
-## TECOLI Getopt Library for Bash Script
+## GetOptLong: Getopt Library for Bash Script
 ##
 ################################################################################
 ################################################################################
@@ -13,9 +13,9 @@ gol_opts() {
 }
 gol_conf()  { gol_opts \&"$1" "${@:2}" ; }
 gol_type()  { gol_opts \:"$1" "${@:2}" ; }
-gol_alias() { gol_opts \="$1" "${@:2}" ; }
+gol_alias() { gol_opts \~"$1" "${@:2}" ; }
 gol_hook()  { gol_opts \!"$1" "${@:2}" ; }
-gol_valid() { [[ -v _opts[:$1] ]] }
+gol_valid() { [[ -v _opts[:$1] ]] ; }
 gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] || return 0; gol_warn DEBUG: "${@}" ; }
 gol_dump() {
     local declare="$(declare -p GOL_OPTIONS)"
@@ -24,7 +24,7 @@ gol_dump() {
 	declare -p $name | grep -oE '\[[^]]*\]="[^"]*"' | sort
     fi
 }
-gol_setup() {
+gol_setup() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTIONS OPTIND=1' ; return ; }
     declare -A GOL_CONFIG=(
 	[EXIT_ON_ERROR]=yes [SILENT]= [SAVETO]= [TRUE]=yes [FALSE]= [DEBUG]=
@@ -39,12 +39,12 @@ gol_redirect() {
     declare -n _opts=$GOL_OPTIONS
     declare -n MATCH=BASH_REMATCH
     gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local MARKS=':=!&' MK_TYPE=':' MK_ALIAS='=' MK_HOOK='!' MK_CONF='&' \
+    local MARKS=':~!&' MK_TYPE=':' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' \
 	  TYPES=':@%+?' TP_ARGS=":@%" TP_NEED=":" TP_MAY="?" TP_ARRAY="@" TP_HASH="%" TP_INCR="+"
     local TRUE=${_opts[${MK_CONF}TRUE]} FALSE=${_opts[${MK_CONF}FALSE]}
     "${FUNCNAME[1]}_" "$@"
 }
-gol_setup_() {
+gol_setup_() { local key ;
     (( $# > 0 )) && gol_configure "$@"
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
@@ -83,25 +83,18 @@ gol_setup_() {
     return 0
 }
 gol_configure () { gol_redirect "$@" ; }
-gol_configure_() {
+gol_configure_() { local param key val ;
     for param in "$@" ; do
 	[[ $param =~ ^[[:alnum:]] ]] || gol_die "$param -- invalid config parameter"
-	local key val
-	if [[ $param =~ = ]] ; then
-	    key="${MK_CONF}${param%%=*}"
-	    val="${param#*=}"
-	else
-	    key="${MK_CONF}${param}"
-	    val="$TRUE"
-	fi
+	key="${MK_CONF}${param%%=*}"
+	[[ $param =~ =(.*) ]] && val="${MATCH[1]}" || val="$TRUE"
 	[[ -v _opts[$key] ]] || gol_die "$param -- invalid config parameter"
 	_opts[$key]="$val"
     done
     return 0
 }
 gol_string () { gol_redirect "$@" ; }
-gol_string_() {
-    local key string
+gol_string_() { local key string ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^${MK_TYPE}(.)$ ]] || continue
 	string+=${MATCH[1]}
@@ -113,9 +106,8 @@ gol_string_() {
     echo "$string"
 }
 gol_getopts () { gol_redirect "$@" ; }
-gol_getopts_() {
+gol_getopts_() { local name val type callback ;
     local opt="$1"; shift;
-    local name val type
     case $opt in
 	[:?])
 	    local hook=$(gol_hook "$opt")
@@ -137,7 +129,7 @@ gol_getopts_() {
 		    [$TP_INCR]) val=$(( _opts[$name] + 1 )) ;;
 		    [$TP_ARGS])
 			(( OPTIND > $# )) && gol_die "option requires an argument -- $name"
-			val=${@:$((OPTIND)):1}
+			val=${@:$OPTIND:1}
 			(( OPTIND++ ))
 			;;
 		    *) [[ $no ]] && val="$FALSE" || val="$TRUE" ;;
@@ -158,7 +150,7 @@ gol_getopts_() {
 	[$TP_ARRAY]|[$TP_HASH])
 	    local arrayname="${_opts[$name]}"
 	    declare -n array="$arrayname"
-	    if [[ $type == $TP_ARRAY ]]; then
+	    if [[ $type == $TP_ARRAY ]] ; then
 		[[ -v $arrayname ]] || declare -ga "$arrayname"
 		array+=($val)
 	    else
@@ -169,7 +161,6 @@ gol_getopts_() {
 	*)
 	    _opts[$name]="$val" ;;
     esac
-    local callback
     callback="$(gol_hook $name)" && $callback "$val"
     return 0
 }
@@ -185,8 +176,7 @@ gol_callback_() {
     return 0
 }
 gol_export () { gol_redirect "$@" ; }
-gol_export_() {
-    local key
+gol_export_() { local key ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[[:alnum:]_] ]] || continue
 	local type=$(gol_type "$key")
@@ -198,8 +188,8 @@ gol_export_() {
     return 0
 }
 getoptlong () { gol_redirect "$@" ; }
-getoptlong_() {
-    local gol_OPT optstring="$(gol_string)"
+getoptlong_() { local gol_OPT ;
+    local optstring="$(gol_string)"
     while getopts "$optstring" gol_OPT ; do
 	gol_getopts "$gol_OPT" "$@"
     done
