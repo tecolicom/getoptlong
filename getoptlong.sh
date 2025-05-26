@@ -12,7 +12,7 @@ gol_opts() {
     [[ -v _opts[$1] ]] && echo "${_opts[$1]}" || return 1
 }
 gol_conf()  { gol_opts \&"$1" "${@:2}" ; }
-gol_type()  { gol_opts \:"$1" "${@:2}" ; }
+gol_dest()  { gol_opts \:"$1" "${@:2}" ; }
 gol_alias() { gol_opts \~"$1" "${@:2}" ; }
 gol_hook()  { gol_opts \!"$1" "${@:2}" ; }
 gol_valid() { [[ -v _opts[:$1] ]] ; }
@@ -39,8 +39,8 @@ gol_redirect() {
     declare -n _opts=$GOL_OPTIONS
     declare -n MATCH=BASH_REMATCH
     gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local MARKS=':~!&' MK_TYPE=':' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' \
-	  TYPES=':@%+?' TP_ARGS=":@%" TP_NEED=":" TP_MAY="?" TP_ARRAY="@" TP_HASH="%" TP_INCR="+"
+    local MARKS=':~!&' MK_DATA=':' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' \
+	  KINDS=':@%+?' IS_ARGS=":@%" IS_NEED=":" IS_MAY="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
     local TRUE=${_opts[${MK_CONF}TRUE]} FALSE=${_opts[${MK_CONF}FALSE]}
     "${FUNCNAME[1]}_" "$@"
 }
@@ -48,37 +48,33 @@ gol_setup_() { local key ;
     (( $# > 0 )) && gol_configure "$@"
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
-	if [[ $key =~ ^([-_ \|[:alnum:]]+)([$TYPES]*)( *)$ ]] ; then
-	    local names=${MATCH[1]} type=${MATCH[2]} aliases alias
-	    IFS=' |' read -a aliases <<<$names
-	    local name=${aliases[0]}
-	    gol_type "$name" "$type"
-	    for alias in "${aliases[@]:1}" ; do
-		gol_alias "$alias" "$name"
-		gol_type  "$alias" "$type"
-	    done
-	    case $type in
-		[$TP_ARRAY]|[$TP_HASH])
-		    local arrayname="$(gol_conf PREFIX)$name"
-		    declare -n array=$arrayname
-		    _opts[$name]=$arrayname
-		    local initial="${_opts[$key]}"
-		    [[ $type == $TP_ARRAY && ! -v $arrayname ]] && declare -ga $arrayname
-		    [[ $type == $TP_HASH  && ! -v $arrayname ]] && declare -gA $arrayname
-		    if [[ $initial =~ ^\(.*\)$ ]] ; then
-			eval "$arrayname=$initial"
-		    else
-			[[ $type == $TP_ARRAY ]] && array=(${initial:+"$initial"})
-			[[ $type == $TP_HASH  ]] && gol_die "$initial: invalid"
-		    fi
-		    ;;
-		[$TP_MAY]) ;;
-		*) [[ $name != $key ]] && _opts[$name]=${_opts[$key]} ;;
-	    esac
-	else
-	    gol_warn "[$key] -- option description error"
-	    exit 1
-	fi
+	[[ $key =~ ^([-_ \|[:alnum:]]+)([$KINDS]*)( *)$ ]] || gol_die "[$key] -- invalid"
+	local names=${MATCH[1]} dest=${MATCH[2]} aliases alias
+	IFS=' |' read -a aliases <<<$names
+	local name=${aliases[0]}
+	gol_dest "$name" "$dest"
+	for alias in "${aliases[@]:1}" ; do
+	    gol_alias "$alias" "$name"
+	    gol_dest  "$alias" "$dest"
+	done
+	case $dest in
+	    [$IS_MAY]) ;;
+	    [$IS_ARRAY]|[$IS_HASH])
+		local arrayname="$(gol_conf PREFIX)$name"
+		declare -n array=$arrayname
+		_opts[$name]=$arrayname
+		local initial="${_opts[$key]}"
+		[[ $dest == $IS_ARRAY && ! -v $arrayname ]] && declare -ga $arrayname
+		[[ $dest == $IS_HASH  && ! -v $arrayname ]] && declare -gA $arrayname
+		if [[ $initial =~ ^\(.*\)$ ]] ; then
+		    eval "$arrayname=$initial"
+		else
+		    [[ $dest == $IS_ARRAY ]] && array=(${initial:+"$initial"})
+		    [[ $dest == $IS_HASH  ]] && gol_die "$initial: invalid"
+		fi
+		;;
+	    *) [[ $name != $key ]] && _opts[$name]=${_opts[$key]} ;;
+	esac
     done
     return 0
 }
@@ -96,9 +92,9 @@ gol_configure_() { local param key val ;
 gol_string () { gol_redirect "$@" ; }
 gol_string_() { local key string ;
     for key in "${!_opts[@]}" ; do
-	[[ $key =~ ^${MK_TYPE}(.)$ ]] || continue
+	[[ $key =~ ^${MK_DATA}(.)$ ]] || continue
 	string+=${MATCH[1]}
-	[[ ${_opts[$key]} =~ [$TP_ARGS] ]] && string+=:
+	[[ ${_opts[$key]} =~ [$IS_ARGS] ]] && string+=:
     done
     [[ $(gol_conf SILENT) ]] && string=":$string"
     string+="-:"
@@ -106,7 +102,7 @@ gol_string_() { local key string ;
     echo "$string"
 }
 gol_getopts () { gol_redirect "$@" ; }
-gol_getopts_() { local name val type callback ;
+gol_getopts_() { local name val dest callback ;
     local opt="$1"; shift;
     case $opt in
 	[:?])
@@ -119,15 +115,15 @@ gol_getopts_() { local name val type callback ;
 	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] || die "$OPTARG: unrecognized option"
 	    local no="${MATCH[1]}" nm="${MATCH[2]}" param="${MATCH[3]}"; val="${MATCH[4]}"
 	    name=$(gol_alias $nm) || name=$nm
-	    type=$(gol_type $name)
+	    dest=$(gol_dest $name)
 	    gol_valid $name || gol_die "no such option -- $name"
 	    if [[ $param ]] ; then
-		[[ $type =~ [${TP_ARGS}${TP_MAY}] ]] || die "does not take an argument -- $name"
+		[[ $dest =~ [${IS_ARGS}${IS_MAY}] ]] || die "does not take an argument -- $name"
 	    else
-		case $type in
-		    [$TP_MAY]) ;;
-		    [$TP_INCR]) val=$(( _opts[$name] + 1 )) ;;
-		    [$TP_ARGS])
+		case $dest in
+		    [$IS_MAY]) ;;
+		    [$IS_INCR]) val=$(( _opts[$name] + 1 )) ;;
+		    [$IS_ARGS])
 			(( OPTIND > $# )) && gol_die "option requires an argument -- $name"
 			val=${@:$OPTIND:1}
 			(( OPTIND++ ))
@@ -138,19 +134,19 @@ gol_getopts_() { local name val type callback ;
 	    ;;
 	*)
 	    name=$(gol_alias $opt) || name=$opt
-	    case ${type:=$(gol_type "$name")} in
-		[$TP_MAY])  val="${OPTARG:-}" ;;
-		[$TP_INCR]) val=$(( _opts[$name] + 1 )) ;;
-		[$TP_ARGS]) val="${OPTARG}" ;;
+	    case ${dest:=$(gol_dest "$name")} in
+		[$IS_MAY])  val="${OPTARG:-}" ;;
+		[$IS_INCR]) val=$(( _opts[$name] + 1 )) ;;
+		[$IS_ARGS]) val="${OPTARG}" ;;
 		*)          val="$TRUE" ;;
 	    esac
 	    ;;
     esac
-    case $type in
-	[$TP_ARRAY]|[$TP_HASH])
+    case $dest in
+	[$IS_ARRAY]|[$IS_HASH])
 	    local arrayname="${_opts[$name]}"
 	    declare -n array="$arrayname"
-	    if [[ $type == $TP_ARRAY ]] ; then
+	    if [[ $dest == $IS_ARRAY ]] ; then
 		[[ -v $arrayname ]] || declare -ga "$arrayname"
 		array+=($val)
 	    else
@@ -179,8 +175,8 @@ gol_export () { gol_redirect "$@" ; }
 gol_export_() { local key ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[[:alnum:]_] ]] || continue
-	local type=$(gol_type "$key")
-	[[ $type == $TP_ARRAY ]] && continue
+	local dest=$(gol_dest "$key")
+	[[ $dest == $IS_ARRAY ]] && continue
 	local name="$(gol_conf PREFIX)${key}"
 	gol_debug "exporting $name=${_opts[$key]@Q}"
 	printf -v "${name}" '%s' "${_opts[$key]}";
