@@ -27,6 +27,7 @@ gol_setup() {
     (( $# == 0 )) && { echo 'local GOL_OPTS OPTIND=1' ; return ; }
     declare -A GOL_CONFIG=(
 	[EXIT_ON_ERROR]=yes [SILENT]= [SAVETO]= [TRUE]=yes [FALSE]= [DEBUG]=
+	[EXPORT]= [PREFIX]=opt_
     )
     declare -n _opts=$1
     for key in "${!GOL_CONFIG[@]}" ; do _opts[&$key]="${GOL_CONFIG[$key]}" ; done
@@ -44,6 +45,7 @@ gol_redirect() {
 }
 gol_setup_() {
     declare -n _opts=$1; shift
+    (( $# > 0 )) && gol_configure "$@"
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
 	if [[ $key =~ ^([-_ \|[:alnum:]]+)([$TYPES]*)( *)$ ]] ; then
@@ -57,9 +59,10 @@ gol_setup_() {
 	    done
 	    case $type in
 		[$TP_ARRAY])
-		    declare -n array=$name
+		    local arrayname="$(gol_conf PREFIX)$name"
+		    declare -n array=$arrayname
 		    [[ ${_opts[$key]} ]] && array=("${_opts[$key]}") || array=()
-		    _opts[$name]=$name
+		    _opts[$name]=$arrayname
 		    ;;
 		[$TP_MAY]) ;;
 		*) [[ $name != $key ]] && _opts[$name]=${_opts[$key]} ;;
@@ -69,7 +72,6 @@ gol_setup_() {
 	    exit 1
 	fi
     done
-    (( $# > 0 )) && gol_configure "$@"
     return 0
 }
 gol_configure () { gol_redirect "$@" ; }
@@ -94,7 +96,7 @@ gol_string () { gol_redirect "$@" ; }
 gol_string_() {
     declare -n _opts=$1; shift
     local key string
-    for key in ${!_opts[@]} ; do
+    for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^${MK_TYPE}(.)$ ]] || continue
 	string+=${MATCH[1]}
 	[[ ${_opts[$key]} =~ [$TP_ARGS] ]] && string+=:
@@ -149,7 +151,7 @@ gol_getopts_() {
     esac
     case $type in
 	[$TP_ARRAY])
-	    declare -n array=${_opts[@$name]:-$name}; array+=($val) ;;
+	    declare -n array=${_opts[$name]:-$name}; array+=($val) ;;
 	*)
 	    _opts[$name]="$val" ;;
     esac
@@ -169,6 +171,20 @@ gol_callback_() {
     done
     return 0
 }
+gol_export () { gol_redirect "$@" ; }
+gol_export_() {
+    declare -n _opts=$1; shift
+    local key
+    for key in "${!_opts[@]}" ; do
+	[[ $key =~ ^[[:alnum:]] ]] || continue
+	local type=$(gol_type "$key")
+	[[ $type == $TP_ARRAY ]] && continue
+	local name="$(gol_conf PREFIX)${key}"
+	gol_debug "exporting $name=${_opts[$key]@Q}"
+	printf -v "${name}" '%s' "${_opts[$key]}";
+    done
+    return 0
+}
 getoptlong     () { gol_getoptlong "$@" ; }
 gol_getoptlong () { gol_redirect "$@" ; }
 gol_getoptlong_() {
@@ -181,6 +197,7 @@ gol_getoptlong_() {
     gol_debug "ARGV=(${@@Q})"
     local array="$(gol_conf SAVETO)"
     [[ $array ]] && { declare -n argv=$array ; argv=("$@") ; }
+    [[ $(gol_conf EXPORT) ]] && gol_export
     return 0
 }
 ################################################################################
