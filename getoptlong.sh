@@ -20,7 +20,8 @@ gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] || return 0; gol_warn DEBUG: "${@}" ; }
 gol_dump() {
     local declare="$(declare -p GOL_OPTIONS)"
     if [[ "$declare" =~ \"(.+)\" ]] ; then
-	declare -p ${BASH_REMATCH[1]} | grep -oE '\[[^]]*\]="[^"]*"' | sort
+	local name=${BASH_REMATCH[1]}
+	declare -p $name | grep -oE '\[[^]]*\]="[^"]*"' | sort
     fi
 }
 gol_setup() {
@@ -39,7 +40,7 @@ gol_redirect() {
     declare -n MATCH=BASH_REMATCH
     gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS=':=!&' MK_TYPE=':' MK_ALIAS='=' MK_HOOK='!' MK_CONF='&' \
-	  TYPES=':@+?' TP_ARGS=":@" TP_NEED=":" TP_MAY="?" TP_ARRAY="@" TP_INCR="+"
+	  TYPES=':@%+?' TP_ARGS=":@%" TP_NEED=":" TP_MAY="?" TP_ARRAY="@" TP_HASH="%" TP_INCR="+"
     local TRUE=${_opts[${MK_CONF}TRUE]} FALSE=${_opts[${MK_CONF}FALSE]}
     "${FUNCNAME[1]}_" "$@"
 }
@@ -57,11 +58,19 @@ gol_setup_() {
 		gol_type  "$alias" "$type"
 	    done
 	    case $type in
-		[$TP_ARRAY])
+		[$TP_ARRAY]|[$TP_HASH])
 		    local arrayname="$(gol_conf PREFIX)$name"
 		    declare -n array=$arrayname
-		    [[ ${_opts[$key]} ]] && array=("${_opts[$key]}") || array=()
 		    _opts[$name]=$arrayname
+		    local initial="${_opts[$key]}"
+		    [[ $type == $TP_ARRAY && ! -v $arrayname ]] && declare -ga $arrayname
+		    [[ $type == $TP_HASH  && ! -v $arrayname ]] && declare -gA $arrayname
+		    if [[ $initial =~ ^\(.*\)$ ]] ; then
+			eval "$arrayname=$initial"
+		    else
+			[[ $type == $TP_ARRAY ]] && array=(${initial:+"$initial"})
+			[[ $type == $TP_HASH  ]] && gol_die "$initial: invalid"
+		    fi
 		    ;;
 		[$TP_MAY]) ;;
 		*) [[ $name != $key ]] && _opts[$name]=${_opts[$key]} ;;
@@ -146,8 +155,17 @@ gol_getopts_() {
 	    ;;
     esac
     case $type in
-	[$TP_ARRAY])
-	    declare -n array=${_opts[$name]:-$name}; array+=($val) ;;
+	[$TP_ARRAY]|[$TP_HASH])
+	    local arrayname="${_opts[$name]}"
+	    declare -n array="$arrayname"
+	    if [[ $type == $TP_ARRAY ]]; then
+		[[ -v $arrayname ]] || declare -ga "$arrayname"
+		array+=($val)
+	    else
+		[[ -v $arrayname ]] || declare -gA "$arrayname"
+		[[ $val =~ = ]] && array["${val%%=*}"]="${val#*=}" || array[$val]=$TRUE
+	    fi
+	    ;;
 	*)
 	    _opts[$name]="$val" ;;
     esac
