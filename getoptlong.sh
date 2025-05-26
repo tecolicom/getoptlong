@@ -18,30 +18,30 @@ gol_hook()  { gol_opts \!"$1" "${@:2}" ; }
 gol_valid() { [[ -v _opts[:$1] ]] }
 gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] || return 0; gol_warn DEBUG: "${@}" ; }
 gol_dump() {
-    local declare="$(declare -p GOL_OPTS)"
+    local declare="$(declare -p GOL_OPTIONS)"
     if [[ "$declare" =~ \"(.+)\" ]] ; then
 	declare -p ${BASH_REMATCH[1]} | grep -oE '\[[^]]*\]="[^"]*"' | sort
     fi
 }
 gol_setup() {
-    (( $# == 0 )) && { echo 'local GOL_OPTS OPTIND=1' ; return ; }
+    (( $# == 0 )) && { echo 'local GOL_OPTIONS OPTIND=1' ; return ; }
     declare -A GOL_CONFIG=(
 	[EXIT_ON_ERROR]=yes [SILENT]= [SAVETO]= [TRUE]=yes [FALSE]= [DEBUG]=
 	[EXPORT]= [PREFIX]=opt_
     )
     declare -n _opts=$1
     for key in "${!GOL_CONFIG[@]}" ; do _opts[&$key]="${GOL_CONFIG[$key]}" ; done
-    GOL_OPTS=$1
+    GOL_OPTIONS=$1
     gol_redirect "${@:2}"
 }
 gol_redirect() {
-    declare -n _opts=$GOL_OPTS
+    declare -n _opts=$GOL_OPTIONS
     gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS=':=!&' MK_TYPE=':' MK_ALIAS='=' MK_HOOK='!' MK_CONF='&' \
 	  TYPES=':@+?' TP_ARGS=":@" TP_NEED=":" TP_MAY="?" TP_ARRAY="@" TP_INCR="+"
     local TRUE=${_opts[${MK_CONF}TRUE]} FALSE=${_opts[${MK_CONF}FALSE]}
     declare -n MATCH=BASH_REMATCH
-    "${FUNCNAME[1]}_" $GOL_OPTS "$@"
+    "${FUNCNAME[1]}_" $GOL_OPTIONS "$@"
 }
 gol_setup_() {
     declare -n _opts=$1; shift
@@ -176,7 +176,7 @@ gol_export_() {
     declare -n _opts=$1; shift
     local key
     for key in "${!_opts[@]}" ; do
-	[[ $key =~ ^[[:alnum:]] ]] || continue
+	[[ $key =~ ^[[:alnum:]_] ]] || continue
 	local type=$(gol_type "$key")
 	[[ $type == $TP_ARRAY ]] && continue
 	local name="$(gol_conf PREFIX)${key}"
@@ -185,9 +185,8 @@ gol_export_() {
     done
     return 0
 }
-getoptlong     () { gol_getoptlong "$@" ; }
-gol_getoptlong () { gol_redirect "$@" ; }
-gol_getoptlong_() {
+getoptlong () { gol_redirect "$@" ; }
+getoptlong_() {
     declare -n _opts=$1; shift
     local gol_OPT optstring="$(gol_string)"
     while getopts "$optstring" gol_OPT ; do
