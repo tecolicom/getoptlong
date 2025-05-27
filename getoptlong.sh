@@ -16,7 +16,7 @@ _gol_dest()  { _gol_opts \:"$1" "${@:2}" ; }
 _gol_alias() { _gol_opts \~"$1" "${@:2}" ; }
 _gol_hook()  { _gol_opts \!"$1" "${@:2}" ; }
 _gol_valid() { [[ -v _opts[:$1] ]] ; }
-_gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] || return 0; _gol_warn DEBUG: "${@}" ; }
+_gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_redirect() {
     declare -n _opts=$GOL_OPTIONS
     declare -n MATCH=BASH_REMATCH
@@ -27,11 +27,7 @@ _gol_redirect() {
     "${FUNCNAME[1]}_" "$@"
 }
 gol_dump() {
-    local declare="$(declare -p GOL_OPTIONS)"
-    if [[ "$declare" =~ \"(.+)\" ]] ; then
-	local name=${BASH_REMATCH[1]}
-	declare -p $name | grep -oE '\[[^]]*\]="[^"]*"' | sort
-    fi
+    declare -p $GOL_OPTIONS | grep -oE '\[[^]]*\]="[^"]*"' | sort
 }
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTIONS OPTIND=1' ; return ; }
@@ -68,9 +64,9 @@ gol_init_() { local key ;
 		[[ $dest == $IS_HASH  && ! -v $arrayname ]] && declare -gA $arrayname
 		if [[ $initial =~ ^\(.*\)$ ]] ; then
 		    eval "$arrayname=$initial"
-		else
+		elif [[ $initial ]] ; then
 		    [[ $dest == $IS_ARRAY ]] && array=(${initial:+"$initial"})
-		    [[ $dest == $IS_HASH  ]] && _gol_die "$initial: invalid"
+		    [[ $dest == $IS_HASH  ]] && _gol_die "$initial: invalid hash data"
 		fi
 		;;
 	    *) [[ $name != $key ]] && _opts[$name]=${_opts[$key]} ;;
@@ -144,13 +140,10 @@ gol_getopts_() { local name val dest callback ;
     esac
     case $dest in
 	[$IS_ARRAY]|[$IS_HASH])
-	    local arrayname="${_opts[$name]}"
-	    declare -n array="$arrayname"
+	    declare -n array="${_opts[$name]}"
 	    if [[ $dest == $IS_ARRAY ]] ; then
-		[[ -v $arrayname ]] || declare -ga "$arrayname"
 		array+=($val)
 	    else
-		[[ -v $arrayname ]] || declare -gA "$arrayname"
 		[[ $val =~ = ]] && array["${val%%=*}"]="${val#*=}" || array[$val]=$TRUE
 	    fi
 	    ;;
@@ -183,21 +176,20 @@ gol_export_() { local key ;
     return 0
 }
 gol_parse () { _gol_redirect "$@" ; }
-gol_parse_() { local gol_OPT ;
+gol_parse_() { local gol_OPT array ;
     local optstring="$(gol_optstring_)"
     while getopts "$optstring" gol_OPT ; do
 	gol_getopts_ "$gol_OPT" "$@"
     done
     shift $(( OPTIND - 1 ))
     _gol_debug "ARGV=(${@@Q})"
-    local array="$(_gol_conf SAVETO)"
-    [[ $array ]] && { declare -n argv=$array ; argv=("$@") ; }
+    [[ ${array:=$(_gol_conf SAVETO)} ]] && { declare -n argv=$array ; argv=("$@") ; }
     [[ $(_gol_conf EXPORT) ]] && gol_export_
     return 0
 }
 getoptlong () {
     case $1 in
-	init|parse|callback|configure|export|getopts|dump)
+	init|parse|configure|getopts|callback|export|dump)
 	    gol_$1 "${@:2}" ;;
 	*)
 	    _gol_die "unknown subcommand -- $1" ;;
