@@ -24,7 +24,7 @@ gol_dump() {
 	declare -p $name | grep -oE '\[[^]]*\]="[^"]*"' | sort
     fi
 }
-gol_setup() { local key ;
+gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTIONS OPTIND=1' ; return ; }
     declare -A GOL_CONFIG=(
 	[EXIT_ON_ERROR]=yes [SILENT]= [SAVETO]= [TRUE]=yes [FALSE]= [DEBUG]=
@@ -44,8 +44,8 @@ gol_redirect() {
     local TRUE=${_opts[${MK_CONF}TRUE]} FALSE=${_opts[${MK_CONF}FALSE]}
     "${FUNCNAME[1]}_" "$@"
 }
-gol_setup_() { local key ;
-    (( $# > 0 )) && gol_configure "$@"
+gol_init_() { local key ;
+    (( $# > 0 )) && gol_configure_ "$@"
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
 	[[ $key =~ ^([-_ \|[:alnum:]]+)([$KINDS]*)( *)$ ]] || gol_die "[$key] -- invalid"
@@ -89,8 +89,8 @@ gol_configure_() { local param key val ;
     done
     return 0
 }
-gol_string () { gol_redirect "$@" ; }
-gol_string_() { local key string ;
+gol_optstring () { gol_redirect "$@" ; }
+gol_optstring_() { local key string ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^${MK_DATA}(.)$ ]] || continue
 	string+=${MATCH[1]}
@@ -175,26 +175,33 @@ gol_export () { gol_redirect "$@" ; }
 gol_export_() { local key ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[[:alnum:]_] ]] || continue
-	local dest=$(gol_dest "$key")
-	[[ $dest == $IS_ARRAY ]] && continue
+	[[ $(gol_dest "$key") =~ [${IS_ARRAY}${IS_HASH}] ]] && continue
 	local name="$(gol_conf PREFIX)${key}"
 	gol_debug "exporting $name=${_opts[$key]@Q}"
 	printf -v "${name}" '%s' "${_opts[$key]}";
     done
     return 0
 }
-getoptlong () { gol_redirect "$@" ; }
-getoptlong_() { local gol_OPT ;
-    local optstring="$(gol_string)"
+gol_parse () { gol_redirect "$@" ; }
+gol_parse_() { local gol_OPT ;
+    local optstring="$(gol_optstring_)"
     while getopts "$optstring" gol_OPT ; do
-	gol_getopts "$gol_OPT" "$@"
+	gol_getopts_ "$gol_OPT" "$@"
     done
     shift $(( OPTIND - 1 ))
     gol_debug "ARGV=(${@@Q})"
     local array="$(gol_conf SAVETO)"
     [[ $array ]] && { declare -n argv=$array ; argv=("$@") ; }
-    [[ $(gol_conf EXPORT) ]] && gol_export
+    [[ $(gol_conf EXPORT) ]] && gol_export_
     return 0
+}
+getoptlong () {
+    case $1 in
+	init|parse|callback|configure|export|getopts|dump)
+	    gol_$1 "${@:2}" ;;
+	*)
+	    gol_die "unknown subcommand -- $1" ;;
+    esac
 }
 ################################################################################
 ################################################################################

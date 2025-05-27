@@ -26,9 +26,9 @@ declare -A OPT=(
     [ debug     | d + ]=0
     [ help      | h   ]=
 )
-gol_setup OPT EXPORT PREFIX= DEBUG=${DEBUG_ME:-}
-gol_callback help - trace -
-getoptlong "$@" && shift $((OPTIND - 1))
+getoptlong init OPT EXPORT PREFIX= DEBUG=${DEBUG_ME:-}
+getoptlong callback help - trace -
+getoptlong parse "$@" && shift $((OPTIND - 1))
 (( debug >= 2 )) && gol_dump | column >&2
 [[ ! -v paragraph ]] && paragraph= || : ${paragraph:=$'\n'} 
 
