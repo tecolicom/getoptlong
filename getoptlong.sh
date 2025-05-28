@@ -16,15 +16,14 @@ _gol_alias() { _gol_opts \~"$1" "${@:2}" ; }
 _gol_hook()  { _gol_opts \!"$1" "${@:2}" ; }
 _gol_valid() { [[ -v _opts[:$1] ]] ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
-_gol_redirect() {
+_gol_redirect() { local name ;
     declare -n _opts=$GOL_OPTIONS
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS=':~!&' MK_DATA=':' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' \
-	  KINDS=':@%+?' IS_ARGS=":@%" IS_NEED=":" IS_MAY="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
-    for key in EXIT_ON_ERROR SILENT SAVETO TRUE FALSE PERMUTE DEBUG EXPORT PREFIX ; do
-	declare $key="${_opts[&$key]}"
-    done
+	  KINDS=':@%+?' IS_NEED=":@%" IS_MUST=":" IS_MAY="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
+    local CONFIG=(EXIT_ON_ERROR SILENT TRUE FALSE PERMUTE DEBUG EXPORT PREFIX)
+    for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
 gol_dump() {
@@ -33,13 +32,17 @@ gol_dump() {
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTIONS OPTIND=1' ; return ; }
     declare -A GOL_CONFIG=(
-	[EXIT_ON_ERROR]=yes [SILENT]= [SAVETO]= [TRUE]=yes [FALSE]= [PERMUTE]= [DEBUG]=
+	[EXIT_ON_ERROR]=yes [SILENT]= [TRUE]=yes [FALSE]= [PERMUTE]= [DEBUG]=
 	[EXPORT]= [PREFIX]=opt_
     )
     declare -n _opts=$1
     for key in "${!GOL_CONFIG[@]}" ; do _opts[&$key]="${GOL_CONFIG[$key]}" ; done
     GOL_OPTIONS=$1
-    _gol_redirect "${@:2}"
+    [[ ${2:-} =~ ^[_a-zA-Z][_a-zA-Z0-9]*$ ]] && {
+	[[ -v GOL_CONFIG[$2] ]] && _gol_die "$2 can not used as array name"
+	PERMUTE="$2" && _opts[&PERMUTE]="$2"
+    }
+    _gol_redirect "${@:3}"
 }
 gol_init_() { local key ;
     (( $# > 0 )) && gol_configure_ "$@"
@@ -91,7 +94,7 @@ gol_optstring_() { local key string ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^${MK_DATA}(.)$ ]] || continue
 	string+=${MATCH[1]}
-	[[ ${_opts[$key]} =~ [$IS_ARGS] ]] && string+=:
+	[[ ${_opts[$key]} =~ [$IS_NEED] ]] && string+=:
     done
     [[ $SILENT ]] && string=":$string"
     string+="-:"
@@ -115,12 +118,12 @@ gol_getopts_() { local name val dest callback ;
 	    dest=$(_gol_dest $name)
 	    _gol_valid $name || _gol_die "no such option -- $name"
 	    if [[ $param ]] ; then
-		[[ $dest =~ [${IS_ARGS}${IS_MAY}] ]] || die "does not take an argument -- $name"
+		[[ $dest =~ [${IS_NEED}${IS_MAY}] ]] || die "does not take an argument -- $name"
 	    else
 		case $dest in
 		    [$IS_MAY]) ;;
 		    [$IS_INCR]) val=$(( _opts[$name] + 1 )) ;;
-		    [$IS_ARGS])
+		    [$IS_NEED])
 			(( OPTIND > $# )) && _gol_die "option requires an argument -- $name"
 			val=${@:$OPTIND:1}
 			(( OPTIND++ ))
@@ -134,7 +137,7 @@ gol_getopts_() { local name val dest callback ;
 	    case ${dest:=$(_gol_dest "$name")} in
 		[$IS_MAY])  val="${OPTARG:-}" ;;
 		[$IS_INCR]) val=$(( _opts[$name] + 1 )) ;;
-		[$IS_ARGS]) val="${OPTARG}" ;;
+		[$IS_NEED]) val="${OPTARG}" ;;
 		*)          val="$TRUE" ;;
 	    esac
 	    ;;
@@ -177,7 +180,7 @@ gol_export_() { local key ;
     return 0
 }
 gol_parse () { _gol_redirect "$@" ; }
-gol_parse_() { local gol_OPT SAVEARG=() SAVEIND ;
+gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
     local optstring="$(gol_optstring_)"
     while (( OPTIND <= $# )) ; do
 	while getopts "$optstring" gol_OPT ; do
@@ -188,15 +191,23 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND ;
 	SAVEARG+=(${@:$((OPTIND++)):1})
     done
     [[ $PERMUTE ]] && set -- "${SAVEARG[@]}" "${@:$OPTIND}" || shift $(( OPTIND - 1 ))
-    OPTIND=$SAVEIND
+    OPTIND=${SAVEIND:-$OPTIND}
     _gol_debug "ARGV=(${@@Q})"
-    [[ $SAVETO ]] && { declare -n _gol_argv=$SAVETO ; _gol_argv=("$@") ; }
+    [[ $PERMUTE ]] && { declare -n _gol_argv=$PERMUTE ; _gol_argv=("$@") ; }
     [[ $EXPORT ]] && gol_export_
     return 0
 }
+gol_set () { _gol_redirect "$@" ; }
+gol_set_() {
+    if [[ $PERMUTE ]] ; then
+	printf 'set -- "${%s[@]}"' "$PERMUTE"
+    else
+	echo 'shift $(( OPTIND-1 ))'
+    fi
+}
 getoptlong () {
     case $1 in
-	init|parse|configure|getopts|callback|export|dump)
+	init|parse|set|configure|getopts|callback|export|dump)
 	    gol_$1 "${@:2}" ;;
 	*)
 	    _gol_die "unknown subcommand -- $1" ;;

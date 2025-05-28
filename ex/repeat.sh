@@ -26,9 +26,9 @@ declare -A OPT=(
     [ debug     | d + ]=0
     [ help      | h   ]=
 )
-getoptlong init OPT DEBUG=${DEBUG_ME:-}
+getoptlong init OPT - DEBUG=${DEBUG_ME:-}
 getoptlong callback help - trace -
-getoptlong parse "$@" && shift $((OPTIND - 1))
+getoptlong parse "$@" && eval "$(getoptlong set)"
 (( OPT[debug] >= 1 )) && echo "OPTIND=$OPTIND"
 (( OPT[debug] >= 2 )) && gol_dump | column >&2
 [[ ! -v OPT[paragraph] ]] && OPT[paragraph]= || : ${OPT[paragraph]:=$'\n'} 

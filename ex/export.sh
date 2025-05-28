@@ -28,13 +28,13 @@ declare -A OPT=(
     [ help      | h   ]=
     [ message   | m % ]=
 )
-getoptlong init OPT EXPORT SAVETO=ARGV DEBUG=${DEBUG_ME:-}
+getoptlong init OPT ARGV EXPORT DEBUG=${DEBUG_ME:-}
 getoptlong callback help - trace -
-getoptlong parse "$@" && shift $((OPTIND - 1))
+getoptlong parse "$@" && set -- "${ARGV[@]}"
+
 (( opt_debug >= 2 )) && gol_dump | column >&2
 [[ ! -v opt_paragraph ]] && opt_paragraph= || : ${opt_paragraph:=$'\n'} 
 
-set -- "${ARGV[@]}"
 case ${1:-} in
     [0-9]*) opt_count=$1 ; shift ;;
 esac

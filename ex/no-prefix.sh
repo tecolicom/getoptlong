@@ -26,7 +26,7 @@ declare -A OPT=(
     [ debug     | d + ]=0
     [ help      | h   ]=
 )
-getoptlong init OPT EXPORT PREFIX= DEBUG=${DEBUG_ME:-}
+getoptlong init OPT - EXPORT PREFIX= DEBUG=${DEBUG_ME:-}
 getoptlong callback help - trace -
 getoptlong parse "$@" && shift $((OPTIND - 1))
 (( debug >= 2 )) && gol_dump | column >&2
