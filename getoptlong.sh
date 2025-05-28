@@ -45,6 +45,7 @@ gol_init() { local key ;
     (( $# > 2 )) && gol_configure "${@:3}"
     _gol_redirect
 }
+################################################################################
 gol_init_() { local key ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
@@ -96,18 +97,14 @@ gol_optstring_() { local key string ;
 	string+=${MATCH[1]}
 	[[ ${_opts[$key]} =~ [$IS_NEED] ]] && string+=:
     done
-    [[ $SILENT ]] && string=":$string"
-    string+="-:"
-    _gol_debug "Return $string"
-    echo "$string"
+    echo "${SILENT:+:}${string}-:"
 }
 gol_getopts () { _gol_redirect "$@" ; }
-gol_getopts_() { local name val dest callback ;
+gol_getopts_() { local hook name val dest callback ;
     local opt="$1"; shift;
     case $opt in
 	[:?])
-	    local hook=$(_gol_hook "$opt")
-	    [[ $hook ]] && $hook "$OPTARG"
+	    hook=$(_gol_hook "$opt") && [[ $hook ]] && $hook "$OPTARG"
 	    [[ $EXIT_ON_ERROR ]] && exit 1
 	    return 0
 	    ;;
@@ -181,7 +178,7 @@ gol_export_() { local key ;
 }
 gol_parse () { _gol_redirect "$@" ; }
 gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
-    local optstring="$(gol_optstring_)"
+    local optstring="$(gol_optstring_)" ; _gol_debug "OPTSTRING=$optstring" ;
     while (( OPTIND <= $# )) ; do
 	while getopts "$optstring" gol_OPT ; do
 	    gol_getopts_ "$gol_OPT" "$@"
