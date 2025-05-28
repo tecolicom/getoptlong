@@ -29,6 +29,7 @@ declare -A OPT=(
 getoptlong init OPT DEBUG=${DEBUG_ME:-}
 getoptlong callback help - trace -
 getoptlong parse "$@" && shift $((OPTIND - 1))
+(( OPT[debug] >= 1 )) && echo "OPTIND=$OPTIND"
 (( OPT[debug] >= 2 )) && gol_dump | column >&2
 [[ ! -v OPT[paragraph] ]] && OPT[paragraph]= || : ${OPT[paragraph]:=$'\n'} 
 
@@ -38,6 +39,7 @@ esac
 
 while (( OPT[count]-- ))
 do
+    (( ${OPT[debug]} >= 1 )) && echo "[ ${COMMAND[@]@Q} ]" >&2
     eval "${@@Q}"
     if (( OPT[count] > 0 ))
     then

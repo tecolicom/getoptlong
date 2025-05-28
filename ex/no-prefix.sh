@@ -38,6 +38,7 @@ esac
 
 while (( count-- ))
 do
+    (( debug >= 1 )) && echo "[ ${COMMAND[@]@Q} ]" >&2
     eval "${@@Q}"
     if (( $count > 0 ))
     then

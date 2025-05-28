@@ -32,7 +32,7 @@ gol_dump() {
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTIONS OPTIND=1' ; return ; }
     declare -A GOL_CONFIG=(
-	[EXIT_ON_ERROR]=yes [SILENT]= [SAVETO]= [TRUE]=yes [FALSE]= [DEBUG]=
+	[EXIT_ON_ERROR]=yes [SILENT]= [SAVETO]= [TRUE]=yes [FALSE]= [PERMUTE]= [DEBUG]=
 	[EXPORT]= [PREFIX]=opt_
     )
     declare -n _opts=$1
@@ -64,9 +64,9 @@ gol_init_() { local key ;
 		[[ $dest == $IS_HASH  && ! -v $arrayname ]] && declare -gA $arrayname
 		if [[ $initial =~ ^\(.*\)$ ]] ; then
 		    eval "$arrayname=$initial"
-		elif [[ $initial ]] ; then
+		else
 		    [[ $dest == $IS_ARRAY ]] && array=(${initial:+"$initial"})
-		    [[ $dest == $IS_HASH  ]] && _gol_die "$initial: invalid hash data"
+		    [[ $dest == $IS_HASH  ]] && [[ $initial ]] && _gol_die "$initial: invalid hash data"
 		fi
 		;;
 	    *) [[ $name != $key ]] && _opts[$name]=${_opts[$key]} ;;
@@ -176,15 +176,19 @@ gol_export_() { local key ;
     return 0
 }
 gol_parse () { _gol_redirect "$@" ; }
-gol_parse_() { local gol_OPT array ;
+gol_parse_() { local gol_OPT SAVEARG=() PERMUTE=$(_gol_conf PERMUTE) EXPORT=$(_gol_conf EXPORT) SAVETO=$(_gol_conf SAVETO) ;
     local optstring="$(gol_optstring_)"
-    while getopts "$optstring" gol_OPT ; do
-	gol_getopts_ "$gol_OPT" "$@"
+    while (( OPTIND <= $# )) ; do
+	while getopts "$optstring" gol_OPT ; do
+	    gol_getopts_ "$gol_OPT" "$@"
+	done
+	[[ ! $PERMUTE || $OPTIND > $# || ${@:$(($OPTIND-1)):1} == -- ]] && break
+	SAVEARG+=(${@:$((OPTIND++)):1})
     done
-    shift $(( OPTIND - 1 ))
+    [[ $PERMUTE ]] && set -- "${SAVEARG[@]}" "${@:$OPTIND}" || shift $(( OPTIND - 1 ))
     _gol_debug "ARGV=(${@@Q})"
-    [[ ${array:=$(_gol_conf SAVETO)} ]] && { declare -n argv=$array ; argv=("$@") ; }
-    [[ $(_gol_conf EXPORT) ]] && gol_export_
+    [[ $SAVETO ]] && { declare -n _gol_argv=$SAVETO ; _gol_argv=("$@") ; }
+    [[ $EXPORT ]] && gol_export_
     return 0
 }
 getoptlong () {
