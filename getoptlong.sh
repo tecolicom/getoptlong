@@ -20,7 +20,7 @@ _gol_redirect() { local name ;
     declare -n _opts=$GOL_OPTIONS
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local MARKS=':~!&' MK_DATA=':' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' \
+    local MARKS=':~!&' MK_DEST=':' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' \
 	  KINDS=':@%+?' IS_NEED=":@%" IS_MUST=":" IS_MAY="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
     local CONFIG=(EXIT_ON_ERROR SILENT TRUE FALSE PERMUTE DEBUG EXPORT PREFIX)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]}" ; done
@@ -42,10 +42,10 @@ gol_init() { local key ;
 	[[ -v GOL_CONFIG[$2] ]] && _gol_die "$2 can not used as array name"
 	PERMUTE="$2" && _opts[&PERMUTE]="$2"
     }
-    _gol_redirect "${@:3}"
+    (( $# > 2 )) && gol_configure "${@:3}"
+    _gol_redirect
 }
 gol_init_() { local key ;
-    (( $# > 0 )) && gol_configure_ "$@"
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
 	[[ $key =~ ^([-_ \|[:alnum:]]+)([$KINDS]*)( *)$ ]] || _gol_die "[$key] -- invalid"
@@ -92,7 +92,7 @@ gol_configure_() { local param key val ;
 gol_optstring () { _gol_redirect "$@" ; }
 gol_optstring_() { local key string ;
     for key in "${!_opts[@]}" ; do
-	[[ $key =~ ^${MK_DATA}(.)$ ]] || continue
+	[[ $key =~ ^${MK_DEST}(.)$ ]] || continue
 	string+=${MATCH[1]}
 	[[ ${_opts[$key]} =~ [$IS_NEED] ]] && string+=:
     done

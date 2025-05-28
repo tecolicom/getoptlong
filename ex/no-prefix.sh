@@ -8,11 +8,12 @@ help() {
     cat <<-END
 	repeat count command
 	repeat [ options ] command
-	    -c#, --count=#        repeat count
-	    -i#, --sleep=#        interval time
-	    -p , --paragraph[=#]  print newline (or #) after each cycle
-	    -x , --trace          trace execution (set -x)
-	    -d , --debug          debug mode
+	    -c#, --count=#            repeat count
+	    -i#, --sleep=#            interval time
+	    -p , --paragraph[=#]      print newline (or #) after each cycle
+	    -m#, --message=WHEN=WHAT  print WHAT for WHEN (BEGIN, END, EACH)
+	    -x , --trace              trace execution (set -x)
+	    -d , --debug              debug mode
 	END
     exit 0
 }
@@ -25,20 +26,31 @@ declare -A OPT=(
     [ trace     | x   ]=
     [ debug     | d + ]=0
     [ help      | h   ]=
+    [ message   | m % ]=
 )
-getoptlong init OPT - EXPORT PREFIX= DEBUG=${DEBUG_ME:-}
+getoptlong init OPT ARGV EXPORT PREFIX= DEBUG=${DEBUG_ME:-}
 getoptlong callback help - trace -
-getoptlong parse "$@" && shift $((OPTIND - 1))
+getoptlong parse "$@" && eval "$(getoptlong set)"
+
 (( debug >= 2 )) && gol_dump | column >&2
 [[ ! -v paragraph ]] && paragraph= || : ${paragraph:=$'\n'} 
 
+
 case ${1:-} in
-    [0-9]*) $count=$1 ; shift ;;
+    [0-9]*) count=$1 ; shift ;;
 esac
 
+message() {
+    if [[ ${message[$1]:-} ]] ; then
+	echo "${message[$1]}"
+    fi
+}
+
+message BEGIN
 while (( count-- ))
 do
-    (( debug >= 1 )) && echo "[ ${COMMAND[@]@Q} ]" >&2
+    (( debug >= 1 )) && echo "[ ${@@Q} ]" >&2
+    message EACH
     eval "${@@Q}"
     if (( $count > 0 ))
     then
@@ -46,3 +58,4 @@ do
 	[[ $sleep ]] && sleep $sleep
     fi
 done
+message END
