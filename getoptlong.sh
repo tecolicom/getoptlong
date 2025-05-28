@@ -11,7 +11,6 @@ _gol_opts() {
     (($# == 2)) && { _opts["$1"]="$2" ; return 0 ; }
     [[ -v _opts[$1] ]] && echo "${_opts[$1]}" || return 1
 }
-_gol_conf()  { _gol_opts \&"$1" "${@:2}" ; }
 _gol_dest()  { _gol_opts \:"$1" "${@:2}" ; }
 _gol_alias() { _gol_opts \~"$1" "${@:2}" ; }
 _gol_hook()  { _gol_opts \!"$1" "${@:2}" ; }
@@ -23,7 +22,9 @@ _gol_redirect() {
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS=':~!&' MK_DATA=':' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' \
 	  KINDS=':@%+?' IS_ARGS=":@%" IS_NEED=":" IS_MAY="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
-    local TRUE=${_opts[${MK_CONF}TRUE]} FALSE=${_opts[${MK_CONF}FALSE]}
+    for key in EXIT_ON_ERROR SILENT SAVETO TRUE FALSE PERMUTE DEBUG EXPORT PREFIX ; do
+	declare $key="${_opts[&$key]}"
+    done
     "${FUNCNAME[1]}_" "$@"
 }
 gol_dump() {
@@ -56,7 +57,7 @@ gol_init_() { local key ;
 	case $dest in
 	    [$IS_MAY]) ;;
 	    [$IS_ARRAY]|[$IS_HASH])
-		local arrayname="$(_gol_conf PREFIX)$name"
+		local arrayname="${PREFIX}${name}"
 		declare -n array=$arrayname
 		_opts[$name]=$arrayname
 		local initial="${_opts[$key]}"
@@ -92,7 +93,7 @@ gol_optstring_() { local key string ;
 	string+=${MATCH[1]}
 	[[ ${_opts[$key]} =~ [$IS_ARGS] ]] && string+=:
     done
-    [[ $(_gol_conf SILENT) ]] && string=":$string"
+    [[ $SILENT ]] && string=":$string"
     string+="-:"
     _gol_debug "Return $string"
     echo "$string"
@@ -104,7 +105,7 @@ gol_getopts_() { local name val dest callback ;
 	[:?])
 	    local hook=$(_gol_hook "$opt")
 	    [[ $hook ]] && $hook "$OPTARG"
-	    [[ $(_gol_conf EXIT_ON_ERROR) ]] && exit 1
+	    [[ $EXIT_ON_ERROR ]] && exit 1
 	    return 0
 	    ;;
 	-)
@@ -169,23 +170,25 @@ gol_export_() { local key ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[[:alnum:]_] ]] || continue
 	[[ $(_gol_dest "$key") =~ [${IS_ARRAY}${IS_HASH}] ]] && continue
-	local name="$(_gol_conf PREFIX)${key}"
+	local name="${PREFIX}${key}"
 	_gol_debug "exporting $name=${_opts[$key]@Q}"
 	printf -v "${name}" '%s' "${_opts[$key]}";
     done
     return 0
 }
 gol_parse () { _gol_redirect "$@" ; }
-gol_parse_() { local gol_OPT SAVEARG=() PERMUTE=$(_gol_conf PERMUTE) EXPORT=$(_gol_conf EXPORT) SAVETO=$(_gol_conf SAVETO) ;
+gol_parse_() { local gol_OPT SAVEARG=() SAVEIND ;
     local optstring="$(gol_optstring_)"
     while (( OPTIND <= $# )) ; do
 	while getopts "$optstring" gol_OPT ; do
 	    gol_getopts_ "$gol_OPT" "$@"
 	done
+	: ${SAVEIND:=$OPTIND}
 	[[ ! $PERMUTE || $OPTIND > $# || ${@:$(($OPTIND-1)):1} == -- ]] && break
 	SAVEARG+=(${@:$((OPTIND++)):1})
     done
     [[ $PERMUTE ]] && set -- "${SAVEARG[@]}" "${@:$OPTIND}" || shift $(( OPTIND - 1 ))
+    OPTIND=$SAVEIND
     _gol_debug "ARGV=(${@@Q})"
     [[ $SAVETO ]] && { declare -n _gol_argv=$SAVETO ; _gol_argv=("$@") ; }
     [[ $EXPORT ]] && gol_export_
