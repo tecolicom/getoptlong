@@ -18,6 +18,7 @@ help() {
     exit 0
 }
 trace() { [[ $1 ]] && set -x || set +x ; }
+count() { [[ "$1" =~ ^[0-9]+$ ]] || { echo "$1: not a number" >&2; exit 1 ; } ; }
 
 declare -A OPT=(
     [ count     | c : ]=1
@@ -29,7 +30,7 @@ declare -A OPT=(
     [ message   | m % ]=
 )
 getoptlong init OPT
-getoptlong callback help - trace -
+getoptlong callback help - trace - count -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
 (( debug >= 2 )) && {
@@ -42,11 +43,7 @@ getoptlong parse "$@" && eval "$(getoptlong set)"
 
 [[ ${1:-} =~ ^[0-9]+$ ]] && { count=$1 ; shift ; }
 
-message() {
-    if [[ ${message[$1]:-} ]] ; then
-	echo "${message[$1]}"
-    fi
-}
+message() { [[ ${message[$1]:-} ]] && echo "${message[$1]}" || : ; }
 
 message BEGIN
 for (( i = 0; i < count ; i++ ))

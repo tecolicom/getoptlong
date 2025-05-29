@@ -39,7 +39,7 @@ esac
 
 while (( OPT[count]-- ))
 do
-    (( ${OPT[debug]} >= 1 )) && echo "[ ${COMMAND[@]@Q} ]" >&2
+    (( ${OPT[debug]} >= 1 )) && echo "[ ${@@Q} ]" >&2
     eval "${@@Q}"
     if (( OPT[count] > 0 ))
     then
