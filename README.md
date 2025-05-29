@@ -14,50 +14,47 @@
 
     ```bash
     declare -A OPTS=(
-        [help|h]=    # Simple flag
-        [name|n:]=   # Option with a required argument
-        [verbose|v+]= # Option that can be specified multiple times (increments)
-        [output|o?]= # Option with an optional argument
-        [mode|m@]=   # Array option
-        [config|C%]= # Hash option
+        [ help    | h   ]=  # Simple flag
+        [ name    | n : ]=  # Option with a required argument
+        [ output  | o ? ]=  # Option with an optional argument
+        [ verbose | v + ]=  # Option that can be specified multiple times (increments)
+        [ mode    | m @ ]=  # Array option
+        [ config  | C % ]=  # Hash option
     )
     ```
 
 3.  **Initialize the library:**
-    Call `getoptlong init` with the name of your options array. You can also set configurations like `PREFIX` or `PERMUTE`.
+    Call `getoptlong init` with the name of your options array.
 
     ```bash
-    getoptlong init OPTS PREFIX=opt_ PERMUTE=ARGS
+    getoptlong init OPTS
     ```
 
 4.  **Parse the arguments:**
-    Call `getoptlong parse` with the script's arguments (`"$@"`). Then, use `eval "$(getoptlong set)"` to set the variables according to the parsed options. If `PERMUTE` was used, the non-option arguments will be available in the specified array (e.g., `ARGS`). Otherwise, use `shift $((OPTIND-1))` to remove processed options.
+    Call `getoptlong parse` with the script's arguments (`"$@"`). Then, use `eval "$(getoptlong set)"` to set the variables according to the parsed options. If `PERMUTE` was used, the non-option arguments will be available in the specified array (`GOL_ARGV` by default). Otherwise, use `shift $((OPTIND-1))` to remove processed options.
 
     ```bash
-    getoptlong parse "$@"
-    eval "$(getoptlong set)" # If PERMUTE is not used, otherwise use: set -- "${ARGS[@]}"
-    # Or, if PERMUTE is not used:
-    # shift $((OPTIND-1))
+    getoptlong parse "$@" && eval "$(getoptlong set)" 
     ```
 
 5.  **Access option values:**
-    - If a `PREFIX` was set (e.g., `opt_`), options will be available as variables like `$opt_help`, `$opt_name`.
     - If no `PREFIX` was set, options will be available as variables like `$help`, `$name`.
-    - Array options will be available as Bash arrays (e.g., `"${opt_mode[@]}"`).
-    - Hash options will be available as Bash associative arrays (e.g., `"${!opt_config[@]}"` for keys, `"${opt_config[key]}"` for values).
+    - If a `PREFIX` was set (e.g., `opt_`), options will be available as variables like `$opt_help`, `$opt_name`.
+    - Array options will be available as Bash arrays (e.g., `"${mode[@]}"`).
+    - Hash options will be available as Bash associative arrays (e.g., `"${!config[@]}"` for keys, `"${config[key]}"` for values).
 
 ## Functions
 
 -   **`getoptlong init <opts_array_name> [CONFIGURATIONS...]`**:
     Initializes the library with the provided options definition array.
-    -   `PERMUTE=<array_name>`: Non-option arguments will be collected into `<array_name>`.
-    -   `PREFIX=<string>`: Prepend `<string>` to variable names when setting them.
-    -   `EXPORT=yes|no`: Whether to export the option variables (default: `yes`).
-    -   `EXIT_ON_ERROR=yes|no`: Whether to exit if an error occurs during parsing (default: `yes`).
+    -   `PERMUTE=<array_name>`: Non-option arguments will be collected into `<array_name>` (default: `GOL_ARGV`).
+    -   `PREFIX=<string>`: Prepend `<string>` to variable names when setting them (default: empty).
+    -   `EXPORT=<BOOL>`: Whether to export the option variables (default: `yes`).
+    -   `EXIT_ON_ERROR=<BOOL>`: Whether to exit if an error occurs during parsing (default: `yes`).
     -   `TRUE=<value>`: Value for boolean flags when they are present (default: `yes`).
-    -   `FALSE=<value>`: Value for boolean flags when explicitly negated with `no-` (default: empty string).
-    -   `SILENT=yes|no`: Suppress error messages (default: `no`).
-    -   `DEBUG=yes|no`: Enable debug messages (default: `no`).
+    -   `FALSE=<value>`: Value for boolean flags when explicitly negated with `no-` (default: empty).
+    -   `SILENT=<BOOL>`: Suppress error messages (default: empty).
+    -   `DEBUG=<BOOL>`: Enable debug messages (default: empty).
 
 -   **`getoptlong parse "$@"`**:
     Parses the command-line arguments according to the initialized options.
