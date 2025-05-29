@@ -105,7 +105,7 @@ gol_getopts_() { local hook name val dest callback ;
 	    return 0
 	    ;;
 	-)
-	    [[ $OPTARG =~ ^(no-?)?([-_[:alnum:]]+)(=(.*))? ]] || die "$OPTARG: unrecognized option"
+	    [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || die "$OPTARG: unrecognized option"
 	    local no="${MATCH[1]}" nm="${MATCH[2]}" param="${MATCH[3]}"; val="${MATCH[4]}"
 	    name=$(_gol_alias $nm) || name=$nm
 	    dest=$(_gol_dest $name)
