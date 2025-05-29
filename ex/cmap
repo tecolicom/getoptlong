@@ -193,7 +193,7 @@ table() {
     done
 }
 
-(( $# > 0 )) && echo "$@"
+if (( ${#GOL_ARGV[@]} > 0 )); then printf "Non-option arguments: %s\n" "${GOL_ARGV[@]}"; fi
 [[ ${#opt_mods[@]} == 0 ]] && opt_mods=(${OPTS[default]})
 
 [[ -v opt_message[BEGIN] ]] && echo "${opt_message[BEGIN]}"
