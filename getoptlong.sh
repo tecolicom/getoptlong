@@ -135,17 +135,11 @@ gol_getopts_() { local hook name val dest callback ;
 	    esac
 	    ;;
     esac
+    [[ $dest =~ [${IS_ARRAY}${IS_HASH}] ]] && declare -n array="${_opts[$name]}"
     case $dest in
-	[$IS_ARRAY]|[$IS_HASH])
-	    declare -n array="${_opts[$name]}"
-	    if [[ $dest == $IS_ARRAY ]] ; then
-		array+=($val)
-	    else
-		[[ $val =~ = ]] && array["${val%%=*}"]="${val#*=}" || array[$val]=$TRUE
-	    fi
-	    ;;
-	*)
-	    _opts[$name]="$val" ;;
+	[$IS_ARRAY]) array+=($val) ;;
+	[$IS_HASH])  [[ $val =~ = ]] && array["${val%%=*}"]="${val#*=}" || array[$val]=$TRUE ;;
+	*)           _opts[$name]="$val" ;;
     esac
     callback="$(_gol_hook $name)" && $callback "$val"
     return 0
