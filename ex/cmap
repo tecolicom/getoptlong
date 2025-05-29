@@ -92,7 +92,7 @@ declare -A OPTS=(
     [ message     % ]=
 #   [ message     % ]="([BEGIN]=$'HELLO\n' [END]=$'\nGOODBY')"
 )
-getoptlong init OPTS ARGV EXIT_ON_ERROR DEBUG=${DEBUG_ME:-}
+getoptlong init OPTS PERMUTE= PREFIX=opt_ DEBUG=${DEBUG_ME:-}
 getoptlong callback help  'help --help' \
                     man   'help --man'  \
                     usage 'help --usage'

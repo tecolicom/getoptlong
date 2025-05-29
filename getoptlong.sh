@@ -17,7 +17,7 @@ _gol_hook()  { _gol_opts \!"$1" "${@:2}" ; }
 _gol_valid() { [[ -v _opts[:$1] ]] ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_redirect() { local name ;
-    declare -n _opts=$GOL_OPTIONS
+    declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS=':~!&' MK_DEST=':' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' \
@@ -27,22 +27,18 @@ _gol_redirect() { local name ;
     "${FUNCNAME[1]}_" "$@"
 }
 gol_dump() {
-    declare -p $GOL_OPTIONS | grep -oE '\[[^]]*\]="[^"]*"' | sort
+    declare -p $GOL_OPTHASH | grep -oE '\[[^]]*\]="[^"]*"' | sort
 }
 gol_init() { local key ;
-    (( $# == 0 )) && { echo 'local GOL_OPTIONS OPTIND=1' ; return ; }
+    (( $# == 0 )) && { echo 'local GOL_OPTHASH OPTIND=1' ; return ; }
     declare -A GOL_CONFIG=(
-	[EXIT_ON_ERROR]=yes [SILENT]= [TRUE]=yes [FALSE]= [PERMUTE]= [DEBUG]=
-	[EXPORT]= [PREFIX]=opt_
+	[PERMUTE]=GOL_ARGV [EXPORT]=yes [EXIT_ON_ERROR]=yes [PREFIX]=
+	[TRUE]=yes [FALSE]= [SILENT]= [DEBUG]=
     )
     declare -n _opts=$1
     for key in "${!GOL_CONFIG[@]}" ; do _opts[&$key]="${GOL_CONFIG[$key]}" ; done
-    GOL_OPTIONS=$1
-    [[ ${2:-} =~ ^[_a-zA-Z][_a-zA-Z0-9]*$ ]] && {
-	[[ -v GOL_CONFIG[$2] ]] && _gol_die "$2 can not used as array name"
-	PERMUTE="$2" && _opts[&PERMUTE]="$2"
-    }
-    (( $# > 2 )) && gol_configure "${@:3}"
+    GOL_OPTHASH=$1
+    (( $# > 1 )) && gol_configure "${@:2}"
     _gol_redirect
 }
 ################################################################################
@@ -197,7 +193,7 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
 gol_set () { _gol_redirect "$@" ; }
 gol_set_() {
     if [[ $PERMUTE ]] ; then
-	printf 'set -- "${%s[@]}"' "$PERMUTE"
+	printf 'set -- "${%s[@]}"\n' "$PERMUTE"
     else
 	echo 'shift $(( OPTIND-1 ))'
     fi

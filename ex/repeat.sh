@@ -8,11 +8,12 @@ help() {
     cat <<-END
 	repeat count command
 	repeat [ options ] command
-	    -c#, --count=#        repeat count
-	    -i#, --sleep=#        interval time
-	    -p , --paragraph[=#]  print newline (or #) after each cycle
-	    -x , --trace          trace execution (set -x)
-	    -d , --debug          debug mode
+	    -c#, --count=#            repeat count
+	    -i#, --sleep=#            interval time
+	    -p , --paragraph[=#]      print newline (or #) after each cycle
+	    -m#, --message=WHEN=WHAT  print WHAT for WHEN (BEGIN, END, EACH)
+	    -x , --trace              trace execution (set -x)
+	    -d , --debug              debug level
 	END
     exit 0
 }
@@ -20,30 +21,47 @@ trace() { [[ $1 ]] && set -x || set +x ; }
 
 declare -A OPT=(
     [ count     | c : ]=1
-    [ sleep     | i : ]=0
+    [ sleep     | i @ ]=
     [ paragraph | p ? ]=
     [ trace     | x   ]=
     [ debug     | d + ]=0
     [ help      | h   ]=
+    [ message   | m % ]=
 )
-getoptlong init OPT - DEBUG=${DEBUG_ME:-}
+getoptlong init OPT
 getoptlong callback help - trace -
 getoptlong parse "$@" && eval "$(getoptlong set)"
-(( OPT[debug] >= 1 )) && echo "OPTIND=$OPTIND"
-(( OPT[debug] >= 2 )) && gol_dump | column >&2
-[[ ! -v OPT[paragraph] ]] && OPT[paragraph]= || : ${OPT[paragraph]:=$'\n'} 
 
-case ${1:-} in
-    [0-9]*) OPT[count]=$1 ; shift ;;
-esac
+(( debug >= 2 )) && {
+    getoptlong dump | column >&2
+    declare -p sleep
+    declare -p message
+}
 
-while (( OPT[count]-- ))
+: ${paragraph:=${paragraph+${paragrah:-$'\n'}}}
+
+[[ ${1:-} =~ ^[0-9]+$ ]] && { count=$1 ; shift ; }
+
+message() {
+    if [[ ${message[$1]:-} ]] ; then
+	echo "${message[$1]}"
+    fi
+}
+
+message BEGIN
+for (( i = 0; i < count ; i++ ))
 do
-    (( ${OPT[debug]} >= 1 )) && echo "[ ${COMMAND[@]@Q} ]" >&2
-    eval "${@@Q}"
-    if (( OPT[count] > 0 ))
+    message EACH
+    (( debug > 0 )) && echo "# [ ${@@Q} ]" >&2
+    "$@"
+    if (( count > 0 ))
     then
-	[[ ${OPT[paragraph]} ]] && echo -n "${OPT[paragraph]}"
-	[[ ${OPT[sleep]} ]] && sleep ${OPT[sleep]}
+	[[ $paragraph ]] && echo -n "$paragraph"
+	(( ${#sleep[@]} > 0 )) && {
+	    time=${sleep[$(( i % ${#sleep[@]} ))]}
+	    (( debug > 0 )) && echo "# sleep $time" >&2
+	    sleep $time
+	}
     fi
 done
+message END

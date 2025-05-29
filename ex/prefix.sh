@@ -28,34 +28,34 @@ declare -A OPT=(
     [ help      | h   ]=
     [ message   | m % ]=
 )
-getoptlong init OPT ARGV EXPORT PREFIX= DEBUG=${DEBUG_ME:-}
+getoptlong init OPT PREFIX=opt_
 getoptlong callback help - trace -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
-(( debug >= 2 )) && gol_dump | column >&2
-[[ ! -v paragraph ]] && paragraph= || : ${paragraph:=$'\n'} 
+(( opt_debug >= 2 )) && gol_dump | column >&2
+[[ ! -v opt_paragraph ]] && opt_paragraph= || : ${opt_paragraph:=$'\n'} 
 
 
 case ${1:-} in
-    [0-9]*) count=$1 ; shift ;;
+    [0-9]*) opt_count=$1 ; shift ;;
 esac
 
 message() {
-    if [[ ${message[$1]:-} ]] ; then
-	echo "${message[$1]}"
+    if [[ ${opt_message[$1]:-} ]] ; then
+	echo "${opt_message[$1]}"
     fi
 }
 
 message BEGIN
-while (( count-- ))
+while (( opt_count-- ))
 do
-    (( debug >= 1 )) && echo "[ ${@@Q} ]" >&2
+    (( opt_debug >= 1 )) && echo "[ ${@@Q} ]" >&2
     message EACH
     eval "${@@Q}"
-    if (( $count > 0 ))
+    if (( opt_count > 0 ))
     then
-	[[ $paragraph ]] && echo -n "$paragraph"
-	[[ $sleep ]] && sleep $sleep
+	[[ $opt_paragraph ]] && echo -n "$opt_paragraph"
+	[[ $opt_sleep ]] && sleep $opt_sleep
     fi
 done
 message END
