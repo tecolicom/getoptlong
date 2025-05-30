@@ -16,13 +16,14 @@ _gol_alias() { _gol_opts \~"$1" "${@:2}" ; }
 _gol_hook()  { _gol_opts \!"$1" "${@:2}" ; }
 _gol_valid() { [[ -v _opts[:$1] ]] ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
+_gol_incr() { [[ ${_opts["$1"]} =~ ^[0-9]+$ ]] && echo $(( ${_opts[$1]} + 1 )) || echo 1 ; }
 _gol_redirect() { local name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS=':~!&' MK_DEST=':' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' \
 	  KINDS=':@%+?' IS_NEED=":@%" IS_MUST=":" IS_MAY="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
-    local CONFIG=(EXIT_ON_ERROR SILENT TRUE FALSE PERMUTE DEBUG EXPORT PREFIX)
+    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE DEBUG EXPORT PREFIX)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
@@ -32,8 +33,7 @@ gol_dump() {
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTHASH OPTIND=1' ; return ; }
     declare -A GOL_CONFIG=(
-	[PERMUTE]=GOL_ARGV [EXPORT]=yes [EXIT_ON_ERROR]=yes [PREFIX]=
-	[TRUE]=yes [FALSE]= [SILENT]= [DEBUG]=
+	[PERMUTE]=GOL_ARGV [EXPORT]=1 [EXIT_ON_ERROR]=1 [PREFIX]= [SILENT]= [DEBUG]=
     )
     declare -n _opts=$1
     for key in "${!GOL_CONFIG[@]}" ; do _opts[&$key]="${GOL_CONFIG[$key]}" ; done
@@ -80,7 +80,7 @@ gol_configure_() { local param key val ;
     for param in "$@" ; do
 	[[ $param =~ ^[[:alnum:]] ]] || _gol_die "$param -- invalid config parameter"
 	key="${MK_CONF}${param%%=*}"
-	[[ $param =~ =(.*) ]] && val="${MATCH[1]}" || val="$TRUE"
+	[[ $param =~ =(.*) ]] && val="${MATCH[1]}" || val=1
 	[[ -v _opts[$key] ]] || _gol_die "$param -- invalid config parameter"
 	_opts[$key]="$val"
     done
@@ -101,8 +101,7 @@ gol_getopts_() { local hook name val dest callback ;
     case $opt in
 	[:?])
 	    hook=$(_gol_hook "$opt") && [[ $hook ]] && $hook "$OPTARG"
-	    [[ $EXIT_ON_ERROR ]] && exit 1
-	    return 0
+	    [[ $EXIT_ON_ERROR ]] && exit 1 || return 0
 	    ;;
 	-)
 	    [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || die "$OPTARG: unrecognized option"
@@ -115,13 +114,12 @@ gol_getopts_() { local hook name val dest callback ;
 	    else
 		case $dest in
 		    [$IS_MAY]) ;;
-		    [$IS_INCR]) val=$(( _opts[$name] + 1 )) ;;
 		    [$IS_NEED])
 			(( OPTIND > $# )) && _gol_die "option requires an argument -- $name"
 			val=${@:$OPTIND:1}
 			(( OPTIND++ ))
 			;;
-		    *) [[ $no ]] && val="$FALSE" || val="$TRUE" ;;
+		    *) [[ $no ]] && val= || val=$(_gol_incr "$name") ;;
 		esac
 	    fi
 	    ;;
@@ -129,16 +127,15 @@ gol_getopts_() { local hook name val dest callback ;
 	    name=$(_gol_alias $opt) || name=$opt
 	    case ${dest:=$(_gol_dest "$name")} in
 		[$IS_MAY])  val="${OPTARG:-}" ;;
-		[$IS_INCR]) val=$(( _opts[$name] + 1 )) ;;
 		[$IS_NEED]) val="${OPTARG}" ;;
-		*)          val="$TRUE" ;;
+		*)          val=$(_gol_incr "$name") ;;
 	    esac
 	    ;;
     esac
     [[ $dest =~ [${IS_ARRAY}${IS_HASH}] ]] && declare -n array="${_opts[$name]}"
     case $dest in
 	[$IS_ARRAY]) array+=($val) ;;
-	[$IS_HASH])  [[ $val =~ = ]] && array["${val%%=*}"]="${val#*=}" || array[$val]=$TRUE ;;
+	[$IS_HASH])  [[ $val =~ = ]] && array["${val%%=*}"]="${val#*=}" || array[$val]=1 ;;
 	*)           _opts[$name]="$val" ;;
     esac
     callback="$(_gol_hook $name)" && $callback "$val"
@@ -149,7 +146,7 @@ gol_callback_() {
     declare -a config=("$@")
     while (($# > 0)) ; do
 	local name=$1 callback=${2:-$1}
-	[[ $callback == - ]] && callback=$name
+	[[ $callback =~ ^[_[:alnum:]] ]] || callback=$name
 	_gol_hook "$name" "$callback"
 	shift $(( $# >= 2 ? 2 : 1 ))
     done
