@@ -26,7 +26,7 @@ declare -A OPT=(
     [ trace     | x     ]=
     [ debug     | d     ]=0
     [ help      | h     ]=
-    [ message   | m %   ]=
+    [ message   | m %=(^(BEGIN|END|EACH)=) ]=
 )
 getoptlong init OPT
 getoptlong callback help - trace -

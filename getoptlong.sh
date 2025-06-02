@@ -18,8 +18,10 @@ _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
 _gol_validate() {
     case $1 in
-	i) [[ "$2" =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
-	f) [[ "$2" =~ ^[-+]?[0-9]+(\.[0-9]*)?$ ]] || _gol_die "$2: not a number" ;;
+	i)   [[ "$2" =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
+	f)   [[ "$2" =~ ^[-+]?[0-9]+(\.[0-9]*)?$ ]] || _gol_die "$2: not a number" ;;
+	\(*) eval "[[ $2 =~ $1 ]]"                  || _gol_die "$2: invalid argument" ;;
+	*)   _gol_die "$1: unkown validation pattern" ;;
     esac
 }
 _gol_redirect() { local name ;
@@ -48,7 +50,7 @@ gol_init() { local key ;
 gol_init_() { local key aliases alias ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
-	[[ $key =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*)( *)(=([if]|/.*/))?( *)(#.*)?$ ]] \
+	[[ $key =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*)( *)(=([if]|\(.*\)))?( *)(#.*)?$ ]] \
 	    || _gol_die "[$key] -- invalid"
 	local names=${MATCH[1]} dtype=${MATCH[2]} type=${MATCH[5]} comment=${MATCH[7]}
 	local initial="${_opts[$key]}"
@@ -142,7 +144,7 @@ gol_getopts_() { local optname val dtype dname alias rname callback type ;
 	*)           target=${val-$(_gol_incr "$target")} ;;
     esac
     alias=$(_gol_alias $optname) && rname=$alias || rname=$optname
-    type=$(_gol_check $rname) && _gol_validate $type "$val"
+    type=$(_gol_check $rname) && _gol_validate "$type" "$val"
     callback="$(_gol_hook $rname)" && $callback "$target"
     return 0
 }
