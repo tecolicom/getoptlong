@@ -43,7 +43,7 @@ getoptlong parse "$@" && eval "$(getoptlong set)"
 
 [[ ${1:-} =~ ^[0-9]+$ ]] && { count=$1 ; shift ; }
 
-message() { [[ ${message[$1]:-} ]] && echo "${message[$1]}" || : ; }
+message() { [[ -v message[$1] ]] && echo "${message[$1]}" || : ; }
 
 message BEGIN
 for (( i = 0; i < count ; i++ ))
