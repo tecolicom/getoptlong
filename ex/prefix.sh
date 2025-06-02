@@ -25,7 +25,7 @@ declare -A OPT=(
     [ sleep     | i @ ]=
     [ paragraph | p ? ]=
     [ trace     | x   ]=
-    [ debug     | d + ]=0
+    [ debug     | d   ]=0
     [ help      | h   ]=
     [ message   | m % ]=
 )

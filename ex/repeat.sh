@@ -25,7 +25,7 @@ declare -A OPT=(
     [ sleep     | i @ ]=
     [ paragraph | p ? ]=
     [ trace     | x   ]=
-    [ debug     | d + ]=0
+    [ debug     | d   ]=0
     [ help      | h   ]=
     [ message   | m % ]=
 )
@@ -39,7 +39,7 @@ getoptlong parse "$@" && eval "$(getoptlong set)"
     declare -p message
 }
 
-: ${paragraph:=${paragraph+${paragrah:-$'\n'}}}
+: ${paragraph:=${paragraph+${paragraph:-$'\n'}}}
 
 [[ ${1:-} =~ ^[0-9]+$ ]] && { count=$1 ; shift ; }
 
