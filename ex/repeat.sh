@@ -18,19 +18,18 @@ help() {
     exit 0
 }
 trace() { [[ $1 ]] && set -x || set +x ; }
-count() { [[ "$1" =~ ^[0-9]+$ ]] || { echo "$1: not a number" >&2; exit 1 ; } ; }
 
 declare -A OPT=(
-    [ count     | c : ]=1
-    [ sleep     | i @ ]=
-    [ paragraph | p ? ]=
-    [ trace     | x   ]=
-    [ debug     | d   ]=0
-    [ help      | h   ]=
-    [ message   | m % ]=
+    [ count     | c :=i ]=1
+    [ sleep     | i @=f ]=
+    [ paragraph | p ?   ]=
+    [ trace     | x     ]=
+    [ debug     | d     ]=0
+    [ help      | h     ]=
+    [ message   | m %   ]=
 )
 getoptlong init OPT
-getoptlong callback help - trace - count -
+getoptlong callback help - trace -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
 (( debug >= 2 )) && {
