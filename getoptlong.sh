@@ -20,7 +20,7 @@ _gol_validate() {
     case $1 in
 	i)   [[ "$2" =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
 	f)   [[ "$2" =~ ^[-+]?[0-9]+(\.[0-9]*)?$ ]] || _gol_die "$2: not a number" ;;
-	\(*) eval "[[ $2 =~ $1 ]]"                  || _gol_die "$2: invalid argument" ;;
+	\(*) eval "[[ \"$2\" =~ $1 ]]"              || _gol_die "$2: invalid argument" ;;
 	*)   _gol_die "$1: unkown validation pattern" ;;
     esac
 }
@@ -30,7 +30,7 @@ _gol_redirect() { local name ;
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS='~!&=' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' \
 	  IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
-    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE DEBUG PREFIX)
+    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE DEBUG PREFIX IFS)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
@@ -40,7 +40,7 @@ gol_dump() {
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTHASH OPTIND=1' ; return ; }
     declare -n _opts=$1
-    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [PREFIX]= [SILENT]= [DEBUG]=)
+    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [PREFIX]= [SILENT]= [DEBUG]= [IFS]=$' \t\n,')
     for key in "${!GOL_CONFIG[@]}" ; do _opts[&$key]="${GOL_CONFIG[$key]}" ; done
     GOL_OPTHASH=$1
     (( $# > 1 )) && gol_configure "${@:2}"
@@ -138,15 +138,31 @@ gol_getopts_() { local optname val dtype dname alias rname callback type ;
 	    [[ $dtype =~ [${IS_FREE}${IS_NEED}] ]] && val="${OPTARG:-}"
 	    ;;
     esac
-    case $dtype in
-	[$IS_ARRAY]) target+=($val) ;;
-	[$IS_HASH])  [[ $val =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
-	*)           target=${val-$(_gol_incr "$target")} ;;
-    esac
     alias=$(_gol_alias $optname) && rname=$alias || rname=$optname
-    type=$(_gol_check $rname) && _gol_validate "$type" "$val"
+    type=$(_gol_check $rname)
+    _gol_set_target
     callback="$(_gol_hook $rname)" && $callback "$target"
     return 0
+}
+_gol_set_target() { local vals ;
+    case $dtype in
+	[$IS_ARRAY]|[$IS_HASH])
+	    read -a vals <<<"$val"
+	    for val in "${vals[@]}" ; do
+		[[ $type ]] && _gol_validate "$type" "$val"
+		case $dtype in
+		[$IS_ARRAY]) target+=($val) ;;
+		[$IS_HASH])  [[ $val =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
+		esac
+	    done
+	    ;;
+	[$IS_ARRAY]) target+=($val) ;;
+	[$IS_HASH])  [[ $val =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
+	*)
+	    [[ $type ]] && _gol_validate "$type" "$val"
+	    target=${val-$(_gol_incr "$target")}
+	    ;;
+    esac
 }
 gol_callback () { _gol_redirect "$@" ; }
 gol_callback_() {
