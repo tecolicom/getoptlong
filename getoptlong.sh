@@ -52,29 +52,29 @@ gol_init_() { local key aliases alias ;
 	[[ $key =~ ^[$MARKS] ]] && continue
 	[[ $key =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*)( *)(=([if]|\(.*\)))?( *)(#.*)?$ ]] \
 	    || _gol_die "[$key] -- invalid"
-	local names=${MATCH[1]} dtype=${MATCH[2]} type=${MATCH[5]} comment=${MATCH[7]}
+	local names=${MATCH[1]} vtype=${MATCH[2]} type=${MATCH[5]} comment=${MATCH[7]}
 	local initial="${_opts[$key]}"
 	IFS=' |' read -a aliases <<<$names
 	local name=${aliases[0]}
-	local dname="${PREFIX}${name}"
-	declare -n target=$dname
+	local vname="${PREFIX}${name}"
+	declare -n target=$vname
 	unset _opts["$key"]
-	case ${dtype:=$IS_INCR} in
+	case ${vtype:=$IS_INCR} in
 	    [$IS_FREE]) ;;
 	    [$IS_ARRAY]|[$IS_HASH])
-		[[ $dtype == $IS_ARRAY && ! -v $dname ]] && declare -ga $dname
-		[[ $dtype == $IS_HASH  && ! -v $dname ]] && declare -gA $dname
+		[[ $vtype == $IS_ARRAY && ! -v $vname ]] && declare -ga $vname
+		[[ $vtype == $IS_HASH  && ! -v $vname ]] && declare -gA $vname
 		if [[ $initial =~ ^\(.*\)$ ]] ; then
-		    eval "$dname=$initial"
+		    eval "$vname=$initial"
 		else
-		    [[ $dtype == $IS_ARRAY ]] && target=(${initial:+"$initial"})
-		    [[ $dtype == $IS_HASH  ]] && [[ $initial ]] && _gol_die "$initial: invalid hash data"
+		    [[ $vtype == $IS_ARRAY ]] && target=(${initial:+"$initial"})
+		    [[ $vtype == $IS_HASH  ]] && [[ $initial ]] && _gol_die "$initial: invalid hash data"
 		fi
 		;;
 	    [$IS_WANT]|[$IS_INCR])
 		target=$initial ;;
 	esac
-	_opts[$name]="${dtype}${dname}"
+	_opts[$name]="${vtype}${vname}"
 	[[ $type ]] && _gol_check $name "$type"
 	for alias in "${aliases[@]:1}" ; do
 	    _opts[$alias]="${_opts[$name]}"
@@ -103,65 +103,61 @@ gol_optstring_() { local key string ;
     echo "${SILENT:+:}${string}-:"
 }
 gol_getopts () { _gol_redirect "$@" ; }
-gol_getopts_() { local optname val dtype dname alias rname callback type ;
+gol_getopts_() { local optname val vtype vname name callback ;
     local opt="$1"; shift;
     case $opt in
-	[:?])
-	    callback=$(_gol_hook "$opt") && [[ $hook ]] && $callback "$OPTARG"
-	    [[ $EXIT_ON_ERROR ]] && exit 1 || return 0
-	    ;;
-	-)
-	    [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || die "$OPTARG: unrecognized option"
-	    local no="${MATCH[1]}" optname="${MATCH[2]}" param="${MATCH[3]}"; val="${MATCH[4]}"
-	    [[ ${_opts[$optname]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- --$optname"
-	    dtype=${MATCH[1]} dname=${MATCH[2]}
-	    declare -n target=$dname
-	    if [[ $param ]] ; then
-		[[ $dtype =~ [${IS_NEED}${IS_FREE}] ]] || die "does not take an argument -- $optname"
-	    else
-		case $dtype in
-		    [$IS_FREE]) ;;
-		    [$IS_NEED])
-			(( OPTIND > $# )) && _gol_die "option requires an argument -- $optname"
-			val=${@:$OPTIND:1}
-			(( OPTIND++ ))
-			;;
-		    *) [[ $no ]] && val= || unset val ;;
-		esac
-	    fi
-	    ;;
-	*)
-	    optname=$opt
-	    [[ ${_opts[$opt]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- -$opt"
-	    dtype=${MATCH[1]} dname=${MATCH[2]}
-	    declare -n target="${MATCH[2]}"
-	    [[ $dtype =~ [${IS_FREE}${IS_NEED}] ]] && val="${OPTARG:-}"
-	    ;;
+	[:?]) callback=$(_gol_hook "$opt") && [[ $callback ]] && $callback "$OPTARG"
+	      [[ $EXIT_ON_ERROR ]] && exit 1 || return 0 ;;
+	-) _gol_getopts_long "$@" ;;
+	*) _gol_getopts_short ;;
     esac
-    alias=$(_gol_alias $optname) && rname=$alias || rname=$optname
-    type=$(_gol_check $rname)
-    _gol_set_target
-    callback="$(_gol_hook $rname)" && $callback "$target"
+    name=$(_gol_alias $optname) || name=$optname
+    _gol_getopts_store
+    callback="$(_gol_hook $name)" && $callback "$target"
     return 0
 }
-_gol_set_target() { local vals ;
-    case $dtype in
+_gol_getopts_long() { local no param ;
+    [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || die "$OPTARG: unrecognized option"
+    no="${MATCH[1]}" optname="${MATCH[2]}" param="${MATCH[3]}" val="${MATCH[4]}"
+    [[ ${_opts[$optname]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- --$optname"
+    vtype=${MATCH[1]} vname=${MATCH[2]}
+    if [[ $param ]] ; then
+	[[ $vtype =~ [${IS_NEED}${IS_FREE}] ]] || die "does not take an argument -- $optname"
+    else
+	case $vtype in
+	    [$IS_FREE]) ;;
+	    [$IS_NEED])
+		(( OPTIND > $# )) && _gol_die "option requires an argument -- $optname"
+		val=${@:$OPTIND:1}
+		(( OPTIND++ )) ;;
+	    *) [[ $no ]] && val= || unset val ;;
+	esac
+    fi
+}
+_gol_getopts_short() {
+    optname=$opt
+    [[ ${_opts[$opt]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- -$opt"
+    vtype=${MATCH[1]} vname=${MATCH[2]}
+    [[ $vtype =~ [${IS_FREE}${IS_NEED}] ]] && val="${OPTARG:-}"
+}
+_gol_getopts_store() { local vals ;
+    declare -n target=$vname
+    local check=$(_gol_check $name)
+    case $vtype in
 	[$IS_ARRAY]|[$IS_HASH])
 	    read -a vals <<<"$val"
 	    for val in "${vals[@]}" ; do
-		[[ $type ]] && _gol_validate "$type" "$val"
-		case $dtype in
+		[[ $check ]] && _gol_validate "$check" "$val"
+		case $vtype in
 		[$IS_ARRAY]) target+=($val) ;;
 		[$IS_HASH])  [[ $val =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
 		esac
 	    done
 	    ;;
 	[$IS_ARRAY]) target+=($val) ;;
-	[$IS_HASH])  [[ $val =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
-	*)
-	    [[ $type ]] && _gol_validate "$type" "$val"
-	    target=${val-$(_gol_incr "$target")}
-	    ;;
+	[$IS_HASH])  [[ "$val" =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
+	*) [[ $check ]] && _gol_validate "$check" "$val"
+	   target=${val-$(_gol_incr "$target")} ;;
     esac
 }
 gol_callback () { _gol_redirect "$@" ; }
@@ -193,11 +189,7 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
 }
 gol_set () { _gol_redirect "$@" ; }
 gol_set_() {
-    if [[ $PERMUTE ]] ; then
-	printf 'set -- "${%s[@]}"\n' "$PERMUTE"
-    else
-	echo 'shift $(( OPTIND-1 ))'
-    fi
+    [[ $PERMUTE ]] && printf 'set -- "${%s[@]}"\n' "$PERMUTE" || echo 'shift $(( OPTIND-1 ))'
 }
 getoptlong () {
     case $1 in
