@@ -274,9 +274,7 @@ When defining options in the associative array:
     an argument** (e.g., used as `-h` or `--help`). Its associated
     variable is incremented each time the option is found (e.g., if
     `-h` is specified, `$help` becomes `1`; if specified again, it
-    becomes `2`). While less common for typical flags, if a value is
-    explicitly assigned using the long option form (e.g., `--help=5`),
-    the variable will be set to that value.
+    becomes `2`).
 
 -   `:` (e.g., `[name|n:]`): Option **requires an argument**. The
     methods for specifying this argument are detailed in the "How to
@@ -289,18 +287,13 @@ When defining options in the associative array:
 
 -   `@` (e.g., `[mode|m@]`): **Array option**. Collects one or more
     arguments into a Bash array. Array options inherently expect
-    arguments (the items of the array) and **cannot** be combined with
-    `?` (optional argument) or `:` (required argument) specifiers in
-    their definition (e.g., `m@?` or `m@:` are invalid). See "How to
-    Specify Option Values" for how these arguments are provided.
+    arguments (the items of the array). See "How to Specify Option
+    Values" for how these arguments are provided.
 
 -   `%` (e.g., `[config|C%]`): **Hash option**. Collects one or more
     `key=value` pairs into a Bash associative array. Hash options
-    inherently expect arguments (the `key=value` pairs) and **cannot**
-    be combined with `?` (optional argument) or `:` (required
-    argument) specifiers in their definition (e.g., `C%?` or `C%:` are
-    invalid). See "How to Specify Option Values" for how these
-    arguments are provided.
+    inherently expect arguments (the `key=value` pairs). See "How to
+    Specify Option Values" for how these arguments are provided.
 
 ## Data Validation
 
@@ -331,14 +324,14 @@ For options that take arguments (i.e., those defined with `:`, `@`, or
 
     *   Example for an option requiring an argument: `[count|c:=i]`
 
-    *   Example for an array option: `[ids|id@=i]` (e.g., `--ids=1,2,3` or `--ids 1 --ids 2`)
+    *   Example for an array option: `[ids|id@=i]` (e.g.,
+        `--ids=1,2,3` or `--ids 1 --ids 2`)
 
-    *   Example for a hash option: `[config_levels|cl%=i]` (e.g., `--config_levels=main=1,aux=2`)
+    *   Example for a hash option: `[config_levels|cl%=i]` (e.g.,
+        `--config_levels=main=1,aux=2`)
 
     *   If an argument is not a valid integer, `getoptlong.sh` will
-        report an error and the script will typically exit (this
-        behavior is managed by the internal `_gol_validate` and
-        `_gol_die` functions).
+        report an error and the script will exit.
 
 *   **Float Validation (`=f`)**: Appending `=f` to an option
     definition ensures that the provided argument(s) must be valid
@@ -346,11 +339,14 @@ For options that take arguments (i.e., those defined with `:`, `@`, or
 
     *   Example for an option requiring an argument: `[rate|r:=f]`
 
-    *   Example for an array option: `[measurements|m@=f]` (e.g., `--measurements=1.2,3.05`)
+    *   Example for an array option: `[measurements|m@=f]` (e.g.,
+        `--measurements=1.2,3.05`)
 
-    *   Example for a hash option: `[tolerances|t%=f]` (e.g., `--tolerances=low=0.01,high=0.05`)
+    *   Example for a hash option: `[tolerances|t%=f]` (e.g.,
+        `--tolerances=low=0.01,high=0.05`)
 
-    *   Similar to integer validation, a non-float argument will result in an error and script termination.
+    *   Similar to integer validation, a non-float argument will
+        result in an error and script termination.
 
     *   Note: Float validation (`=f`) supports formats like
         `123.45`. Exponential notation (e.g., `1.2e-3`) and formats
@@ -394,9 +390,8 @@ flexibility.
 When a callback is defined for an option, the option's argument
 (value) is passed as the first parameter (`$1`) to the callback
 function. The callback can then perform any necessary checks. If
-validation fails, the callback should typically `exit 1` (or `return
-1` if `EXIT_ON_ERROR` is configured to be off or non-strict for the
-script), often after printing a custom error message to `stderr`.
+validation fails, the callback should typically `exit 1` often after
+printing a custom error message to `stderr`.
 
 For example, to check if a 'count' option is a positive number:
 
@@ -404,12 +399,10 @@ For example, to check if a 'count' option is a positive number:
 # Callback function for the 'count' option
 count_check() {
     if [[ "$1" =~ ^[0-9]+$ && "$1" -gt 0 ]]; then
-        # Value is valid, optionally assign it or just return success
-        # If the variable name is 'count', it's already set by getoptlong
         return 0
     else
         echo "Error: 'count' must be a positive integer, got '$1'." >&2
-        exit 1 # Or return 1 if EXIT_ON_ERROR is configured differently
+        exit 1
     fi
 }
 getoptlong callback count count_check
