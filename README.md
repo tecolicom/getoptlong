@@ -157,22 +157,24 @@ This section details how values are provided for options based on their definiti
         *   `--param` (without `=value`): The variable `$param` will be set to an empty string. If a default value was defined for the option (e.g., `[param|p?]=defaultval`), this empty string assignment typically overrides the default for this specific invocation. If the option is not used at all, the predefined default (if any) remains.
     *   **Short form** (e.g., `-p` for `[param|p?]`):
         *   Using just `-p`: The variable `$param` will be set to an empty string (or default handling as described above for long options).
-        *   Providing a value with a short option that has an optional argument (e.g., trying to do `-pvalue`): Support for this can be inconsistent or behave like a required argument depending on the specific `getopts` implementation and shell. For maximum clarity and reliability, if you need to provide a value to an option with an optional argument, it is **strongly recommended to use the long option form** (`--param=value`).
+        *   The form `-pvalue` (attempting to attach a value directly to a short option with an optional argument) is generally **not supported or reliable.** To provide a value, the long option form (`--param=value`) is recommended.
 
 *   **Array Options (defined with `@`)**
-    *   These options collect multiple values into a Bash array. The way the initial argument for the array is provided depends on whether the array option itself is defined to require an argument (e.g., `[myarray|a@:]`) or have an optional argument (e.g., `[myarray|a@?]`).
-    *   If defined as `[myarray|a@:]` (requires an argument for the list):
+    *   These options collect multiple values into a Bash array. Typically, array options are used by specifying the option multiple times (e.g., `--array val1 --array val2` or `-a val1 -a val2` if `-a` is an array option requiring an argument). This adds each `val` as a new element to the array.
+    *   As a convenience for providing multiple items at once, you can also use a single option instance. The way the argument for this single instance is provided depends on whether the array option itself is defined to require an argument (e.g., `[myarray|a@:]`) or have an optional argument (e.g., `[myarray|a@?]`).
+    *   For example, if defined as `[myarray|a@:]` (requires an argument for the list):
         *   `--myarray=val1,val2,val3` or `--myarray "val1 val2 val3"`
         *   `-a val1,val2,val3` or `-a "val1 val2 val3"` (if `-a` is the short option)
-    *   Values within the list are separated by commas, spaces, or tabs (controlled by the IFS setting, default is space, tab, newline). Quotes should be used if a single value within the list contains spaces/tabs, e.g., `--myarray="first item,second item,third"`.
+    *   In this convenience form, values within the list are separated by commas, spaces, or tabs (controlled by the IFS setting, default is space, tab, newline). Quotes should be used if a single value within the list contains spaces/tabs, e.g., `--myarray="first item,second item,third"`.
     *   The variable (e.g., `$myarray`) will be a Bash array; access elements with `${myarray[0]}`, etc.
 
 *   **Hash Options (defined with `%`)**
-    *   These options collect key-value pairs into a Bash associative array. Similar to array options, the initial argument provision depends on whether the hash option is defined with `:` or `?`.
-    *   If defined as `[myhash|h%:]` (requires an argument for the pairs):
+    *   These options collect key-value pairs into a Bash associative array. Typically, hash options are used by specifying the option multiple times (e.g., `--hash key1=val1 --hash key2=val2`). This adds each `key=value` pair to the associative array.
+    *   As a convenience for providing multiple items at once, you can also use a single option instance. The way the argument for this single instance is provided depends on whether the hash option itself is defined to require an argument (e.g., `[myhash|h%:]`) or have an optional argument (e.g., `[myhash|h%?]`).
+    *   For example, if defined as `[myhash|h%:]` (requires an argument for the pairs):
         *   `--myhash=key1=val1,key2=val2`
         *   `-h key1=val1,key2=val2` (if `-h` is the short option)
-    *   Key-value pairs are separated by commas. Each pair is `key=value`.
+    *   In this convenience form, key-value pairs are separated by commas. Each pair is `key=value`.
     *   The variable (e.g., `$myhash`) will be a Bash associative array; access values with `${myhash[key1]}`, etc.
 
 ## Option Types in Definition
