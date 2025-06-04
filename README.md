@@ -4,23 +4,6 @@
 shell scripts. It provides a flexible way to handle both short and
 long options, option arguments, and callbacks.
 
-## How to Specify Option Values
-
-This section details how to provide values for different types of options on the command line.
-
-*   **Standard Options (`:` or no special character):** These options accept values in two ways:
-    *   Using an equals sign: `--option=value` or `-o=value`.
-    *   As the next argument: `--option value` or `-o value`. For long options requiring an argument (defined with `:`), if `=` is not used, the subsequent command-line argument is taken as the value.
-
-*   **Optional Argument Options (`?`):**
-    *   If providing a value, you **must** use the `--option=value` format.
-    *   If the option is used without `=value` (e.g., `--opt`), the corresponding variable will be set to an empty string.
-    *   If the option is not used at all, the variable will retain its predefined default value or remain unset if no default was specified.
-
-*   **Array Options (`@`):** Multiple values are specified by separating them with a comma. Example: `--array=val1,val2,val3`.
-
-*   **Hash Options (`%`):** Key-value pairs are specified by separating them with a comma. Example: `--hash=key1=val1,key2=val2`.
-
 ## Usage
 
 1.  **Source the library:**
@@ -149,11 +132,28 @@ This section details how to provide values for different types of options on the
     Prints the internal state of the options and their values. Useful
     for debugging.
 
+## How to Specify Option Values
+
+This section details how to provide values for different types of options on the command line.
+
+*   **Standard Options (`:` or no special character):** These options accept values in two ways:
+    *   Using an equals sign: `--option=value` or `-o=value`.
+    *   As the next argument: `--option value` or `-o value`. For long options requiring an argument (defined with `:`), if `=` is not used, the subsequent command-line argument is taken as the value.
+
+*   **Optional Argument Options (`?`):**
+    *   If providing a value, you **must** use the `--option=value` format.
+    *   If the option is used without `=value` (e.g., `--opt`), the corresponding variable will be set to an empty string.
+    *   If the option is not used at all, the variable will retain its predefined default value or remain unset if no default was specified.
+
+*   **Array Options (`@`):** Multiple values for array options are provided by separating them with commas, spaces, or tabs (as per the default IFS setting). For example: `--array=val1,val2,val3` or `--array "val1 val2 val3"`.
+
+*   **Hash Options (`%`):** Key-value pairs are specified by separating them with a comma. Example: `--hash=key1=val1,key2=val2`.
+
 ## Option Types in Definition
 
 When defining options in the associative array:
 
--   No suffix (e.g., `[help|h]`): A simple flag. Its variable is incremented each time the option is found if no explicit value is assigned. For example, if `-h` is specified, `$help` becomes `1`. If specified again, it becomes `2`. If used like `--help=5`, `$help` is set to `5`. See "How to Specify Option Values" for more details.
+-   No suffix (e.g., `[help|h]`): A simple flag that does not take an argument (e.g., used as `-h`). Its associated variable is incremented each time the option is found (e.g., if `-h` is specified, `$help` becomes `1`; if specified again, it becomes `2`). While less common for typical flags, if a value is explicitly assigned using the long option form (e.g., `--help=5`), the variable will be set to that value.
 
 -   `:` (e.g., `[name|n:]`): Option requires an argument. See "How to Specify Option Values" for how values are provided.
 
