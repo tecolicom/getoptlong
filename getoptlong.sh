@@ -115,12 +115,12 @@ gol_getopts_() { local optname val vtype vname name callback ;
     return 0
 }
 _gol_getopts_long() { local no param ;
-    [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || die "$OPTARG: unrecognized option"
+    [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
     no="${MATCH[1]}" optname="${MATCH[2]}" param="${MATCH[3]}" val="${MATCH[4]}"
     [[ ${_opts[$optname]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- --$optname"
     vtype=${MATCH[1]} vname=${MATCH[2]}
     if [[ $param ]] ; then
-	[[ $vtype =~ [${IS_NEED}${IS_FREE}] ]] || die "does not take an argument -- $optname"
+	[[ $vtype =~ [${IS_NEED}${IS_FREE}] ]] || _gol_die "does not take an argument -- $optname"
     else
 	case $vtype in
 	    [$IS_FREE]) ;;
@@ -155,7 +155,7 @@ _gol_getopts_store() { local vals ;
 	[$IS_ARRAY]) target+=($val) ;;
 	[$IS_HASH])  [[ "$val" =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
 	*) [[ $check ]] && _gol_validate "$check" "$val"
-	   target=${val-$(_gol_incr "$target")} ;;
+	   target=${val=$(_gol_incr "$target")} ;;
     esac
 }
 gol_callback () { _gol_redirect "$@" ; }
