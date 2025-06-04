@@ -2,7 +2,7 @@
 
 `getoptlong.sh` is a Bash library for parsing command-line options in
 shell scripts. It provides a flexible way to handle both short and
-long options, option arguments, and callbacks.
+long options, option arguments, argument validation, and callbacks.
 
 ## Usage
 
@@ -45,21 +45,22 @@ long options, option arguments, and callbacks.
     Callbacks allow you to execute custom functions when an option is parsed. This can be used for various purposes, such as triggering actions, setting complex states, or performing specialized argument processing.
     You register a callback using `getoptlong callback <opt_name> [callback_function]`. If `callback_function` is omitted or is `-`, it defaults to `opt_name`.
     For examples of using callbacks specifically for data validation, see the 'Using Callbacks for Validation' subsection within the '## Data Validation' section.
-    Example of a callback for an action:
+    Example of a callback for a `help` option:
     ```bash
-    # Callback for a 'verbose' flag
-    verbose_action() {
-        # Action to take when --verbose is encountered
-        # For a flag, $1 might not be relevant or could be the incremented value
-        echo "Verbose mode enabled."
-        # Set a global variable or perform other setup
-        VERBOSE_MODE=1
+    # Help message function
+    help_message() {
+        echo "Usage: myscript [options] ..."
+        echo "Options:"
+        echo "  -h, --help    Show this help message and exit"
+        # ... other help text ...
+        exit 0
     }
 
-    # In option definitions:
-    # [ verbose|v ]=
+    # In option definitions (assuming OPT is your options array):
+    # OPT[help|h]=
     # ...
-    # getoptlong callback verbose verbose_action
+    # getoptlong init OPT
+    # getoptlong callback help help_message
     ```
 
 5.  **Parse the arguments:**
@@ -196,6 +197,11 @@ When defining options in the associative array:
 
 `getoptlong.sh` provides mechanisms to validate the arguments passed to options. This helps ensure that your script receives data in the expected format.
 
+**Scope of Validation:**
+*   For options that take a single required (`:`) or optional (`?`) argument, the validation applies directly to that single argument.
+*   When applied to array options (e.g., `[items|i@=i]`), the validation is performed on each individual item provided to the array.
+*   For hash options (e.g., `[config|c%=(=(^[a-z]+=[0-9]+$))]`), the validation is applied to each `key=value` string as a whole.
+
 ### Built-in Type Validation
 
 For options that take arguments (i.e., those defined with `:`, `@`, or `%`), you can enforce basic data types:
@@ -211,7 +217,7 @@ For options that take arguments (i.e., those defined with `:`, `@`, or `%`), you
     *   Example for an array option: `[measurements|m@=f]` (e.g., `--measurements=1.2,3.05,4e-2`)
     *   Example for a hash option: `[tolerances|t%=f]` (e.g., `--tolerances=low=0.01,high=0.05`)
     *   Similar to integer validation, a non-float argument will result in an error and script termination.
-    *   Note: Currently, float validation (`=f`) primarily supports formats like `123.45`. It may not support scientific notation (e.g., `1.2e-3`) or formats like `.5` or `5.` without explicit digits on both sides of the decimal.
+    *   Note: Float validation (`=f`) supports formats like `123.45`. Exponential notation (e.g., `1.2e-3`) and formats without digits on both sides of the decimal (e.g., `.9` or `9.`) are **not** supported.
 
 ### Custom Regex Validation
 
