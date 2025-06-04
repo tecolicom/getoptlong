@@ -16,23 +16,26 @@ long options, option arguments, and callbacks.
 
     Create an associative array (e.g., `OPT`) to define your script's
     options.  Each key is a string representing the option names
-    (short and long, separated by `|`) and its properties (e.g.,
-    whether it takes an argument).
+    (short and long, separated by `|`) and its storage type character.
+    Storage type can be followed `=` and data type character (e.g.,
+    `i`: integer, `f`: float).
 
     ```bash
     declare -A OPT=(
-        [ count     | c : ]=1 # require argument
-        [ paragraph | p ? ]=  # optional argument
-        [ sleep     | i @ ]=  # array type
-        [ message   | m % ]=  # hash type
-        [ help      | h   ]=  # flag type
-        [ debug     | d   ]=0 # incremental
+        [ count     | c :=i ]=1  # require argument
+        [ paragraph | p ?   ]=   # optional argument
+        [ sleep     | i @=f ]=   # array type
+        [ message   | m %   ]=   # hash type
+        [ help      | h     ]=   # flag type
+        [ debug     | d     ]=0  # incremental 
     )
     ```
 
 3.  **Initialize the library:**
 
-    Call `getoptlong init` with the name of your options array.
+    Call `getoptlong init` with the name of your options array.  You
+    can provide configuration parameter at this point following array
+    name.
 
     ```bash
     getoptlong init OPT
@@ -71,8 +74,9 @@ long options, option arguments, and callbacks.
     - By default, options will be available as simple variables like
       `$help`, `$name`.  All flag type options are incremental.
 
-    - Optional argument type option has `unset` value initially.
-      Empty string is assigned if the parameter is not givien.
+    - Optional argument has `unset` value initially.  Because empty
+      string is assigned if the parameter is not givien, you need
+      check it by `-v` or such.
 
     - Array options will be available as Bash arrays (e.g.,
       `"${mode[@]}"`).
