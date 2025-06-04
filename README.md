@@ -51,6 +51,7 @@ long options, option arguments, and callbacks.
     getoptlong callback help - count -
     ```
 
+    Callbacks can be used to perform actions or more complex validation after an option and its argument are parsed. While basic type and pattern validation can often be specified directly in the option definition (see the '## Data Validation' section below), callbacks offer more flexibility.
     You can define a callback function to validate the value or perform other actions:
 	
 	```bash
@@ -188,6 +189,37 @@ When defining options in the associative array:
 -   `@` (e.g., `[mode|m@]`): **Array option**. Collects one or more arguments into a Bash array. Array options inherently expect arguments (the items of the array) and **cannot** be combined with `?` (optional argument) or `:` (required argument) specifiers in their definition (e.g., `m@?` or `m@:` are invalid). See "How to Specify Option Values" for how these arguments are provided.
 
 -   `%` (e.g., `[config|C%]`): **Hash option**. Collects one or more `key=value` pairs into a Bash associative array. Hash options inherently expect arguments (the `key=value` pairs) and **cannot** be combined with `?` (optional argument) or `:` (required argument) specifiers in their definition (e.g., `C%?` or `C%:` are invalid). See "How to Specify Option Values" for how these arguments are provided.
+
+## Data Validation
+
+`getoptlong.sh` provides mechanisms to validate the arguments passed to options. This helps ensure that your script receives data in the expected format.
+
+### Built-in Type Validation
+
+For options that take arguments (i.e., those defined with `:`, `@`, or `%`), you can enforce basic data types:
+
+*   **Integer Validation (`=i`)**: Appending `=i` to an option definition ensures that the provided argument (or each item in an array/each value in a hash) is a valid integer.
+    *   Example for an option requiring an argument: `[count|c:=i]`
+    *   Example for an array option: `[ids|id@=i]` (e.g., `--ids=1,2,3` or `--ids 1 --ids 2`)
+    *   Example for a hash option: `[config_levels|cl%=i]` (e.g., `--config_levels=main=1,aux=2`)
+    *   If an argument is not a valid integer, `getoptlong.sh` will report an error and the script will typically exit (this behavior is managed by the internal `_gol_validate` and `_gol_die` functions).
+
+*   **Float Validation (`=f`)**: Appending `=f` to an option definition ensures that the provided argument(s) must be valid floating-point numbers.
+    *   Example for an option requiring an argument: `[rate|r:=f]`
+    *   Example for an array option: `[measurements|m@=f]` (e.g., `--measurements=1.2,3.05,4e-2`)
+    *   Example for a hash option: `[tolerances|t%=f]` (e.g., `--tolerances=low=0.01,high=0.05`)
+    *   Similar to integer validation, a non-float argument will result in an error and script termination.
+
+### Custom Regex Validation
+
+For more specific validation needs, you can provide a Bash extended regular expression (ERE) using the `=(<regex>)` syntax. The argument(s) provided to the option must match this regex.
+
+*   **Syntax**: `[option_name|opt_char:<validation_type>=(<regex>)]` (applies to options defined with `:`, `@`, or `%`).
+*   **Examples**:
+    *   Option requiring a specific string set: `[mode|m:=(^(fast|slow|debug)$)]` (accepts only "fast", "slow", or "debug")
+    *   Array of simple names: `[names|n@=(^[A-Za-z_]+$)]` (e.g., `--names=foo,bar_baz` ensures each name consists of letters and underscores)
+    *   Hash with specific key-value format: `[params|p%:=(^[a-z_]+=\d+$)]` (e.g., `--params=rate=10,count=100` ensures keys are lowercase letters/underscores and values are digits).
+*   If the argument (or any item in an array/hash) does not match the regex, `getoptlong.sh` will report an error and the script will exit.
 
 ## Examples
 
