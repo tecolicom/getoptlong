@@ -4,14 +4,6 @@
 shell scripts. It provides a flexible way to handle both short and
 long options, option arguments, and callbacks.
 
-## Usage
-
-1.  **Source the library:**
-
-    ```bash
-    . getoptlong.sh
-    ```
-
 ## How to Specify Option Values
 
 This section details how to provide values for different types of options on the command line.
@@ -28,6 +20,14 @@ This section details how to provide values for different types of options on the
 *   **Array Options (`@`):** Multiple values are specified by separating them with a comma. Example: `--array=val1,val2,val3`.
 
 *   **Hash Options (`%`):** Key-value pairs are specified by separating them with a comma. Example: `--hash=key1=val1,key2=val2`.
+
+## Usage
+
+1.  **Source the library:**
+
+    ```bash
+    . getoptlong.sh
+    ```
 
 2.  **Define your options:**
 
