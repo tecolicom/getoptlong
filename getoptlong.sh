@@ -1,10 +1,8 @@
-################################################################################
-################################################################################
-##
-## GetOptLong: Getopt Library for Bash Script
-##
-################################################################################
-################################################################################
+###############################################################################
+# GetOptLong: Getopt Library for Bash Script
+: ${GOL_VERSION:=0.01}
+###############################################################################
+declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
 _gol_opts() {
@@ -30,8 +28,8 @@ _gol_redirect() { local name ;
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS='~!&=' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' \
 	  IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
-    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE DEBUG PREFIX IFS)
-    for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]}" ; done
+    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX IFS)
+    for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
 gol_dump() {
@@ -40,14 +38,14 @@ gol_dump() {
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTHASH OPTIND=1' ; return ; }
     declare -n _opts=$1
-    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [PREFIX]= [SILENT]= [DEBUG]= [IFS]=$' \t\n,')
+    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [IFS]=$' \t\n,')
     for key in "${!GOL_CONFIG[@]}" ; do _opts[&$key]="${GOL_CONFIG[$key]}" ; done
     GOL_OPTHASH=$1
     (( $# > 1 )) && gol_configure "${@:2}"
     _gol_redirect
-}
-################################################################################
+} ################################################################################
 gol_init_() { local key aliases alias ;
+    [[ $REQUIRE && $GOL_VERSION < $REQUIRE ]] && _gol_die "getoptlong version $GOL_VERSION < $REQUIRE"
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
 	[[ $key =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*)( *)(=([if]|\(.*\)))?( *)(#.*)?$ ]] \
@@ -113,7 +111,7 @@ gol_getopts_() { local optname val vtype vname name callback ;
     esac
     name=$(_gol_alias $optname) || name=$optname
     _gol_getopts_store
-    callback="$(_gol_hook $name)" && $callback "$target"
+    callback="$(_gol_hook $name)" && $callback "$val"
     return 0
 }
 _gol_getopts_long() { local no param ;
@@ -189,15 +187,13 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
 }
 gol_set () { _gol_redirect "$@" ; }
 gol_set_() {
-    [[ $PERMUTE ]] && printf 'set -- "${%s[@]}"\n' "$PERMUTE" || echo 'shift $(( OPTIND-1 ))'
+    [[ $PERMUTE ]] && { printf 'set -- "${%s[@]}"\n' "$PERMUTE" ; } \
+		   || { echo 'shift $(( OPTIND-1 ))' ; }
 }
 getoptlong () {
     case $1 in
-	init|parse|set|configure|getopts|callback|dump)
-	    gol_$1 "${@:2}" ;;
-	*)
-	    _gol_die "unknown subcommand -- $1" ;;
+	init|parse|set|configure|getopts|callback|dump) gol_$1 "${@:2}" ;;
+	version) echo ${GOL_VERSION} ;;
+	*)       _gol_die "unknown subcommand -- $1" ;;
     esac
 }
-################################################################################
-################################################################################
