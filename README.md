@@ -160,18 +160,16 @@ This section details how values are provided for options based on their definiti
         *   The form `-pvalue` (attempting to attach a value directly to a short option with an optional argument) is generally **not supported or reliable.** To provide a value, the long option form (`--param=value`) is recommended.
 
 *   **Array Options (defined with `@`)**
-    *   These options collect multiple values into a Bash array. Typically, array options are used by specifying the option multiple times (e.g., `--array val1 --array val2` or `-a val1 -a val2` if `-a` is an array option requiring an argument). This adds each `val` as a new element to the array.
-    *   As a convenience for providing multiple items at once, you can also use a single option instance. The way the argument for this single instance is provided depends on whether the array option itself is defined to require an argument (e.g., `[myarray|a@:]`) or have an optional argument (e.g., `[myarray|a@?]`).
-    *   For example, if defined as `[myarray|a@:]` (requires an argument for the list):
+    *   These options collect multiple values into a Bash array. Typically, array options are used by specifying the option multiple times (e.g., `--array val1 --array val2` or `-a val1 -a val2` if `-a` is defined as an array option, e.g., `[array|a@]`). This adds each `val` as a new element to the array.
+    *   As a convenience for providing multiple items at once, you can also use a single option instance. For example, to provide the list for `[myarray|a@]` as a single argument:
         *   `--myarray=val1,val2,val3` or `--myarray "val1 val2 val3"`
         *   `-a val1,val2,val3` or `-a "val1 val2 val3"` (if `-a` is the short option)
     *   In this convenience form, values within the list are separated by commas, spaces, or tabs (controlled by the IFS setting, default is space, tab, newline). Quotes should be used if a single value within the list contains spaces/tabs, e.g., `--myarray="first item,second item,third"`.
     *   The variable (e.g., `$myarray`) will be a Bash array; access elements with `${myarray[0]}`, etc.
 
 *   **Hash Options (defined with `%`)**
-    *   These options collect key-value pairs into a Bash associative array. Typically, hash options are used by specifying the option multiple times (e.g., `--hash key1=val1 --hash key2=val2`). This adds each `key=value` pair to the associative array.
-    *   As a convenience for providing multiple items at once, you can also use a single option instance. The way the argument for this single instance is provided depends on whether the hash option itself is defined to require an argument (e.g., `[myhash|h%:]`) or have an optional argument (e.g., `[myhash|h%?]`).
-    *   For example, if defined as `[myhash|h%:]` (requires an argument for the pairs):
+    *   These options collect key-value pairs into a Bash associative array. Typically, hash options are used by specifying the option multiple times (e.g., `--hash key1=val1 --hash key2=val2` if `--hash` is defined as a hash option, e.g., `[myhash|h%]` ). This adds each `key=value` pair to the associative array.
+    *   As a convenience for providing multiple items at once, you can also use a single option instance. For example, to provide the pairs for `[myhash|h%]` as a single argument:
         *   `--myhash=key1=val1,key2=val2`
         *   `-h key1=val1,key2=val2` (if `-h` is the short option)
     *   In this convenience form, key-value pairs are separated by commas. Each pair is `key=value`.
@@ -187,9 +185,9 @@ When defining options in the associative array:
 
 -   `?` (e.g., `[output|o?]`): Option takes an **optional argument**. If no argument is provided when the option is used, its variable is set to an empty string. See "How to Specify Option Values" for syntax details.
 
--   `@` (e.g., `[mode|m@]`): **Array option**. Collects multiple arguments into a Bash array. The list of arguments itself might be mandatory or optional based on whether `:` or `?` is also used in the definition (e.g., `m@:` or `m@?`). Values are typically comma or space-separated. See "How to Specify Option Values".
+-   `@` (e.g., `[mode|m@]`): **Array option**. Collects one or more arguments into a Bash array. Array options inherently expect arguments (the items of the array) and **cannot** be combined with `?` (optional argument) or `:` (required argument) specifiers in their definition (e.g., `m@?` or `m@:` are invalid). See "How to Specify Option Values" for how these arguments are provided.
 
--   `%` (e.g., `[config|C%]`): **Hash option**. Collects `key=value` pairs into a Bash associative array. The set of pairs might be mandatory or optional (e.g., `C%:` or `C%?`). Pairs are typically comma-separated. See "How to Specify Option Values".
+-   `%` (e.g., `[config|C%]`): **Hash option**. Collects one or more `key=value` pairs into a Bash associative array. Hash options inherently expect arguments (the `key=value` pairs) and **cannot** be combined with `?` (optional argument) or `:` (required argument) specifiers in their definition (e.g., `C%?` or `C%:` are invalid). See "How to Specify Option Values" for how these arguments are provided.
 
 ## Examples
 
