@@ -42,22 +42,24 @@ long options, option arguments, and callbacks.
 
 4.  **Setup callback function:**
 
-    Registers a callback function. Provide the option name and the
-    corresponding callback function name. If the function name is `-` or
-    omitted, it defaults to the option name. The callback is invoked
-    with the option's value when the option is parsed.
-
+    Callbacks allow you to execute custom functions when an option is parsed. This can be used for various purposes, such as triggering actions, setting complex states, or performing specialized argument processing.
+    You register a callback using `getoptlong callback <opt_name> [callback_function]`. If `callback_function` is omitted or is `-`, it defaults to `opt_name`.
+    For examples of using callbacks specifically for data validation, see the 'Using Callbacks for Validation' subsection within the '## Data Validation' section.
+    Example of a callback for an action:
     ```bash
-    getoptlong callback help - count -
-    ```
-
-    Callbacks can be used to perform actions or more complex validation after an option and its argument are parsed. While basic type and pattern validation can often be specified directly in the option definition (see the '## Data Validation' section below), callbacks offer more flexibility.
-    You can define a callback function to validate the value or perform other actions:
-	
-	```bash
-    count() {
-        [[ "$1" =~ ^[0-9]+$ ]] || { echo "$1: not a number" >&2; exit 1 ; }
+    # Callback for a 'verbose' flag
+    verbose_action() {
+        # Action to take when --verbose is encountered
+        # For a flag, $1 might not be relevant or could be the incremented value
+        echo "Verbose mode enabled."
+        # Set a global variable or perform other setup
+        VERBOSE_MODE=1
     }
+
+    # In option definitions:
+    # [ verbose|v ]=
+    # ...
+    # getoptlong callback verbose verbose_action
     ```
 
 5.  **Parse the arguments:**
@@ -209,6 +211,7 @@ For options that take arguments (i.e., those defined with `:`, `@`, or `%`), you
     *   Example for an array option: `[measurements|m@=f]` (e.g., `--measurements=1.2,3.05,4e-2`)
     *   Example for a hash option: `[tolerances|t%=f]` (e.g., `--tolerances=low=0.01,high=0.05`)
     *   Similar to integer validation, a non-float argument will result in an error and script termination.
+    *   Note: Currently, float validation (`=f`) primarily supports formats like `123.45`. It may not support scientific notation (e.g., `1.2e-3`) or formats like `.5` or `5.` without explicit digits on both sides of the decimal.
 
 ### Custom Regex Validation
 
@@ -220,6 +223,33 @@ For more specific validation needs, you can provide a Bash extended regular expr
     *   Array of simple names: `[names|n@=(^[A-Za-z_]+$)]` (e.g., `--names=foo,bar_baz` ensures each name consists of letters and underscores)
     *   Hash with specific key-value format: `[params|p%:=(^[a-z_]+=\d+$)]` (e.g., `--params=rate=10,count=100` ensures keys are lowercase letters/underscores and values are digits).
 *   If the argument (or any item in an array/hash) does not match the regex, `getoptlong.sh` will report an error and the script will exit.
+
+### Using Callbacks for Validation
+
+For more complex or procedural validation logic that goes beyond simple type or regex checks, callback functions offer maximum flexibility.
+
+When a callback is defined for an option, the option's argument (value) is passed as the first parameter (`$1`) to the callback function. The callback can then perform any necessary checks. If validation fails, the callback should typically `exit 1` (or `return 1` if `EXIT_ON_ERROR` is configured to be off or non-strict for the script), often after printing a custom error message to `stderr`.
+
+For example, to check if a 'count' option is a positive number:
+```bash
+# Callback function for the 'count' option
+count_check() {
+    if [[ "$1" =~ ^[0-9]+$ && "$1" -gt 0 ]]; then
+        # Value is valid, optionally assign it or just return success
+        # If the variable name is 'count', it's already set by getoptlong
+        return 0
+    else
+        echo "Error: 'count' must be a positive integer, got '$1'." >&2
+        exit 1 # Or return 1 if EXIT_ON_ERROR is configured differently
+    fi
+}
+
+# In option definitions:
+# declare -A OPT=( [count|c:]=1 ... )
+# ...
+# To register the callback:
+# getoptlong callback count count_check
+```
 
 ## Examples
 
