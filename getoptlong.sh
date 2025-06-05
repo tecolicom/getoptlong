@@ -129,8 +129,7 @@ _gol_getopts_long() { local no param ;
 	    [$IS_FREE]) ;;
 	    [$IS_NEED])
 		(( OPTIND > $# )) && _gol_die "option requires an argument -- $optname"
-		val=${@:$OPTIND:1}
-		(( OPTIND++ )) ;;
+		val=${@:$((OPTIND++)):1} ;;
 	    *) [[ $no ]] && val= || unset val ;;
 	esac
     fi
