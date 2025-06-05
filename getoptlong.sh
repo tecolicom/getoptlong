@@ -1,5 +1,8 @@
+# vim: filetype=bash :  -*- mode: sh; sh-shell: bash; -*-
 ###############################################################################
 # GetOptLong: Getopt Library for Bash Script
+# Copyright 2025 Office TECOLI, LLC <https://github.com/tecolicom/getoptlong>
+# MIT License: See <https://opensource.org/licenses/MIT>
 : ${GOL_VERSION:=0.01}
 ###############################################################################
 declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
@@ -17,7 +20,7 @@ _gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
 _gol_validate() {
     case $1 in
 	i)   [[ "$2" =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
-	f)   [[ "$2" =~ ^[-+]?[0-9]+(\.[0-9]*)?$ ]] || _gol_die "$2: not a number" ;;
+	f)   [[ "$2" =~ ^[-+]?[0-9]*(\.[0-9]+)?$ ]] || _gol_die "$2: not a number" ;;
 	\(*) eval "[[ \"$2\" =~ $1 ]]"              || _gol_die "$2: invalid argument" ;;
 	*)   _gol_die "$1: unkown validation pattern" ;;
     esac
@@ -187,8 +190,8 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
 }
 gol_set () { _gol_redirect "$@" ; }
 gol_set_() {
-    [[ $PERMUTE ]] && { printf 'set -- "${%s[@]}"\n' "$PERMUTE" ; } \
-		   || { echo 'shift $(( OPTIND-1 ))' ; }
+    [[ $PERMUTE ]] && printf 'set -- "${%s[@]}"\n' "$PERMUTE" \
+		   || echo 'shift $(( OPTIND-1 ))'
 }
 getoptlong () {
     case $1 in

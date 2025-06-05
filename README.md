@@ -2,9 +2,12 @@
 
 `getoptlong.sh` is a Bash library for parsing command-line options in
 shell scripts.  It provides a flexible way to handle both short and
-long options, option arguments, argument validation, and callbacks.
+long options, optional arguments, argument validation, and callbacks.
 
 ## Usage
+
+The following is a sample script from [repeat.sh](ex/repeat.sh) as an
+example to illustrate the use of [getoptlong.sh](getoptlong.sh).
 
 1.  **Source the library:**
 
@@ -18,10 +21,10 @@ long options, option arguments, argument validation, and callbacks.
     options.  Each key is a string representing the option names
     (short and long, separated by `|`) and its storage type character.
     Storage type can be followed `=` and data type character (e.g.,
-    `i`: integer, `f`: float).
+    `i`: integer, `f`: float).  White spaces are all ignored.
 
     ```bash
-    declare -A OPT=(
+    declare -A OPTS=(
         [ count     | c :=i ]=1  # require argument
         [ paragraph | p ?   ]=   # optional argument
         [ sleep     | i @=f ]=   # array type
@@ -37,7 +40,7 @@ long options, option arguments, argument validation, and callbacks.
     can provide configuration parameters after the array name.
 
     ```bash
-    getoptlong init OPT
+    getoptlong init OPTS
     ```
 
 4.  **Setup callback function:**
@@ -47,24 +50,15 @@ long options, option arguments, argument validation, and callbacks.
     actions, setting complex states, or performing specialized
     argument processing.  You register a callback using `getoptlong
     callback <opt_name> [callback_function]`.  If `callback_function`
-    is omitted or is `-`, it defaults to `opt_name`.  Example of a
-    callback for a `help` option:
+    is omitted or is `-`, it defaults to `opt_name`.
+
+    Callback function is called with the value as `$1`.  Next code
+    execute `set -x` by `--trace` option, and `set +x` by `--no-trace`
+    option.
 
     ```bash
-    help() {
-        cat <<-END
-        repeat count command
-        repeat [ options ] command
-            -c#, --count=#            repeat count
-            -i#, --sleep=#            interval time
-            -p , --paragraph[=#]      print newline (or #) after each cycle
-            -m#, --message=WHEN=WHAT  print WHAT for WHEN (BEGIN, END, EACH)
-            -x , --trace              trace execution (set -x)
-            -d , --debug              debug level
-        END
-        exit 0
-    }
-    getoptlong callback help -
+    trace() { [[ $1 ]] && set -x || set +x ; }
+    getoptlong callback help - trace -
     ```
 
 5.  **Parse the arguments:**
@@ -81,25 +75,28 @@ long options, option arguments, argument validation, and callbacks.
 
     - By default, options will be available as simple variables like
       `$count`, `$debug`.  Variables for flag-type options (those
-      without `:`, `?`, `@`, or `%`) are incremented each time the
-      flag is encountered.
+      without `:`, `?`, `@`, or `%`) are assigned string `1` at the
+      first time, and incremented each time the flag is encountered.
 
-    - For an option with an optional argument (e.g., `[paragraph|i?]`):
+    - Values for array options are stored in Bash arrays (e.g., access
+      with `"${sleep[@]}"`).
 
-      * If `--paragraph=$'---\n'` is used, `$paragraph` will be `---\n`.
+    - Values for hash options are stored in Bash associative arrays
+      (e.g., access keys with `"${!message[@]}"` and values with
+      `"${message[key]}"`).
+
+    - Accessing value of optional argument (e.g., `[paragraph|p?]`) is
+      a bit tricky.
+
+      * If (and only if) `--paragraph='string'` is used, `$paragraph`
+        will be `string`.
 
       * If `-p` or `--paragraph` is used (no value provided after
         `=`), `$paragraph` will be an empty string.
 
       * If the option is not present in the arguments, `$paragraph`
-        remains unset.  You can use `-v` operator if it is set.
-
-    - Values for array options are stored in Bash arrays (e.g., access
-      with `"${paragraph[@]}"`).
-
-    - Values for hash options are stored in Bash associative arrays
-      (e.g., access keys with `"${!message[@]}"` and values with
-      `"${message[key]}"`).
+        remains unset.  You can use `-v` operator or something like
+        `${paragraph+_}` notation to check it is set or not.
 
     ```
     (( debug >= 2 )) && {
@@ -139,28 +136,29 @@ When defining options in the associative array:
 
 - No suffix (e.g., `[help|h]`): A simple flag that **does not take an
   argument** (e.g., used as `-h` or `--help`).  Its associated
-  variable is incremented each time the option is found (e.g., if `-h`
-  is specified, `$help` becomes `1`; if specified again, it becomes
-  `2`).
+  variable set as empty string initially, and is incremented each time
+  the option is found (e.g., if `-h` is specified, `$help` becomes
+  `1`; if specified again, it becomes `2`).  They can be nagated with
+  prefix `no-` like `--no-help` for `--help`, and the variable is set
+  to empty.
 
-- `:` (e.g., `[count|c:]`): Option **requires an argument**.  The
-  methods for specifying this argument are detailed in the "How to
-  Specify Option Values" section.
+- `:` (e.g., `[count|c:]`): Option **requires an argument**.
 
 - `?` (e.g., `[paragraph|p?]`): Option takes an **optional argument**.
-  If no argument is provided when the option is used, its variable is
-  set to an empty string.  See "How to Specify Option Values" for
-  syntax details.
+  Its associated variable is unset initially.  If no argument is
+  provided when the option is used, its variable is set to an empty
+  string.
 
 - `@` (e.g., `[sleep|i@]`): **Array option**.  Collects one or more
   arguments into a Bash array.  Array options inherently expect
-  arguments (the items of the array).  See "How to Specify Option
-  Values" for how these arguments are provided.
+  arguments (the items of the array).
 
 - `%` (e.g., `[message|m%]`): **Hash option**.  Collects one or more
   `key=value` pairs into a Bash associative array.  Hash options
-  inherently expect arguments (the `key=value` pairs).  See "How to
-  Specify Option Values" for how these arguments are provided.
+  inherently expect arguments (the `key=value` pairs).
+
+You may be able to put prefix `no-` for non-flag type options, but the
+result is undefined.
 
 ## Functions
 
@@ -330,17 +328,6 @@ their definition in the "Option Types in Definition" section.
 to options.  This helps ensure that your script receives data in the
 expected format.
 
-**Scope of Validation:**
-
-* For options that take a single required (`:`) or optional (`?`)
-  argument, the validation applies directly to that single argument.
-
-* When applied to array options (e.g., `[items|i@=i]`), the validation
-  is performed on each individual item provided to the array.
-
-* For hash options (e.g., `[config|c%=(=(^[a-z]+=[0-9]+$))]`), the
-  validation is applied to each `key=value` string as a whole.
-
 ### Built-in Type Validation
 
 For options that take arguments (i.e., those defined with `:`, `@`, or
@@ -376,10 +363,8 @@ For options that take arguments (i.e., those defined with `:`, `@`, or
   * Similar to integer validation, a non-float argument will result in
     an error and script termination.
 
-  * Note: Float validation (`=f`) supports formats like
-    `123.45`.  Exponential notation (e.g., `1.2e-3`) and formats
-    without digits on both sides of the decimal (e.g., `.9` or `9.`)
-    are **not** supported.
+  * Note: Float validation (`=f`) supports formats like `123.45`.
+    Exponential notation (e.g., `1.2e-3`) is **not** supported.
 
 ### Custom Regex Validation
 
@@ -441,12 +426,18 @@ getoptlong callback count count_check
 The `ex/` directory contains example scripts demonstrating various
 features of `getoptlong.sh`:
 
-- `ex/repeat.sh`: A utility to repeat commands, showcasing various
+- [repeat.sh](ex/repeat.sh): A utility to repeat commands, showcasing various
   option types including array, hash and incrementals.
 
-- `ex/prefix.sh`: Shows usage with the `PREFIX` configuration.
+- [prefix.sh](ex/prefix.sh): Shows usage with the `PREFIX` configuration.
 
-- `ex/cmap`: Demonstrates color mapping, complex option parsing, and
+- [cmap](ex/cmap): Demonstrates color mapping, complex option parsing, and
   callbacks.
 
 Refer to these examples for practical usage patterns.
+
+## See Also
+
+- [Getopt::Long](https://metacpan.org/dist/Getopt-Long)
+
+- [getoptions](https://github.com/ko1nksm/getoptions)
