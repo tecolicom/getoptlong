@@ -101,7 +101,7 @@ gol_optstring_() { local key string ;
 	string+=$key
 	[[ ${_opts[$key]} =~ ^[$IS_NEED] ]] && string+=:
     done
-    echo "${SILENT:+:}${string}-:"
+    echo "${SILENT:+:}${string:- }-:"
 }
 gol_getopts () { _gol_redirect "$@" ; }
 gol_getopts_() { local optname val vtype vname name callback ;
