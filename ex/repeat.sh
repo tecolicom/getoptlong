@@ -19,7 +19,7 @@ help() {
 }
 trace() { [[ $1 ]] && set -x || set +x ; }
 
-declare -A OPT=(
+declare -A OPTS=(
     [ count     | c :=i ]=1
     [ sleep     | i @=f ]=
     [ paragraph | p ?   ]=
@@ -28,7 +28,7 @@ declare -A OPT=(
     [ help      | h     ]=
     [ message   | m %=(^(BEGIN|END|EACH)=) ]=
 )
-getoptlong init OPT
+getoptlong init OPTS
 getoptlong callback help - trace -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 

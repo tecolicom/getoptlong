@@ -78,6 +78,10 @@ example to illustrate the use of [getoptlong.sh](getoptlong.sh).
       without `:`, `?`, `@`, or `%`) are assigned string `1` at the
       first time, and incremented each time the flag is encountered.
 
+    - Any dashes (`-`) included in the option name will be replaced by
+      underscores (`_`).  So the `--help-me-please` option sets the
+      variable `$help_me_please`.
+
     - Values for array options are stored in Bash arrays (e.g., access
       with `"${sleep[@]}"`).
 
@@ -306,7 +310,8 @@ their definition in the "Option Types in Definition" section.
     array.  Typically, hash options are used by specifying the option
     multiple times (e.g., `--hash key1=val1 --hash key2=val2` if
     `--hash` is defined as a hash option, e.g., `[myhash|h%]` ).  This
-    adds each `key=value` pair to the associative array.
+    adds each `key=value` pair to the associative array.  When
+    `=value` part is omitted, `=1` is assumed.
 
   * As a convenience for providing multiple items at once, you can
     also use a single option instance.  For example, to provide the

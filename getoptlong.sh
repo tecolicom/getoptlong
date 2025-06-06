@@ -55,7 +55,7 @@ gol_init_() { local key aliases alias ;
 	    || _gol_die "[$key] -- invalid"
 	local names=${MATCH[1]} vtype=${MATCH[2]} type=${MATCH[5]} comment=${MATCH[7]}
 	local initial="${_opts[$key]}"
-	IFS=' |' read -a aliases <<<$names
+	IFS=$' \t|' read -a aliases <<< ${names//-/_}
 	local name=${aliases[0]}
 	local vname="${PREFIX}${name}"
 	declare -n target=$vname
@@ -119,7 +119,7 @@ gol_getopts_() { local optname val vtype vname name callback ;
 }
 _gol_getopts_long() { local no param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
-    no="${MATCH[1]}" optname="${MATCH[2]}" param="${MATCH[3]}" val="${MATCH[4]}"
+    no="${MATCH[1]}" optname="${MATCH[2]//-/_}" param="${MATCH[3]}" val="${MATCH[4]}"
     [[ ${_opts[$optname]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- --$optname"
     vtype=${MATCH[1]} vname=${MATCH[2]}
     if [[ $param ]] ; then
