@@ -145,7 +145,8 @@ _gol_getopts_store() { local vals ;
     local check=$(_gol_check $name)
     case $vtype in
 	[$IS_ARRAY]|[$IS_HASH])
-	    read -a vals <<< "${val//$'\n'/$'\t'}"
+	    [[ $val =~ $'\n' ]] && readarray -t vals <<< ${val%$'\n'} \
+				|| read -a vals <<< ${val}
 	    for val in "${vals[@]}" ; do
 		[[ $check ]] && _gol_validate "$check" "$val"
 		case $vtype in

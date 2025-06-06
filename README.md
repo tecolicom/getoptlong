@@ -293,10 +293,10 @@ their definition in the "Option Types in Definition" section.
     also use a single option instance.  For example, to provide the
     list for `[myarray|a@]` as a single argument:
 
-    *   `--myarray=val1,val2,val3` or `--myarray "val1 val2 val3"`
+    * `--myarray val1,val2,val3` or `--myarray "val1 val2 val3"`
 
-    *   `-a val1,val2,val3` or `-a "val1 val2 val3"` (if `-a` is the
-        short option)
+    * `-a val1,val2,val3` or `-a "val1 val2 val3"` (if `-a` is the
+      short option)
 
   * In this convenience form, values within the list are separated by
     commas, spaces, or tabs (controlled by the `IFS` setting).
@@ -317,15 +317,20 @@ their definition in the "Option Types in Definition" section.
     also use a single option instance.  For example, to provide the
     pairs for `[myhash|h%]` as a single argument:
 
-    *   `--myhash=key1=val1,key2=val2`
+    * `--myhash key1=val1,key2=val2`
 
-    *   `-h key1=val1,key2=val2` (if `-h` is the short option)
+    * `-h key1=val1,key2=val2` (if `-h` is the short option)
 
   * In this convenience form, key-value pairs are separated by
     commas.  Each pair is `key=value`.
 
   * The variable (e.g., `$myhash`) will be a Bash associative array;
     access values with `${myhash[key1]}`, etc.
+
+For the array and hash type options, each line is expanded as an
+element if the parameter contains newline characters.  For example,
+`'BEGIN=hello world'` will expand to `BEGIN=hello` and `world`, while
+`$'BEGIN=hello world\n'` will expand to `BEGIN=hello world`.
 
 ## Data Validation
 
