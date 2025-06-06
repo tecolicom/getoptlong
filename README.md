@@ -220,6 +220,17 @@ result is undefined.
 This section details how values are provided for options based on
 their definition in the "Option Types in Definition" section.
 
+* **Flag Options (defined with no suffix)**
+
+  * Examples: `-v` or `--verbose` for `[verbose|v]`.
+
+  * These options **do not take an argument**.  Their corresponding
+    variable is typically used as a boolean state (empty or not), or a
+    counter (incremented if the flag is present).
+
+  * Prefix `no-` (e.g., `--no-verbose` or `--no-v`) can be used to
+    reset the corresponding variable to empty.
+
 * **Options Requiring an Argument (defined with `:`)**
 
   * These options *must* receive an argument.
@@ -245,17 +256,6 @@ their definition in the "Option Types in Definition" section.
     standard for POSIX `getopts`.  Use one of the valid short form
     syntaxes above.
 
-* **Flag Options (defined with no suffix)**
-
-  * These options **do not take an argument**.  They are used to toggle
-    features or indicate a boolean state.
-
-  * Examples: `-v` (for `[verbose|v]`) or `--verbose`.
-
-  * Their corresponding variable is typically used as a counter
-    (incremented if the flag is present) or reflects a boolean state,
-    as detailed in "Option Types in Definition".
-
 * **Options with Optional Arguments (defined with `?`)**
 
   * **Long form** (e.g., `--param` for `[param|p?]`):
@@ -277,9 +277,9 @@ their definition in the "Option Types in Definition" section.
       options).
 
     * The form `-pvalue` (attempting to attach a value directly to a
-      short option with an optional argument) is generally **not
-      supported or reliable.** To provide a value, the long option
-      form (`--param=value`) is recommended.
+      short option with an optional argument) is **not supported**.
+      To provide a value, the long option form (`--param=value`) is
+      required.
 
 * **Array Options (defined with `@`)**
 
