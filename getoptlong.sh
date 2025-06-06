@@ -41,7 +41,7 @@ gol_dump() {
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTHASH OPTIND=1' ; return ; }
     declare -n _opts=$1
-    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [IFS]=$' \t\n,')
+    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [IFS]=$' \t,')
     for key in "${!GOL_CONFIG[@]}" ; do _opts[&$key]="${GOL_CONFIG[$key]}" ; done
     GOL_OPTHASH=$1
     (( $# > 1 )) && gol_configure "${@:2}"
@@ -145,7 +145,7 @@ _gol_getopts_store() { local vals ;
     local check=$(_gol_check $name)
     case $vtype in
 	[$IS_ARRAY]|[$IS_HASH])
-	    read -a vals <<<"$val"
+	    read -a vals <<< "${val//$'\n'/$'\t'}"
 	    for val in "${vals[@]}" ; do
 		[[ $check ]] && _gol_validate "$check" "$val"
 		case $vtype in
