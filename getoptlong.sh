@@ -9,8 +9,9 @@ declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; e
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
 _gol_opts() {
-    (($# == 2)) && { _opts["$1"]="$2" ; return 0 ; }
-    [[ -v _opts[$1] ]] && echo "${_opts[$1]}" || return 1
+    local key=${1//-/_}
+    (($# == 2)) && { _opts["$key"]="$2" ; return 0 ; }
+    [[ -v _opts[$key] ]] && echo "${_opts[$key]}" || return 1
 }
 _gol_alias() { _gol_opts \~"$1" "${@:2}" ; }
 _gol_hook()  { _gol_opts \!"$1" "${@:2}" ; }
@@ -120,8 +121,8 @@ gol_getopts_() { local optname val vtype vname name callback ;
 }
 _gol_getopts_long() { local no param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
-    no="${MATCH[1]}" optname="${MATCH[2]//-/_}" param="${MATCH[3]}" val="${MATCH[4]}"
-    [[ ${_opts[$optname]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- --$optname"
+    no="${MATCH[1]}" optname="${MATCH[2]}" param="${MATCH[3]}" val="${MATCH[4]}"
+    [[ $(_gol_opts $optname) =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- --$optname"
     vtype=${MATCH[1]} vname=${MATCH[2]}
     if [[ $param ]] ; then
 	[[ $vtype =~ [${IS_NEED}${IS_FREE}] ]] || _gol_die "does not take an argument -- $optname"
@@ -167,7 +168,7 @@ gol_callback_() {
     while (($# > 0)) ; do
 	local name=$1 callback=${2:-$1}
 	[[ $callback =~ ^[_[:alnum:]] ]] || callback=$name
-	_gol_hook "$name" "$callback"
+	_gol_hook "$name" "${callback//-/_}"
 	shift $(( $# >= 2 ? 2 : 1 ))
     done
     return 0

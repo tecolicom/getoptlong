@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-. "${0%/*}"/../getoptlong.sh
+. "$(dirname $0)"/../getoptlong.sh
 
 set -eu
 
@@ -12,31 +12,28 @@ help() {
 	    -i#, --sleep=#            interval time
 	    -p , --paragraph[=#]      print newline (or #) after each cycle
 	    -m#, --message=WHEN=WHAT  print WHAT for WHEN (BEGIN, END, EACH)
-	    -x , --trace              trace execution (set -x)
+	    -x , --set-x              trace execution
 	    -d , --debug              debug level
 	END
     exit 0
 }
-trace() { [[ $1 ]] && set -x || set +x ; }
-count() { [[ "$1" =~ ^[0-9]+$ ]] || { echo "$1: not a number" >&2; exit 1 ; } ; }
+set_x() { [[ $1 ]] && set -x || set +x ; }
 
-declare -A OPT=(
+declare -A OPTS=(
     [ count     | c :=i ]=1
     [ sleep     | i @=f ]=
     [ paragraph | p ?   ]=
-    [ trace     | x     ]=
+    [ set-x     | x     ]=
     [ debug     | d     ]=0
     [ help      | h     ]=
     [ message   | m %=(^(BEGIN|END|EACH)=) ]=
 )
-getoptlong init OPT PREFIX=opt_
-getoptlong callback help - trace - count -
+getoptlong init OPTS PREFIX=opt_
+getoptlong callback help - set-x -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
 (( opt_debug >= 2 )) && {
     getoptlong dump | column >&2
-    declare -p opt_sleep
-    declare -p opt_message
 }
 
 : ${opt_paragraph:=${opt_paragraph+${opt_paragrah:-$'\n'}}}

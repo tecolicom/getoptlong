@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-. "${0%/*}"/../getoptlong.sh
+. "$(dirname $0)"/../getoptlong.sh
 
 set -eu
 
@@ -12,30 +12,28 @@ help() {
 	    -i#, --sleep=#            interval time
 	    -p , --paragraph[=#]      print newline (or #) after each cycle
 	    -m#, --message=WHEN=WHAT  print WHAT for WHEN (BEGIN, END, EACH)
-	    -x , --trace              trace execution (set -x)
+	    -x , --set-x              trace execution
 	    -d , --debug              debug level
 	END
     exit 0
 }
-trace() { [[ $1 ]] && set -x || set +x ; }
+set_x() { [[ $1 ]] && set -x || set +x ; }
 
 declare -A OPTS=(
     [ count     | c :=i ]=1
     [ sleep     | i @=f ]=
     [ paragraph | p ?   ]=
-    [ trace     | x     ]=
+    [ set-x     | x     ]=
     [ debug     | d     ]=0
     [ help      | h     ]=
     [ message   | m %=(^(BEGIN|END|EACH)=) ]=
 )
 getoptlong init OPTS
-getoptlong callback help - trace -
+getoptlong callback help - set-x -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
 (( debug >= 2 )) && {
     getoptlong dump | column >&2
-    declare -p sleep
-    declare -p message
 }
 
 : ${paragraph:=${paragraph+${paragraph:-$'\n'}}}
