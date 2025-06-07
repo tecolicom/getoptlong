@@ -111,11 +111,25 @@ load test_helper.bash
     assert_output "file_val:data.txt"
 }
 
+# Test: Option with required argument (not given, should retain default from OPTS array)
+@test "getoptlong: required arg - not given (retain default)" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([file|f:]=default)
+        getoptlong init OPTS
+        getoptlong parse # No args
+        eval "$(getoptlong set)"
+        echo "file_val:$file"
+    '
+    assert_success
+    assert_output "file_val:default"
+}
+
 # Test: Option with optional argument (--optarg=value)
 @test "getoptlong: optional arg - long --optarg=value" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([optarg|o?]=default)
+        declare -A OPTS=([optarg|o?]=)
         getoptlong init OPTS
         getoptlong parse --optarg=value
         eval "$(getoptlong set)"
@@ -129,7 +143,7 @@ load test_helper.bash
 @test "getoptlong: optional arg - long --optarg (no value)" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([optarg|o?]=default)
+        declare -A OPTS=([optarg|o?]=)
         getoptlong init OPTS
         getoptlong parse --optarg
         eval "$(getoptlong set)"
@@ -139,29 +153,15 @@ load test_helper.bash
     assert_output "optarg_val:"
 }
 
-# Test: Option with optional argument (not given, should retain default from OPTS array)
-@test "getoptlong: optional arg - not given (retain default)" {
-    run bash -c '
-        . ../getoptlong.sh
-        declare -A OPTS=([optarg|o?]=default_value_in_opts)
-        getoptlong init OPTS
-        getoptlong parse # No args
-        eval "$(getoptlong set)"
-        echo "optarg_val:$optarg"
-    '
-    assert_success
-    assert_output "optarg_val:default_value_in_opts"
-}
-
 # Test: Array option (--item val1 --item val2)
 @test "getoptlong: array option - long --item val1 --item val2" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([item|i@]=())
+        declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
         getoptlong parse --item val1 --item val2
         eval "$(getoptlong set)"
-        echo "item_vals:\${item[*]}"
+        echo "item_vals:${item[*]}"
     '
     assert_success
     assert_output "item_vals:val1 val2"
@@ -171,11 +171,11 @@ load test_helper.bash
 @test "getoptlong: array option - short -i val1 -i val2" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([item|i@]=())
+        declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
         getoptlong parse -i val1 -i val2
         eval "$(getoptlong set)"
-        echo "item_vals:\${item[*]}"
+        echo "item_vals:${item[*]}"
     '
     assert_success
     assert_output "item_vals:val1 val2"
@@ -186,11 +186,11 @@ load test_helper.bash
 @test "getoptlong: array option - long --item=v1,v2,v3 (comma separated)" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([item|i@]=())
+        declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
         getoptlong parse --item=v1,v2,v3
         eval "$(getoptlong set)"
-        echo "item_vals:\${item[*]}"
+        echo "item_vals:${item[*]}"
     ' # Ensure this closing quote for bash -c is present and correct
         . ../getoptlong.sh
     assert_success
@@ -201,12 +201,12 @@ load test_helper.bash
 @test "getoptlong: hash option - long --data k1=v1 --data k2=v2" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([data|D%]=())
+        declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
         getoptlong parse --data k1=v1 --data k2=v2
         eval "$(getoptlong set)"
-        echo "data_k1:\${data[k1]}"
-        echo "data_k2:\${data[k2]}"
+        echo "data_k1:${data[k1]}"
+        echo "data_k2:${data[k2]}"
     '
     assert_success
     assert_line --index 0 "data_k1:v1"
@@ -217,12 +217,12 @@ load test_helper.bash
 @test "getoptlong: hash option - short -D k1=v1 -D k2=v2" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([data|D%]=())
+        declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
         getoptlong parse -D k1=v1 -D k2=v2
         eval "$(getoptlong set)"
-        echo "data_k1:\${data[k1]}"
-        echo "data_k2:\${data[k2]}"
+        echo "data_k1:${data[k1]}"
+        echo "data_k2:${data[k2]}"
     '
     assert_success
     assert_line --index 0 "data_k1:v1"
@@ -237,7 +237,7 @@ load test_helper.bash
         getoptlong init OPTS
         getoptlong parse --count 123
         eval "$(getoptlong set)"
-        echo "count_val:\$count"
+        echo "count_val:$count"
     '
     assert_success
     assert_output "count_val:123"
@@ -281,7 +281,7 @@ load test_helper.bash
         getoptlong init OPTS
         getoptlong parse --value 3.14
         eval "$(getoptlong set)"
-        echo "value_val:\$value"
+        echo "value_val:$value"
     '
     assert_success
     assert_output "value_val:3.14"
@@ -295,7 +295,7 @@ load test_helper.bash
         getoptlong init OPTS
         getoptlong parse --mode fast
         eval "$(getoptlong set)"
-        echo "mode_val:\$mode"
+        echo "mode_val:$mode"
     '
     assert_success
     assert_output "mode_val:fast"
@@ -305,7 +305,7 @@ load test_helper.bash
 @test "getoptlong: callback - basic execution" {
     run bash -c '
         . ../getoptlong.sh
-        my_callback() { echo "Callback invoked for \$1 with value: \$2"; }
+        my_callback() { echo "Callback invoked for $1 with value: $2"; }
         # Export the function so the subshell created by getoptlong can see it.
         # However, getoptlong runs callbacks in its own context, not a new subshell from here.
         # The issue might be if `getoptlong parse` itself is in a subshell from `run`.
@@ -329,7 +329,7 @@ load test_helper.bash
         getoptlong init OPTS PREFIX=test_
         getoptlong parse --long
         eval "$(getoptlong set)"
-        echo "test_long_val:\$test_long"
+        echo "test_long_val:$test_long"
     '
     assert_success
     assert_output "test_long_val:1"
@@ -339,12 +339,13 @@ load test_helper.bash
 @test "getoptlong: configuration - PERMUTE" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([verbose|v]=) GOL_MYARGS=()
+        declare -A OPTS=([verbose|v]=)
+        declare -a GOL_MYARGS=()
         getoptlong init OPTS PERMUTE=GOL_MYARGS
         getoptlong parse arg1 --verbose arg2 -- arg3
         eval "$(getoptlong set)"
-        echo "verbose_is:\$verbose"
-        echo "permuted_args:\${GOL_MYARGS[*]}"
+        echo "verbose_is:$verbose"
+        echo "permuted_args:${GOL_MYARGS[*]}"
     '
     assert_success
     assert_line --index 0 "verbose_is:1"
@@ -372,7 +373,7 @@ load test_helper.bash
         getoptlong init OPTS
         getoptlong parse -xvf somefile
         eval "$(getoptlong set)"
-        echo "x:\$xflag v:\$vflag f:\$file"
+        echo "x:$xflag v:$vflag f:$file"
   '
   assert_success
   assert_output "x:1 v:1 f:somefile"
