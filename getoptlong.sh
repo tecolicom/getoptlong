@@ -36,8 +36,15 @@ _gol_redirect() { local name ;
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
-gol_dump() {
+gol_dump () { _gol_redirect "$@" ; }
+gol_dump_() {
     declare -p $GOL_OPTHASH | grep -oE '\[[^]]*\]="[^"]*"' | sort
+    for key in "${!_opts[@]}" ; do
+	[[ $key =~ ^[[:alnum:]_] && ${_opts[$key]} =~ ([$IS_ANY])($PREFIX(.*)) && $key == ${MATCH[3]} ]] \
+	    || continue
+	local vname=${MATCH[2]}
+	[[ $(declare -p $vname 2> /dev/null) =~ declare( )(..)( )(.*) ]] && echo "${MATCH[4]}" || echo "$vname=unset"
+    done
 }
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTHASH OPTIND=1' ; return ; }
