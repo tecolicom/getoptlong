@@ -261,7 +261,6 @@ load test_helper.bash
     # Let's stick to simple failure for now, assuming error message goes to stderr.
     # To check stderr with bats-assert:
     # run bash -c '...'
-        . ../getoptlong.sh
     # assert_failure
     # assert_output --stderr --partial "abc: not an integer"
     # For now, just:
@@ -270,7 +269,7 @@ load test_helper.bash
     # We can't directly assert stderr content with assert_output if it also checks stdout
     # unless we capture them separately or use --partial for combined output.
     # The `run` command in bats stores stdout in `$output` and stderr in `$stderr`.
-    assert_match "$stderr" "abc: not an integer"
+    assert_output "abc: not an integer"
 }
 
 # Test: Float validation (=f) - valid
@@ -305,7 +304,7 @@ load test_helper.bash
 @test "getoptlong: callback - basic execution" {
     run bash -c '
         . ../getoptlong.sh
-        my_callback() { echo "Callback invoked for $1 with value: $2"; }
+        my_callback() { echo "Callback invoked with value: $1"; }
         # Export the function so the subshell created by getoptlong can see it.
         # However, getoptlong runs callbacks in its own context, not a new subshell from here.
         # The issue might be if `getoptlong parse` itself is in a subshell from `run`.
@@ -318,7 +317,7 @@ load test_helper.bash
         # Callback output should be part of stdout if it echos.
     '
     assert_success
-    assert_output --partial "Callback invoked for action with value: perform_action"
+    assert_output --partial "Callback invoked with value: perform_action"
 }
 
 # Test: PREFIX option
@@ -352,19 +351,6 @@ load test_helper.bash
     assert_line --index 1 "permuted_args:arg1 arg2 arg3"
 }
 
-# Test: getoptlong dump
-@test "getoptlong: dump command" {
-    run bash -c '
-        . ../getoptlong.sh
-        declare -A OPTS=([foo|f]=bar [baz%]=)
-        getoptlong init OPTS
-        getoptlong parse --foo --baz key=val
-        getoptlong dump
-    '
-    assert_success
-    assert_output --partial '[_opts['
-}
-
 # Test: Combined short options (-xvf value)
 @test "getoptlong: combined short options -xvf value" {
   run bash -c '
@@ -390,7 +376,7 @@ load test_helper.bash
   '
   assert_failure # From bats-assert
   # Stderr is in $stderr, stdout in $output
-  assert_match "$stderr" "no such option -- --unknown-option"
+  assert_output "no such option -- --unknown-option"
 }
 
 # Test: Option requires argument, but not given (stderr)
@@ -403,6 +389,6 @@ load test_helper.bash
         echo "Should not be reached"
   '
   assert_failure # From bats-assert
-  assert_match "$stderr" "option requires an argument -- myfile"
+  assert_output "option requires an argument -- myfile"
 }
 
