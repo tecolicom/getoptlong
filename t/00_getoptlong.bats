@@ -192,7 +192,7 @@ load 'test_helper'
         eval "$(getoptlong set)"
         # Order of keys might vary, so check presence of both
         # For simplicity in this output-based test, we might need to sort or check individually.
-        # Let's output specific known keys for now.
+        # Lets output specific known keys for now.
         echo "data_k1:\${data[k1]}"
         echo "data_k2:\${data[k2]}"
     '
