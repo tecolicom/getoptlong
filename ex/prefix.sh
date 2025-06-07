@@ -38,14 +38,14 @@ getoptlong parse "$@" && eval "$(getoptlong set)"
 
 : ${opt_paragraph:=${opt_paragraph+${opt_paragrah:-$'\n'}}}
 
-[[ ${1:-} =~ ^[0-9]+$ ]] && { count=$1 ; shift ; }
+[[ ${1:-} =~ ^[0-9]+$ ]] && { opt_count=$1 ; shift ; }
 
 message() { [[ -v opt_message[$1] ]] && echo "${opt_message[$1]}" || : ; }
 
 message BEGIN
 for (( i = 0; i < opt_count ; i++ ))
 do
-    (( opt_debug >= 1 )) && echo "[ ${@@Q} ]" >&2
+    (( opt_debug >= 1 )) && echo "# [ ${@@Q} ]" >&2
     message EACH
     "$@"
     if (( opt_count > 0 ))
