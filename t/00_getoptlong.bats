@@ -3,7 +3,7 @@
 # Load the helper (which loads bats-support and bats-assert)
 load test_helper.bash
 # Source getoptlong.sh to make its functions available for testing
-        . ../getoptlong.sh
+. ../getoptlong.sh
 
 # Test: getoptlong init and version
 @test "getoptlong: init and version" {
