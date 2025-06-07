@@ -61,7 +61,8 @@ gol_init_() { local key aliases alias ;
 	declare -n target=$vname
 	unset _opts["$key"]
 	case ${vtype:=$IS_INCR} in
-	    [$IS_FREE]) ;;
+	    [$IS_FREE])
+		[[ $initial ]] && _gol_die "$initial: optional parameter can't be initialized" ;;
 	    [$IS_ARRAY]|[$IS_HASH])
 		[[ $vtype == $IS_ARRAY && ! -v $vname ]] && declare -ga $vname
 		[[ $vtype == $IS_HASH  && ! -v $vname ]] && declare -gA $vname
