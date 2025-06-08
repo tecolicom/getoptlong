@@ -9,7 +9,7 @@ load test_helper.bash
 @test "getoptlong: init and version" {
     run getoptlong version # Directly run the function
     assert_success # Provided by bats-assert
-    assert_output --partial "0.01"
+    assert_output -e "[0-9]+.[0-9]+"
 }
 
 # Test: Basic flag option (--verbose)
@@ -19,12 +19,27 @@ load test_helper.bash
         # getoptlong.sh is sourced above by the test file itself
         declare -A OPTS=([verbose|v]=)
         getoptlong init OPTS
-        getoptlong parse --verbose
+        getoptlong parse foo --verbose
         eval "$(getoptlong set)"
         echo "verbose_val:$verbose"
     '
     assert_success # bats-assert
     assert_output "verbose_val:1"
+}
+
+# Test: Basic flag option (--verbose)
+@test "getoptlong: flag - long option --verbose (PERMUTE=)" {
+    run bash -c '
+        . ../getoptlong.sh
+        # getoptlong.sh is sourced above by the test file itself
+        declare -A OPTS=([verbose|v]=)
+        getoptlong init OPTS PERMUTE=
+        getoptlong parse foo --verbose
+        eval "$(getoptlong set)"
+        echo "verbose_val:$verbose"
+    '
+    assert_success # bats-assert
+    assert_output "verbose_val:"
 }
 
 # Test: Basic flag option (-v)
@@ -42,17 +57,17 @@ load test_helper.bash
 }
 
 # Test: Flag option, incrementing (-d -d)
-@test "getoptlong: flag - incrementing -d -d --debug" {
+@test "getoptlong: flag - incrementing -d -d -dd --debug" {
     run bash -c '
         . ../getoptlong.sh
         declare -A OPTS=([debug|d]=0)
         getoptlong init OPTS
-        getoptlong parse -d -d --debug
+        getoptlong parse -d -d -dd --debug
         eval "$(getoptlong set)"
         echo "debug_val:$debug"
     '
     assert_success
-    assert_output "debug_val:3"
+    assert_output "debug_val:5"
 }
 
 # Test: Flag option, negated (--no-feature)
@@ -192,9 +207,34 @@ load test_helper.bash
         eval "$(getoptlong set)"
         echo "item_vals:${item[*]}"
     ' # Ensure this closing quote for bash -c is present and correct
-        . ../getoptlong.sh
     assert_success
     assert_output "item_vals:v1 v2 v3"
+}
+
+@test "getoptlong: array option - long --item=v1,v2,v3 (IFS=\$' \t')" {
+    run bash <<'    END'
+        . ../getoptlong.sh
+        declare -A OPTS=([item|i@]=)
+        getoptlong init OPTS IFS=$' \t'
+        getoptlong parse --item=v1,v2,v3
+        eval "$(getoptlong set)"
+        echo "item_vals:${item[*]}"
+    END
+    assert_success
+    assert_output "item_vals:v1,v2,v3"
+}
+
+@test "getoptlong: array option - long --item=v  1\nv  2\nv  3\n (newline separated)" {
+    run bash <<'    END'
+        . ../getoptlong.sh
+        declare -A OPTS=([item|i@]=)
+        getoptlong init OPTS
+        getoptlong parse --item=$'v  1\nv  2\nv  3\n'
+        eval "$(getoptlong set)"
+        echo item_vals: "${item[@]}"
+    END
+    assert_success
+    assert_output "item_vals: v  1 v  2 v  3"
 }
 
 # Test: Hash option (--data key1=val1 --data key2=val2)
@@ -227,6 +267,36 @@ load test_helper.bash
     assert_success
     assert_line --index 0 "data_k1:v1"
     assert_line --index 1 "data_k2:v2"
+}
+
+@test "getoptlong: hash option - short -D k1=v1,k2=v2" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([data|D%]=)
+        getoptlong init OPTS
+        getoptlong parse -D k1=v1,k2=v2
+        eval "$(getoptlong set)"
+        echo "data_k1:${data[k1]}"
+        echo "data_k2:${data[k2]}"
+    '
+    assert_success
+    assert_line --index 0 "data_k1:v1"
+    assert_line --index 1 "data_k2:v2"
+}
+
+@test "getoptlong: hash option - short -D F'k1=v  1,k2=v  2\n' (newline separated)" {
+    run bash << 'END'
+        . ../getoptlong.sh
+        declare -A OPTS=([data|D%]=)
+        getoptlong init OPTS
+        getoptlong parse -D $'k1=v  1\nk2=v  2\n'
+        eval "$(getoptlong set)"
+        echo "data_k1:${data[k1]}"
+        echo "data_k2:${data[k2]}"
+END
+    assert_success
+    assert_line --index 0 "data_k1:v  1"
+    assert_line --index 1 "data_k2:v  2"
 }
 
 # Test: Integer validation (=i) - valid
@@ -349,6 +419,42 @@ load test_helper.bash
     assert_success
     assert_line --index 0 "verbose_is:1"
     assert_line --index 1 "permuted_args:arg1 arg2 arg3"
+}
+
+@test "getoptlong: configuration - PERMUTE=" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([debug|d]= [verbose|v]=)
+        getoptlong init OPTS PERMUTE=
+        set -- --debug arg1 --verbose arg2 arg3
+        getoptlong parse "$@"
+        eval "$(getoptlong set)"
+        echo "debug_is:$debug"
+        echo "verbose_is:$verbose"
+        echo "permuted_args:$@"
+    '
+    assert_success
+    assert_line --index 0 "debug_is:1"
+    assert_line --index 1 "verbose_is:"
+    assert_line --index 2 "permuted_args:arg1 --verbose arg2 arg3"
+}
+
+@test "getoptlong: stop by --" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([debug|d]= [verbose|v]=)
+        getoptlong init OPTS
+        set -- --debug arg1 -- --verbose arg2 arg3
+        getoptlong parse "$@"
+        eval "$(getoptlong set)"
+        echo "debug_is:$debug"
+        echo "verbose_is:$verbose"
+        echo "permuted_args:$@"
+    '
+    assert_success
+    assert_line --index 0 "debug_is:1"
+    assert_line --index 1 "verbose_is:"
+    assert_line --index 2 "permuted_args:arg1 --verbose arg2 arg3"
 }
 
 # Test: Combined short options (-xvf value)
