@@ -52,7 +52,7 @@ do
     then
 	[[ $paragraph ]] && echo -n "$paragraph"
 	(( ${#sleep[@]} > 0 )) && {
-	    time=${sleep[$(( i % ${#sleep[@]} ))]}
+	    time="${sleep[$(( i % ${#sleep[@]} ))]}"
 	    (( debug > 0 )) && echo "# sleep $time" >&2
 	    sleep $time
 	}

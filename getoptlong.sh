@@ -44,7 +44,7 @@ gol_dump_() {
 	    || continue
 	local vname=${MATCH[2]}
 	[[ $(declare -p $vname 2> /dev/null) =~ declare( )(..)( )(.*) ]] && echo "${MATCH[4]}" || echo "$vname=unset"
-    done
+    done | sort
 }
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTHASH OPTIND=1' ; return ; }
@@ -121,7 +121,7 @@ gol_getopts_() { local optname val vtype vname name callback ;
 	-) _gol_getopts_long "$@" ;;
 	*) _gol_getopts_short ;;
     esac
-    name=$(_gol_alias $optname) || name=$optname
+    name=$(_gol_alias ${optname:=$opt}) || name=$optname
     _gol_getopts_store
     callback="$(_gol_hook $name)" && $callback "$val"
     return 0
@@ -144,7 +144,6 @@ _gol_getopts_long() { local no param ;
     fi
 }
 _gol_getopts_short() {
-    optname=$opt
     [[ ${_opts[$opt]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- -$opt"
     vtype=${MATCH[1]} vname=${MATCH[2]}
     [[ $vtype =~ [${IS_FREE}${IS_NEED}] ]] && val="${OPTARG:-}"
@@ -159,7 +158,7 @@ _gol_getopts_store() { local vals ;
 	    for val in "${vals[@]}" ; do
 		[[ $check ]] && _gol_validate "$check" "$val"
 		case $vtype in
-		[$IS_ARRAY]) target+=($val) ;;
+		[$IS_ARRAY]) target+=("$val") ;;
 		[$IS_HASH])  [[ $val =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
 		esac
 	    done

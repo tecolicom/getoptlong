@@ -52,7 +52,7 @@ do
     then
 	[[ $opt_paragraph ]] && echo -n "$opt_paragraph"
 	(( ${#opt_sleep[@]} > 0 )) && {
-	    time=${opt_sleep[$(( i % ${#opt_sleep[@]} ))]}
+	    time="${opt_sleep[$(( i % ${#opt_sleep[@]} ))]}"
 	    (( opt_debug > 0 )) && echo "# sleep $time" >&2
 	    sleep $time
 	}
