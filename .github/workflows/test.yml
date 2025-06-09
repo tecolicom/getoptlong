@@ -7,13 +7,29 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
         submodules: recursive
-    - uses: tecolicom/actions-use-apt-tools@v1
+
+    - name: Set up Bats (Linux)
+      if: runner.os == 'Linux'
+      uses: tecolicom/actions-use-apt-tools@v1
       with:
         tools: bats
+
+    - name: Set up Bats (macOS)
+      if: runner.os == 'macOS'
+      uses: tecolicom/actions-use-homebrew-tools@v1
+      with:
+        tools: bats-core
+
     - run: make test
