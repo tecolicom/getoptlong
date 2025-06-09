@@ -122,7 +122,7 @@ gol_getopts_() { local optname val vtype vname name callback ;
 	-) _gol_getopts_long "$@" || return $? ;;
 	*) _gol_getopts_short || return $? ;;
     esac
-    name=$(_gol_alias ${optname:=$opt}) || name=$optname
+    name=$(_gol_alias ${optname:-$opt}) || name=${optname:=$opt}
     _gol_getopts_store
     callback="$(_gol_hook $name)" && $callback "$val"
     return 0
