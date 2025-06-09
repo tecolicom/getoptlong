@@ -30,6 +30,10 @@ jobs:
       if: runner.os == 'macOS'
       uses: tecolicom/actions-use-homebrew-tools@v1
       with:
-        tools: bats-core
+        tools: bash bats-core
 
-    - run: make test
+    - name: run test
+      run: |
+        echo PATH="$PATH"
+        which bash
+        make test
