@@ -470,3 +470,107 @@ Refer to these examples for practical usage patterns.
 - [Getopt::Long](https://metacpan.org/dist/Getopt-Long)
 
 - [getoptions](https://github.com/ko1nksm/getoptions)
+
+## Subcommand Support
+
+`getoptlong.sh` can be used to support scripts with subcommands. There are two main approaches to parsing options for the main command and the subcommand:
+
+### 1. Separate Option Parsing
+
+This approach involves parsing options for the main command first, stopping at the subcommand name, and then re-initializing `getoptlong.sh` to parse options specifically for that subcommand. The `ex/subcmd.sh` script demonstrates this.
+
+**Key features:**
+*   The main command's `getoptlong init` uses `PERMUTE=` (empty value). This ensures that option parsing stops at the first non-option argument, which is expected to be the subcommand name.
+*   After the main options are parsed, the script identifies the subcommand and then initializes `getoptlong` again with a new set of option definitions (`SUB_OPTS`) specific to that subcommand.
+*   Arguments for the main command and subcommand cannot be interspersed.
+
+**Example Snippets from `ex/subcmd.sh`:**
+
+Initializing main options (note `PERMUTE=`):
+```bash
+# In ex/subcmd.sh
+declare -A OPTS=([debug|d]=0 [help|h]= [message|m%]=)
+getoptlong init OPTS PERMUTE=
+getoptlong callback help help_main
+getoptlong parse "\$@" && eval "\$(getoptlong set)"
+```
+
+Identifying subcommand and initializing its options:
+```bash
+# In ex/subcmd.sh
+# Simplified logic from recent modifications:
+subcmd_val="\$1"
+if [[ -n "\$subcmd_val" ]]; then
+    shift
+    # echo "Subcommand identified: [\$subcmd_val]" >&2 # Example debug output
+else
+    echo "Error: Subcommand is required." >&2
+    exit 1
+fi
+# echo "Args for sub-parser: [\$@]" >&2 # Example debug output
+
+case \$subcmd_val in
+    flag) declare -A SUB_OPTS=([flag|F]=) ;;
+    data) declare -A SUB_OPTS=([data|D:]=) ;;
+    list) declare -A SUB_OPTS=([list|L@]=) ;;
+    hash) declare -A SUB_OPTS=([hash|H%]=) ;;
+    *)    echo "\$subcmd_val: unknown subcommand" >&2 ; exit 1 ;;
+esac
+
+getoptlong init SUB_OPTS # PERMUTE is not disabled here by default for sub_opts
+getoptlong parse "\$@" && eval "\$(getoptlong set)"
+```
+
+**Conceptual Usage:**
+```sh
+./ex/subcmd.sh --debug --message key=val main_command_arg1 command_name --sub-opt --sub-arg value
+```
+Here, `--debug` and `--message` are for `ex/subcmd.sh`. `command_name` is the subcommand, and `--sub-opt --sub-arg value` are for `command_name`.
+
+### 2. Mixed Options with Silent Ignoring
+
+This approach allows options for the main command and subcommand to be mixed. It works by configuring `getoptlong.sh` to silently ignore unknown options during each parsing pass. The `ex/silent.sh` script demonstrates this.
+
+**Key features:**
+*   Both the main command's `getoptlong init` and the subcommand's `getoptlong init` use `EXIT_ON_ERROR=` (empty value) and `SILENT=1`. This tells `getoptlong.sh` to ignore options it doesn't recognize for the current `OPTS` definition and continue parsing.
+*   The script first parses the entire argument list for main options.
+*   After identifying the subcommand, it re-initializes `getoptlong` for `SUB_OPTS` (also with `EXIT_ON_ERROR= SILENT=1`) and re-parses the *same set of arguments* (or the remaining ones if you `shift` past the subcommand name).
+*   This way, main options are picked up in the first pass, and subcommand options are picked up in the second pass, with unrecognized options being ignored in each respective pass.
+
+**Example Snippets from `ex/silent.sh`:**
+
+Initializing main options (note `EXIT_ON_ERROR= SILENT=1`):
+```bash
+# In ex/silent.sh
+declare -A OPTS=(
+    [ debug   | d   ]=0
+    [ help    | h   ]=
+    [ message | m % ]=
+)
+getoptlong init OPTS EXIT_ON_ERROR= SILENT=1 DEBUG=\${DEBUGME:-}
+getoptlong parse "\$@" && eval "\$(getoptlong set)"
+```
+
+Identifying subcommand and initializing its options (again with `EXIT_ON_ERROR= SILENT=1`):
+```bash
+# In ex/silent.sh
+[[ \${subcmd:=\$1} ]] && shift || { echo "subcommand is required"; exit 1; }
+
+case \$subcmd in
+    flag) declare -A SUB_OPTS=([flag|F]=) ;;
+    data) declare -A SUB_OPTS=([data|D:]=) ;;
+    # ... other subcommands
+esac
+
+unset GOL_ARGV # Important if re-parsing original ARGV for subcommands
+# Note: ex/silent.sh was modified to include EXIT_ON_ERROR= SILENT=1 here too
+getoptlong init SUB_OPTS EXIT_ON_ERROR= SILENT=1 DEBUG=\${DEBUGME:-}
+# ex/silent.sh itself re-parses the current $@ after shifting the subcmd name.
+getoptlong parse "\$@" && eval "\$(getoptlong set)"
+```
+
+**Conceptual Usage:**
+```sh
+./ex/silent.sh --debug --sub-opt --message key=val command_name --sub-arg value main_arg
+```
+Here, `--debug` and `--message` could be main options, while `--sub-opt` and `--sub-arg` could be for `command_name`. The order is flexible.

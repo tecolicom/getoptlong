@@ -19,6 +19,12 @@ getoptlong init OPTS EXIT_ON_ERROR= SILENT=1 DEBUG=${DEBUGME:-}
 getoptlong callback help help_main set-x -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
+# Dump main options if debug > 1
+[[ \$debug -gt 1 ]] && {
+    echo "Main Opts Dump:" >&2
+    getoptlong dump OPTS >&2
+}
+
 echo "ARGV=[$@]" >&2
 
 declare -p message
@@ -36,10 +42,11 @@ case $subcmd in
 esac
 
 unset GOL_ARGV
-getoptlong init SUB_OPTS DEBUG=${DEBUGME:-}
+getoptlong init SUB_OPTS EXIT_ON_ERROR= SILENT=1 DEBUG=${DEBUGME:-}
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
-[[ $debug -gt 0 ]] && getoptlong dump
+# For subcommands, GOL_OPTS_DUMP_PREFIX can be used to clarify which options are being dumped
+[[ $debug -gt 0 ]] && GOL_OPTS_DUMP_PREFIX="Sub Opts " getoptlong dump SUB_OPTS
 
 case $subcmd in
     flag) declare -p flag ;;
