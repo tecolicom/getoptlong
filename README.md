@@ -189,7 +189,9 @@ result is undefined.
   See "How to Specify Option Values" for details on value formats.
 
   - `PERMUTE=<array_name>`: Non-option arguments will be collected
-    into `<array_name>` (default: `GOL_ARGV`).
+    into `<array_name>` (default: `GOL_ARGV`).  Setting an empty
+    string disables the permutation, and stop parsing when encounted
+    non-option argument.
 
   - `PREFIX=<string>`: Prepend `<string>` to variable names when
     setting them (default: empty).
@@ -197,7 +199,7 @@ result is undefined.
   - `EXIT_ON_ERROR=<BOOL>`: Whether to exit if an error occurs during
     parsing (default: `1`).
 
-  - `VFS=<string>`: Variable Field Separator (default: `$' \t,'`).
+  - `DELIM=<string>`: Field separator (default: space, tab, comma).
     This is used to split array and hash parameters.
 
   - `SILENT=<BOOL>`: Suppress error messages (default: empty).
@@ -313,7 +315,7 @@ their definition in the "Option Types in Definition" section.
       short option)
 
   * In this convenience form, values within the list are separated by
-    commas, spaces, or tabs (controlled by the `VFS` setting).
+    commas, spaces, or tabs (controlled by the `DELIM` setting).
 
   * The variable (e.g., `$myarray`) will be a Bash array; access
     elements with `${myarray[0]}`, etc.
