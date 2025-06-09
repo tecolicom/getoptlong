@@ -211,11 +211,11 @@ load test_helper.bash
     assert_output "item_vals:v1 v2 v3"
 }
 
-@test "getoptlong: array option - long --item=v1,v2,v3 (IFS=\$' \t')" {
+@test "getoptlong: array option - long --item=v1,v2,v3 (VFS=\$' \t')" {
     run bash <<'    END'
         . ../getoptlong.sh
         declare -A OPTS=([item|i@]=)
-        getoptlong init OPTS IFS=$' \t'
+        getoptlong init OPTS VFS=$' \t'
         getoptlong parse --item=v1,v2,v3
         eval "$(getoptlong set)"
         echo "item_vals:${item[*]}"

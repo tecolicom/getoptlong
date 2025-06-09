@@ -4,6 +4,8 @@
 shell scripts.  It provides a flexible way to handle options including
 followings.
 
+- Clear and expressive option syntax
+
 - Supports both short options (e.g., `-h`) and long options (e.g.,
   `--help`)
 
@@ -195,8 +197,8 @@ result is undefined.
   - `EXIT_ON_ERROR=<BOOL>`: Whether to exit if an error occurs during
     parsing (default: `1`).
 
-  - `IFS=<string>`: Input Field Separator (default: `$' \t,'`).  This
-    is used to split array parameters.
+  - `VFS=<string>`: Variable Field Separator (default: `$' \t,'`).
+    This is used to split array and hash parameters.
 
   - `SILENT=<BOOL>`: Suppress error messages (default: empty).
 
@@ -311,7 +313,7 @@ their definition in the "Option Types in Definition" section.
       short option)
 
   * In this convenience form, values within the list are separated by
-    commas, spaces, or tabs (controlled by the `IFS` setting).
+    commas, spaces, or tabs (controlled by the `VFS` setting).
 
   * The variable (e.g., `$myarray`) will be a Bash array; access
     elements with `${myarray[0]}`, etc.

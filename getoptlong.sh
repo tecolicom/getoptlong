@@ -33,7 +33,7 @@ _gol_redirect() { local name ;
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS='~!&=' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' \
 	  IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
-    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX IFS)
+    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX VFS)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
@@ -50,8 +50,8 @@ gol_dump_() {
 gol_init() { local key ;
     (( $# == 0 )) && { echo 'local GOL_OPTHASH OPTIND=1' ; return ; }
     declare -n _opts=$1
-    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [IFS]=$' \t,')
-    for key in "${!GOL_CONFIG[@]}" ; do _opts[&$key]="${GOL_CONFIG[$key]}" ; done
+    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [VFS]=$' \t,')
+    for key in "${!GOL_CONFIG[@]}" ; do _opts["&$key"]="${GOL_CONFIG[$key]}" ; done
     GOL_OPTHASH=$1
     (( $# > 1 )) && gol_configure "${@:2}"
     _gol_redirect
@@ -155,7 +155,7 @@ _gol_getopts_store() { local vals ;
     case $vtype in
 	[$IS_ARRAY]|[$IS_HASH])
 	    [[ $val =~ $'\n' ]] && readarray -t vals <<< ${val%$'\n'} \
-				|| read -a vals <<< ${val}
+				|| IFS="${VFS}" read -a vals <<< ${val}
 	    for val in "${vals[@]}" ; do
 		[[ $check ]] && _gol_validate "$check" "$val"
 		case $vtype in
