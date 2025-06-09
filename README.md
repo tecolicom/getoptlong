@@ -21,6 +21,9 @@ followings.
 - Enables registration of callback functions for each option for
   flexible processing
 
+- Supports multiple calls, which enables to use different options in
+  subcommands or perform own option analysis within functions
+
 ## Usage
 
 The following is a sample script from [repeat.sh](ex/repeat.sh) as an
