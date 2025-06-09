@@ -48,7 +48,7 @@ gol_dump_() {
     done | sort
 }
 gol_init() { local key ;
-    (( $# == 0 )) && { echo 'local GOL_OPTHASH OPTIND=1' ; return ; }
+    (( $# == 0 )) && { echo '(( ${#FUNCNAME[@]} > 0 )) && local GOL_OPTHASH OPTIND=1 || OPTIND=1' ; return ; }
     declare -n _opts=$1
     declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [DELIM]=$' \t,')
     for key in "${!GOL_CONFIG[@]}" ; do _opts["&$key"]="${GOL_CONFIG[$key]}" ; done
@@ -118,9 +118,9 @@ gol_getopts_() { local optname val vtype vname name callback ;
     local opt="$1"; shift;
     case $opt in
 	[:?]) callback=$(_gol_hook "$opt") && [[ $callback ]] && $callback "$OPTARG"
-	      [[ $EXIT_ON_ERROR ]] && exit 1 || return 0 ;;
-	-) _gol_getopts_long "$@" ;;
-	*) _gol_getopts_short ;;
+	      [[ $EXIT_ON_ERROR ]] && exit 1 || return 1 ;;
+	-) _gol_getopts_long "$@" || return $? ;;
+	*) _gol_getopts_short || return $? ;;
     esac
     name=$(_gol_alias ${optname:=$opt}) || name=$optname
     _gol_getopts_store
@@ -130,7 +130,9 @@ gol_getopts_() { local optname val vtype vname name callback ;
 _gol_getopts_long() { local no param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
     no="${MATCH[1]}" optname="${MATCH[2]}" param="${MATCH[3]}" val="${MATCH[4]}"
-    [[ $(_gol_opts $optname) =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- --$optname"
+    [[ $(_gol_opts $optname) =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || {
+	[[ $EXIT_ON_ERROR ]] && _gol_die "no such option -- --$optname" || return 2
+    }
     vtype=${MATCH[1]} vname=${MATCH[2]}
     if [[ $param ]] ; then
 	[[ $vtype =~ [${IS_NEED}${IS_FREE}] ]] || _gol_die "does not take an argument -- $optname"
@@ -143,11 +145,15 @@ _gol_getopts_long() { local no param ;
 	    *) [[ $no ]] && val= || unset val ;;
 	esac
     fi
+    return 0
 }
 _gol_getopts_short() {
-    [[ ${_opts[$opt]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || _gol_die "no such option -- -$opt"
+    [[ ${_opts[$opt]-} =~ ^([$IS_ANY])([_[:alnum:]]+) ]] || {
+	[[ $EXIT_ON_ERROR ]] && _gol_die "no such option -- -$opt" || return 3
+    }
     vtype=${MATCH[1]} vname=${MATCH[2]}
     [[ $vtype =~ [${IS_FREE}${IS_NEED}] ]] && val="${OPTARG:-}"
+    return 0
 }
 _gol_getopts_store() { local vals ;
     declare -n target=$vname
@@ -183,13 +189,17 @@ gol_callback_() {
 gol_parse () { _gol_redirect "$@" ; }
 gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
     local optstring="$(gol_optstring_)" ; _gol_debug "OPTSTRING=$optstring" ;
-    while (( OPTIND <= $# )) ; do
+    for (( OPTIND=1 ; OPTIND <= $# ; OPTIND++ )) ; do
 	while getopts "$optstring" gol_OPT ; do
-	    gol_getopts_ "$gol_OPT" "$@"
+	    gol_getopts_ "$gol_OPT" "$@" || {
+		_gol_debug "SAVE ERROR: ${@:$((OPTIND-1)):1}"
+		SAVEARG+=("${@:$((OPTIND-1)):1}")
+	    }
 	done
 	: ${SAVEIND:=$OPTIND}
 	[[ ! $PERMUTE || $OPTIND > $# || ${@:$(($OPTIND-1)):1} == -- ]] && break
-	SAVEARG+=(${@:$((OPTIND++)):1})
+	_gol_debug "SAVE PARAM: ${!OPTIND}"
+	SAVEARG+=(${!OPTIND})
     done
     [[ $PERMUTE ]] && set -- "${SAVEARG[@]}" "${@:$OPTIND}" || shift $(( OPTIND - 1 ))
     OPTIND=${SAVEIND:-$OPTIND}
