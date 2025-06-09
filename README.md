@@ -12,8 +12,8 @@ followings.
 - Allows options and non-option arguments to be freely mixed on the
   command line (PERMUTE)
 
-- Supports required arguments, optional arguments, array-type, and
-  hash-type options
+- Supports flag type incremental option as well as required arguments,
+  optional arguments, array-type, and hash-type options
 
 - Provides validation for integer, floating-point, and custom regular
   expression patterns
@@ -21,135 +21,138 @@ followings.
 - Enables registration of callback functions for each option for
   flexible processing
 
+- Supports multiple calls, which enables to use different options in
+  subcommands or perform own option analysis within functions
+
 ## Usage
 
 The following is a sample script from [repeat.sh](ex/repeat.sh) as an
 example to illustrate the use of [getoptlong.sh](getoptlong.sh).
 
-1.  **Source the library:**
+1. **Source the library:**
 
-    ```bash
-    . getoptlong.sh
-    ```
+   ```bash
+   . getoptlong.sh
+   ```
 
-2.  **Define your options:**
+2. **Define your options:**
 
-    Create an associative array (e.g., `OPT`) to define your script's
-    options.  Each key is a string representing the option names
-    (short and long, separated by `|`) and its storage type character.
-    Storage type can be followed `=` and data type character (e.g.,
-    `i`: integer, `f`: float).  White spaces are all ignored.
+   Create an associative array (e.g., `OPTS`) to define your script's
+   options.  Each key is a string representing the option names (short
+   and long, separated by `|`) and its storage type character.
+   Storage type can be followed `=` and data type character (e.g.,
+   `i`: integer, `f`: float).  White spaces are all ignored.
 
-    ```bash
-    declare -A OPTS=(
-        [ count     | c :=i ]=1  # require argument
-        [ paragraph | p ?   ]=   # optional argument
-        [ sleep     | i @=f ]=   # array type
-        [ message   | m %   ]=   # hash type
-        [ help      | h     ]=   # flag type
-        [ debug     | d     ]=0  # incremental
-    )
-    ```
+   ```bash
+   declare -A OPTS=(
+       [ count     | c :=i ]=1  # require argument
+       [ paragraph | p ?   ]=   # optional argument
+       [ sleep     | i @=f ]=   # array type
+       [ message   | m %   ]=   # hash type
+       [ help      | h     ]=   # flag type
+       [ debug     | d     ]=0  # incremental
+   )
+   ```
 
-3.  **Initialize the library:**
+3. **Initialize the library:**
 
-    Call `getoptlong init` with the name of your options array. You
-    can provide configuration parameters after the array name.
+   Call `getoptlong init` with the name of your options array. You can
+   provide configuration parameters after the array name.
 
-    ```bash
-    getoptlong init OPTS
-    ```
+   ```bash
+   getoptlong init OPTS
+   ```
 
-4.  **Setup callback function:**
+4. **Setup callback function:**
 
-    Callbacks allow you to execute custom functions when an option is
-    parsed.  This can be used for various purposes, such as triggering
-    actions, setting complex states, or performing specialized
-    argument processing.  You register a callback using `getoptlong
-    callback <opt_name> [callback_function]`.  If `callback_function`
-    is omitted or is `-`, it defaults to `opt_name`.
+   Callbacks allow you to execute custom functions when an option is
+   parsed.  This can be used for various purposes, such as triggering
+   actions, setting complex states, or performing specialized argument
+   processing.  You register a callback using `getoptlong callback
+   <opt_name> [callback_function]`.  If `callback_function` is omitted
+   or is `-`, it defaults to `opt_name`.
 
-    Callback function is called with the value as `$1`.  Next code
-    execute `set -x` by `--trace` option, and `set +x` by `--no-trace`
-    option.
+   Callback function is called with the value as `$1`.  Next code
+   execute `set -x` by `--trace` option, and `set +x` by `--no-trace`
+   option.
 
-    ```bash
-    trace() { [[ $1 ]] && set -x || set +x ; }
-    getoptlong callback help - trace -
-    ```
+   ```bash
+   trace() { [[ $1 ]] && set -x || set +x ; }
+   getoptlong callback help - trace -
+   ```
 
-5.  **Parse the arguments:**
+5. **Parse the arguments:**
 
-    Call `getoptlong parse` with the script's arguments (`"$@"`).
-    Then, use `eval "$(getoptlong set)"` to set the variables
-    according to the parsed options.
+   Call `getoptlong parse` with the script's arguments (`"$@"`).
+   Then, use `eval "$(getoptlong set)"` to set the variables according
+   to the parsed options.
 
-    ```bash
-    getoptlong parse "$@" && eval "$(getoptlong set)" 
-    ```
+   ```bash
+   getoptlong parse "$@" && eval "$(getoptlong set)" 
+   ```
 
-6.  **Access option values:**
+6. **Access option values:**
 
-    - By default, options will be available as simple variables like
-      `$count`, `$debug`.  Variables for flag-type options (those
-      without `:`, `?`, `@`, or `%`) are assigned string `1` at the
-      first time, and incremented each time the flag is encountered.
+   - By default, options will be available as simple variables like
+     `$count`, `$debug`.  Variables for flag-type options (those
+     without `:`, `?`, `@`, or `%`) are assigned string `1` at the
+     first time, and incremented each time the flag is encountered.
 
-    - Any dashes (`-`) included in the option name will be replaced by
-      underscores (`_`).  So the `--help-me-please` option sets the
-      variable `$help_me_please`.
+   - Any dashes (`-`) included in the option name will be replaced by
+     underscores (`_`).  So the `--help-me-please` option sets the
+     variable `$help_me_please`.
 
-    - Values for array options are stored in Bash arrays (e.g., access
-      with `"${sleep[@]}"`).
+   - Values for array options are stored in Bash arrays (e.g., access
+     with `"${sleep[@]}"`).
 
-    - Values for hash options are stored in Bash associative arrays
-      (e.g., access keys with `"${!message[@]}"` and values with
-      `"${message[key]}"`).
+   - Values for hash options are stored in Bash associative arrays
+     (e.g., access keys with `"${!message[@]}"` and values with
+     `"${message[key]}"`).
 
-    - Accessing value of optional argument (e.g., `[paragraph|p?]`) is
-      a bit tricky.
+   - Accessing value of optional argument (e.g., `[paragraph|p?]`) is
+     a bit tricky.
 
-      * If (and only if) `--paragraph='string'` is used, `$paragraph`
-        will be `string`.
+     * If (and only if) `--paragraph='string'` is used, `$paragraph`
+       will be `string`.
 
-      * If `-p` or `--paragraph` is used (no value provided after
-        `=`), `$paragraph` will be an empty string.
+     * If `-p` or `--paragraph` is used (no value provided after
+       `=`), `$paragraph` will be an empty string.
 
-      * If the option is not present in the arguments, `$paragraph`
-        remains unset.  You can use `-v` operator or something like
-        `${paragraph+_}` notation to check it is set or not.
+     * If the option is not present in the arguments, `$paragraph`
+       remains unset.  You can use `-v` operator or something like
+       `${paragraph+_}` notation to check if it is set or not.
 
-    ```
-    (( debug >= 2 )) && {
-        getoptlong dump | column >&2
-        declare -p sleep
-        declare -p message
-    }
-    
-    : ${paragraph:=${paragraph+${paragraph:-$'\n'}}}
-    
-    [[ ${1:-} =~ ^[0-9]+$ ]] && { count=$1 ; shift ; }
-    
-    message() { [[ -v message[$1] ]] && echo "${message[$1]}" || : ; }
-    
-    message BEGIN
-    for (( i = 0; i < count ; i++ ))
-    do
-        message EACH
-        (( debug > 0 )) && echo "# [ ${@@Q} ]" >&2
-        "$@"
-        if (( count > 0 ))
-        then
-            [[ $paragraph ]] && echo -n "$paragraph"
-            (( ${#sleep[@]} > 0 )) && {
-                time=${sleep[$(( i % ${#sleep[@]} ))]}
-                (( debug > 0 )) && echo "# sleep $time" >&2
-                sleep $time
-            }
-        fi
-    done
-    message END
-    ```
+   ```
+   (( debug >= 2 )) && {
+       getoptlong dump | column >&2
+       declare -p sleep
+       declare -p message
+   }
+   
+   : ${paragraph:=${paragraph+${paragraph:-$'\n'}}}
+   
+   [[ ${1:-} =~ ^[0-9]+$ ]] && { count=$1 ; shift ; }
+   
+   message() { [[ -v message[$1] ]] && echo "${message[$1]}" || : ; }
+   
+   message BEGIN
+   for (( i = 0; i < count ; i++ ))
+   do
+       message EACH
+       (( debug > 0 )) && echo "# [ ${@@Q} ]" >&2
+       "$@"
+       if (( count > 0 ))
+       then
+           [[ $paragraph ]] && echo -n "$paragraph"
+           (( ${#sleep[@]} > 0 )) && {
+               time=${sleep[$(( i % ${#sleep[@]} ))]}
+               (( debug > 0 )) && echo "# sleep $time" >&2
+               sleep $time
+           }
+       fi
+   done
+   message END
+   ```
 
 ## Option Types in Definition
 
