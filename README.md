@@ -1,8 +1,23 @@
 # getoptlong.sh
 
 `getoptlong.sh` is a Bash library for parsing command-line options in
-shell scripts.  It provides a flexible way to handle both short and
-long options, optional arguments, argument validation, and callbacks.
+shell scripts.  It provides a flexible way to handle options including
+followings.
+
+- Supports both short options (e.g., `-h`) and long options (e.g.,
+  `--help`)
+
+- Allows options and non-option arguments to be freely mixed on the
+  command line (PERMUTE)
+
+- Supports required arguments, optional arguments, array-type, and
+  hash-type options
+
+- Provides validation for integer, floating-point, and custom regular
+  expression patterns
+
+- Enables registration of callback functions for each option for
+  flexible processing
 
 ## Usage
 
@@ -201,8 +216,10 @@ result is undefined.
 
   Registers a callback function.  Provide the option name and the
   corresponding callback function name.  If the function name is `-`
-  or omitted, it defaults to the option name.  The callback is invoked
-  with the option's value when the option is parsed.
+  or omitted, it defaults to the option name.  If the option string
+  contains a hyphens (`-`), they are changed to underscores (`_`).
+  The callback is invoked with the option's value when the option is
+  parsed.
 
 - **`getoptlong configure <CONFIG_PARAM=VALUE> ...`**:
 
@@ -264,22 +281,17 @@ their definition in the "Option Types in Definition" section.
       `$param` will be set to `value`.
 
     * `--param` (without `=value`): The variable `$param` will be set
-      to an empty string.  If a default value was defined for the
-      option (e.g., `[param|p?]=defaultval`), this empty string
-      assignment typically overrides the default for this specific
-      invocation.  If the option is not used at all, the predefined
-      default (if any) remains.
+      to an empty string.  If the option is not used at all, the
+      variable is unset.
 
   * **Short form** (e.g., `-p` for `[param|p?]`):
 
     * Using just `-p`: The variable `$param` will be set to an empty
-      string (or default handling as described above for long
-      options).
+      string.
 
     * The form `-pvalue` (attempting to attach a value directly to a
       short option with an optional argument) is **not supported**.
-      To provide a value, the long option form (`--param=value`) is
-      required.
+      To provide a value, use the long option form (`--param=value`).
 
 * **Array Options (defined with `@`)**
 
