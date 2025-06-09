@@ -22,7 +22,8 @@ _gol_validate() {
     case $1 in
 	i)   [[ "$2" =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
 	f)   [[ "$2" =~ ^[-+]?[0-9]*(\.[0-9]+)?$ ]] || _gol_die "$2: not a number" ;;
-	\(*) eval "[[ \"$2\" =~ $1 ]]"              || _gol_die "$2: invalid argument" ;;
+	\(*) declare -a error=([1]="$2: invalid argument" [2]="$1: something wrong")
+	     eval "[[ \"$2\" =~ $1 ]]" || _gol_die "${error[$?]}" ;;
 	*)   _gol_die "$1: unkown validation pattern" ;;
     esac
 }
