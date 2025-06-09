@@ -13,8 +13,12 @@ setup() {
 
 script=$(basename "$SCRIPT_UNDER_TEST")
 
+RUN() {
+    run "$SCRIPT_UNDER_TEST" "$@"
+}
+
 @test "${script}: shows help with --help" {
-    run "$SCRIPT_UNDER_TEST" --help
+    RUN --help
     assert_success
     assert_output --partial "repeat count command"
     assert_output --partial "-c#, --count=#"
@@ -22,14 +26,14 @@ script=$(basename "$SCRIPT_UNDER_TEST")
 }
 
 @test "${script}: 2 times: echo hello" {
-    run "$SCRIPT_UNDER_TEST" 2 echo hello
+    RUN 2 echo hello
     assert_success
     assert_output "hello
 hello"
 }
 
 @test "${script}: -c 3: echo test" {
-    run "$SCRIPT_UNDER_TEST" -c 3 echo test
+    RUN -c 3 echo test
     assert_success
     assert_output "test
 test
@@ -37,13 +41,13 @@ test"
 }
 
 @test "${script}: --count=1: echo single" {
-    run "$SCRIPT_UNDER_TEST" --count=1 echo single
+    RUN --count=1 echo single
     assert_success
     assert_output "single"
 }
 
 @test "${script}: paragraph (-p): echo line (default newline)" {
-    run "$SCRIPT_UNDER_TEST" -c 2 -p echo line
+    RUN -c 2 -p echo line
     assert_success
     # Expected: command_output + paragraph_separator + command_output + paragraph_separator
     # Default separator is a newline.
@@ -53,7 +57,7 @@ line"
 }
 
 @test "${script}: --paragraph=---: echo segment" {
-    run "$SCRIPT_UNDER_TEST" --count=2 --paragraph=$'---\n' echo segment
+    RUN --count=2 --paragraph=$'---\n' echo segment
     assert_success
     assert_output "segment
 ---
@@ -62,21 +66,26 @@ segment
 }
 
 @test "${script}: message BEGIN (-m BEGIN=Start)" {
-    run "$SCRIPT_UNDER_TEST" -c 1 -m BEGIN=Start echo action
+    RUN -c 1 -m BEGIN=Start echo action
     assert_success
     assert_output "Start
 action"
 }
 
+@test "${script}: message BEGIN (-m begin=Start) -- invalid" {
+    RUN -c 1 -m begin=Start echo action
+    assert_failure
+}
+
 @test "${script}: message END (--message END=Finish)" {
-    run "$SCRIPT_UNDER_TEST" --count=1 --message END=Finish echo work
+    RUN --count=1 --message END=Finish echo work
     assert_success
     assert_output "work
 Finish"
 }
 
 @test "${script}: message EACH (-m EACH=Cycle)" {
-    run "$SCRIPT_UNDER_TEST" -c 2 -m EACH=Cycle echo ping
+    RUN -c 2 -m EACH=Cycle echo ping
     assert_success
     assert_output "Cycle
 ping
@@ -85,7 +94,7 @@ ping"
 }
 
 @test "${script}: multiple messages (BEGIN, EACH, END)" {
-    run "$SCRIPT_UNDER_TEST" -c 1 -m BEGIN=B -m EACH=E -m END=X echo task
+    RUN -c 1 -m BEGIN=B -m EACH=E -m END=X echo task
     assert_success
     assert_output "B
 E
@@ -93,8 +102,26 @@ task
 X"
 }
 
+@test "${script}: multiple messages (BEGIN, EACH, END) -- bundling together" {
+    RUN -c 1 -m BEGIN=B,EACH=E,END=X echo task
+    assert_success
+    assert_output "B
+E
+task
+X"
+}
+
+@test "${script}: multiple messages (BEGIN, EACH, END) -- bundling together w/nl" {
+    RUN -c 1 -m $'BEGIN=--  B\nEACH=--  E\nEND=--  X\n' echo task
+    assert_success
+    assert_output "--  B
+--  E
+task
+--  X"
+}
+
 @test "${script}: command with spaces: echo hello world" {
-    run "$SCRIPT_UNDER_TEST" -c 1 echo "hello world"
+    RUN -c 1 echo "hello world"
     assert_success
     assert_output "hello world"
 }
@@ -103,13 +130,13 @@ X"
     # This test is slightly less deterministic if ls output format varies wildly.
     # We check for the presence of "null".
     # Note: /dev/null is a file, `ls -a /dev/null` outputs `/dev/null`.
-    run "$SCRIPT_UNDER_TEST" -c 1 -- ls -a /dev/null
+    RUN -c 1 -- ls -a /dev/null
     assert_success
     assert_output --partial "/dev/null"
 }
 
 @test "${script}: no arguments (should show help/error and fail)" {
-    run "$SCRIPT_UNDER_TEST"
+    RUN
     assert_success
     assert_output ''
 }
@@ -118,7 +145,7 @@ X"
     # Actual sleep duration is not tested here, only that the command runs.
     # For more robust sleep testing, one might use `time` and compare durations,
     # but that can be flaky in CI.
-    run "$SCRIPT_UNDER_TEST" -c 1 -i 0.01 echo "slept"
+    RUN -c 1 -i 0.01 echo "slept"
     assert_success
     assert_output "slept"
 }
@@ -127,7 +154,7 @@ X"
     # Checks that the command runs 3 times, cycling through sleep values.
     # The debug output for sleep was useful but made tests complex.
     # Here we just check the command output.
-    run "$SCRIPT_UNDER_TEST" -c 3 -i 0.01 -i 0.02 echo "cycle sleep"
+    RUN -c 3 -i 0.01 -i 0.02 echo "cycle sleep"
     assert_success
     assert_output "cycle sleep
 cycle sleep
@@ -135,7 +162,7 @@ cycle sleep"
 }
 
 @test "${script}: -x (set-x) option (check for trace output)" {
-    run "$SCRIPT_UNDER_TEST" -x -c 1 echo "trace me"
+    RUN -x -c 1 echo "trace me"
     assert_success
     # `set -x` output is on stderr.
     # We check if `stderr` contains a typical trace line.
@@ -144,7 +171,7 @@ cycle sleep"
 }
 
 @test "${script}: -d (debug level 1)" {
-    run "$SCRIPT_UNDER_TEST" -d -c 1 echo "debug test"
+    RUN -d -c 1 echo "debug test"
     assert_success
     # Debug output is on stderr.
     assert_output --partial "# [ 'echo' 'debug' 'test' ]" # stderr
