@@ -15,7 +15,7 @@ _gol_opts() {
     (($# == 2)) && { _opts["$key"]="$2" ; return 0 ; }
     [[ -v _opts[$key] ]] && echo "${_opts[$key]}" || return 1
 }
-_gol_alias() { _gol_opts \~"$1" "${@:2}" ; }
+_gol_alias() { _gol_opts \/"$1" "${@:2}" ; }
 _gol_hook()  { _gol_opts \!"$1" "${@:2}" ; }
 _gol_check() { _gol_opts \="$1" "${@:2}" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
@@ -33,7 +33,7 @@ _gol_redirect() { local name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local MARKS='~!&=' MK_ALIAS='~' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' \
+    local MARKS='/!&=#' MK_ALIAS='/' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' MK_HELP='#' \
 	  IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
     local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
