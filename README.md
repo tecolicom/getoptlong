@@ -125,11 +125,7 @@ example to illustrate the use of [getoptlong.sh](getoptlong.sh).
    ```
    (( debug >= 2 )) && {
        getoptlong dump | column >&2
-       declare -p sleep
-       declare -p message
    }
-   
-   : ${paragraph:=${paragraph+${paragraph:-$'\n'}}}
    
    [[ ${1:-} =~ ^[0-9]+$ ]] && { count=$1 ; shift ; }
    
@@ -143,7 +139,7 @@ example to illustrate the use of [getoptlong.sh](getoptlong.sh).
        "$@"
        if (( count > 0 ))
        then
-           [[ $paragraph ]] && echo -n "$paragraph"
+           [[ -v paragraph ]] && echo "$paragraph"
            (( ${#sleep[@]} > 0 )) && {
                time=${sleep[$(( i % ${#sleep[@]} ))]}
                (( debug > 0 )) && echo "# sleep $time" >&2

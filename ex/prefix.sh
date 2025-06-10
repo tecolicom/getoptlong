@@ -32,30 +32,24 @@ getoptlong init OPTS PREFIX=opt_
 getoptlong callback help - set-x -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
-(( opt_debug >= 2 )) && {
-    getoptlong dump | column >&2
-}
-
-: ${opt_paragraph:=${opt_paragraph+${opt_paragrah:-$'\n'}}}
+(( opt_debug >= 2 )) && getoptlong dump | column >&2
 
 [[ ${1:-} =~ ^[0-9]+$ ]] && { opt_count=$1 ; shift ; }
 
 message() { [[ -v opt_message[$1] ]] && echo "${opt_message[$1]}" || : ; }
 
 message BEGIN
-for (( i = 0; i < opt_count ; i++ ))
-do
-    (( opt_debug >= 1 )) && echo "# [ ${@@Q} ]" >&2
+for (( i = 0; i < opt_count ; i++ )) ; do
     message EACH
+    (( opt_debug > 0 )) && echo "# [ ${@@Q} ]" >&2
     "$@"
-    if (( opt_count > 0 ))
-    then
-	[[ $opt_paragraph ]] && echo -n "$opt_paragraph"
-	(( ${#opt_sleep[@]} > 0 )) && {
+    if (( opt_count > 0 )) ; then
+	[[ -v opt_paragraph ]] && echo "$opt_paragraph"
+	if (( ${#opt_sleep[@]} > 0 )) ; then
 	    time="${opt_sleep[$(( i % ${#opt_sleep[@]} ))]}"
 	    (( opt_debug > 0 )) && echo "# sleep $time" >&2
 	    sleep $time
-	}
+	fi
     fi
 done
 message END

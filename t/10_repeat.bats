@@ -57,7 +57,7 @@ line"
 }
 
 @test "${script}: --paragraph=---: echo segment" {
-    RUN --count=2 --paragraph=$'---\n' echo segment
+    RUN --count=2 --paragraph='---' echo segment
     assert_success
     assert_output "segment
 ---
