@@ -20,9 +20,7 @@ RUN() {
 @test "${script}: shows help with --help" {
     RUN --help
     assert_success
-    assert_output --partial "repeat count command"
-    assert_output --partial "-c#, --count=#"
-    assert_output --partial "-m#, --message=WHEN=WHAT"
+    assert_output --partial "--count=#"
 }
 
 @test "${script}: 2 times: echo hello" {

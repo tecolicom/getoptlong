@@ -4,30 +4,19 @@
 
 set -eu
 
-help() {
-    cat <<-END
-	repeat count command
-	repeat [ options ] command
-	    -c#, --count=#            repeat count
-	    -i#, --sleep=#            interval time
-	    -p , --paragraph[=#]      print newline (or #) after each cycle
-	    -m#, --message=WHEN=WHAT  print WHAT for WHEN (BEGIN, END, EACH)
-	    -x , --set-x              trace execution
-	    -d , --debug              debug level
-	END
-    exit 0
-}
+SYNOPSIS='repeat [ count ] [ options ] command'
+declare -A OPTS=(
+    [ count     | c :=i # repeat count              ]=1
+    [ sleep     | i @=f # interval time             ]=
+    [ paragraph | p ?   # print newline after cycle ]=
+    [ set-x     | x     # trace execution           ]=
+    [ debug     | d     # debug level               ]=0
+    [ help      | h     # show help                 ]=
+    [ message   | m %=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
+)
+help() { getoptlong help "$SYNOPSIS" ; exit ; }
 set_x() { [[ $1 ]] && set -x || set +x ; }
 
-declare -A OPTS=(
-    [ count     | c :=i ]=1
-    [ sleep     | i @=f ]=
-    [ paragraph | p ?   ]=
-    [ set-x     | x     ]=
-    [ debug     | d     ]=0
-    [ help      | h     ]=
-    [ message   | m %=(^(BEGIN|END|EACH)=) ]=
-)
 getoptlong init OPTS PREFIX=opt_
 getoptlong callback help - set-x -
 getoptlong parse "$@" && eval "$(getoptlong set)"
@@ -39,7 +28,7 @@ getoptlong parse "$@" && eval "$(getoptlong set)"
 message() { [[ -v opt_message[$1] ]] && echo "${opt_message[$1]}" || : ; }
 
 message BEGIN
-for (( i = 0; i < opt_count ; i++ )) ; do
+for (( i = 0; $# > 0 && i < opt_count ; i++ )) ; do
     message EACH
     (( opt_debug > 0 )) && echo "# [ ${@@Q} ]" >&2
     "$@"
