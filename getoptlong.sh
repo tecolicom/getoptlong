@@ -11,7 +11,7 @@ declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; e
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
 _gol_opts() {
-    local key=${1//-/_}
+    local key="$1"
     (($# == 2)) && { _opts["$key"]="$2" ; return 0 ; }
     [[ -v _opts[$key] ]] && echo "${_opts[$key]}" || return 1
 }
@@ -66,9 +66,9 @@ gol_init_() { local key aliases alias ;
 	    || _gol_die "[$key] -- invalid"
 	local names=${MATCH[1]} vtype=${MATCH[2]} type=${MATCH[5]} comment=${MATCH[7]}
 	local initial="${_opts[$key]}"
-	IFS=$' \t|' read -a aliases <<< ${names//-/_}
+	IFS=$' \t|' read -a aliases <<< ${names}
 	local name=${aliases[0]}
-	local vname="${PREFIX}${name}"
+	local vname="${PREFIX}${name//-/_}"
 	declare -n target=$vname
 	unset _opts["$key"]
 	case ${vtype:=$IS_INCR} in
