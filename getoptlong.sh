@@ -18,6 +18,7 @@ _gol_opts() {
 _gol_alias() { _gol_opts \/"$1" "${@:2}" ; }
 _gol_hook()  { _gol_opts \!"$1" "${@:2}" ; }
 _gol_check() { _gol_opts \="$1" "${@:2}" ; }
+_gol_help()  { _gol_opts \#"$1" "${@:2}" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
 _gol_validate() {
@@ -62,9 +63,9 @@ gol_init_() { local key aliases alias ;
     [[ $REQUIRE && $GOL_VERSION < $REQUIRE ]] && _gol_die "getoptlong version $GOL_VERSION < $REQUIRE"
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
-	[[ $key =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*)( *)(=([if]|\(.*\)))?( *)(#.*)?$ ]] \
+	[[ $key =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*)( *)(=([if]|\(.*\)))?( *)(# *(.*[^[:space:]]))? ]] \
 	    || _gol_die "[$key] -- invalid"
-	local names=${MATCH[1]} vtype=${MATCH[2]} type=${MATCH[5]} comment=${MATCH[7]}
+	local names=${MATCH[1]} vtype=${MATCH[2]} type=${MATCH[5]} comment=${MATCH[8]}
 	local initial="${_opts[$key]}"
 	IFS=$' \t|' read -a aliases <<< ${names}
 	local name=${aliases[0]}
@@ -93,6 +94,7 @@ gol_init_() { local key aliases alias ;
 	    _opts[$alias]="${_opts[$name]}"
 	    _gol_alias $alias $name
 	done
+	[[ $comment ]] && _gol_help "${aliases[*]}" "$comment"
     done
     return 0
 }
@@ -188,6 +190,35 @@ gol_callback_() {
     done
     return 0
 }
+gol_help () { _gol_redirect "$@" ; }
+gol_help_() {
+    (( $# < 2 )) && { _gol_show_help "$@" ; return 0 ; }
+    while (($# > 1)) ; do _gol_help "$1" "$2" ; shift 2 ; done
+}
+_gol_show_help() { local message ;
+    for key in "${!_opts[@]}" ; do
+	[[ $key =~ ^${MK_HELP}([^[:space:]]+)( *(.*)) ]] || continue
+	local NAME=${MATCH[1]} ALIASES="${MATCH[3]}"
+	message+=( "$(printf '%1s\t%1s\t%1s' \
+		      "$(_gol_optize ${NAME})" "$(_gol_optize $ALIASES)" "${_opts["$key"]}")" )
+    done
+    (( $# > 0 )) && echo "$1"
+    printf '    %s\n' "${message[@]}" | sort | column -s $'\t' -t
+}
+_gol_optize() { local name opt opts ;
+    for name in "$@"; do
+	local type="${_opts[$name]:0:1}"
+	(( ${#name} > 1 )) && opt=--$name eq='=' || opt=-$name eq=
+	case "$type" in
+	    [$IS_WANT])  opt+="$eq#" ;;
+	    [$IS_ARRAY]) opt+="$eq#[,#]" ;;
+	    [$IS_HASH])  opt+="$eq#=#" ;;
+	    [$IS_FREE])  (( ${#name} > 1 )) && opt+="[=#]" ;;
+	esac
+	opts+=("$opt")
+    done
+    printf '%s\n' "${opts[*]}"
+}
 gol_parse () { _gol_redirect "$@" ; }
 gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
     local optstring="$(gol_optstring_)" ; _gol_debug "OPTSTRING=$optstring" ;
@@ -216,7 +247,7 @@ gol_set_() {
 }
 getoptlong () {
     case $1 in
-	init|parse|set|configure|getopts|callback|dump) gol_$1 "${@:2}" ;;
+	init|parse|set|configure|getopts|callback|dump|help) gol_$1 "${@:2}" ;;
 	version) echo ${GOL_VERSION} ;;
 	*)       _gol_die "unknown subcommand -- $1" ;;
     esac
