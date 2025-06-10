@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
+[[ $0 =~ getoptlong(\.sh)?$ ]] && { cat $0 ; exit 0 ; }
 # vim: filetype=bash :  -*- mode: sh; sh-shell: bash; -*-
 ###############################################################################
 # GetOptLong: Getopt Library for Bash Script
@@ -5,7 +8,6 @@
 # MIT License: See <https://opensource.org/licenses/MIT>
 : ${GOL_VERSION:=0.01}
 ###############################################################################
-declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
 _gol_opts() {
