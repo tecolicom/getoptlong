@@ -41,12 +41,12 @@ _gol_redirect() { local name ;
 }
 gol_dump () { _gol_redirect "$@" ; }
 gol_dump_() {
-    declare -p $GOL_OPTHASH | grep -oE '\[[^]]*\]="[^"]*"' | sort
     for key in "${!_opts[@]}" ; do
-	[[ $key =~ ^[[:alnum:]_] && ${_opts[$key]} =~ ([$IS_ANY])($PREFIX(.*)) && $key == ${MATCH[3]} ]] \
-	    || continue
-	local vname=${MATCH[2]}
-	[[ $(declare -p $vname 2> /dev/null) =~ declare( )(..)( )(.*) ]] && echo "${MATCH[4]}" || echo "$vname=unset"
+	printf '[%s]=%s\n' "${key}" "${_opts["$key"]@Q}"
+	[[ $key =~ ^[[:alnum:]_] && ${_opts[$key]} =~ ([$IS_ANY])($PREFIX(.*)) && ${key//-/_} == ${MATCH[3]} ]] && {
+	    local vname=${MATCH[2]}
+	    [[ $(declare -p $vname 2> /dev/null) =~ declare( )(..)( )(.*) ]] && echo "${MATCH[4]}" || echo "$vname=unset"
+	}
     done | sort
 }
 gol_init() { local key ;
