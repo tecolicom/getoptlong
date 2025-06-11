@@ -29,7 +29,7 @@ _gol_redirect() { local name ;
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS='><!&=#' MK_ALIAS='>' MK_SAILA='<' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' MK_HELP='#' \
 	  IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
-    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM)
+    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
@@ -47,7 +47,7 @@ gol_init() { local key ;
     (( $# == 0 )) && { echo '(( ${#FUNCNAME[@]} > 0 )) && local GOL_OPTHASH OPTIND=1 || OPTIND=1' ; return ; }
     declare -n _opts=$1
     declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [DELIM]=$' \t,')
-    for key in "${!GOL_CONFIG[@]}" ; do _opts["&$key"]="${GOL_CONFIG[$key]}" ; done
+    for key in "${!GOL_CONFIG[@]}" ; do : ${_opts["&$key"]="${GOL_CONFIG[$key]}"} ; done
     GOL_OPTHASH=$1
     (( $# > 1 )) && gol_configure "${@:2}"
     _gol_redirect
@@ -198,21 +198,17 @@ gol_help_() {
     (( $# < 2 )) && { _gol_show_help "$@" ; return 0 ; }
     while (($# > 1)) ; do _gol_help "$1" "$2" ; shift 2 ; done
 }
-_gol_show_help() { local message ;
+_gol_show_help() { local key aliases ;
+    (( $# > 0 )) && echo "$1" || { [[ ${USAGE-} ]] && echo "$USAGE" ; }
     for key in "${!_opts[@]}" ; do
-	[[ $key =~ ^${MK_HELP}([^[:space:]]+) ]] || continue
-	local NAME=${MATCH[1]} ALIASES="$(_gol_saila ${MATCH[1]})"
-	message+=( "$(printf '%1s\t%1s\t%1s' \
-		      "$(_gol_optize ${NAME})" "$(_gol_optize $ALIASES)" "${_opts["$key"]}")" )
-    done
-    (( $# > 0 )) && echo "$1"
-    printf '    %s\n' "${message[@]}" | sort | column -s $'\t' -t
+	aliases="$(_gol_saila "$key")" || continue
+	printf '    %s\t%1s\t%s\n' "$(_gol_optize $key)" "$(_gol_optize $aliases)" "$(_gol_help $key)"
+    done | sort | column -s $'\t' -t
 }
-_gol_optize() { local name opt opts ;
+_gol_optize() { local name opt opts eq ;
     for name in "$@"; do
-	local type="${_opts[$name]:0:1}"
 	(( ${#name} > 1 )) && opt=--$name eq='=' || opt=-$name eq=
-	case "$type" in
+	case "${_opts[$name]:0:1}" in
 	    [$IS_WANT])  opt+="$eq#" ;;
 	    [$IS_ARRAY]) opt+="$eq#[,#]" ;;
 	    [$IS_HASH])  opt+="$eq#=#" ;;
