@@ -4,8 +4,8 @@
 
 set -eu
 
-SYNOPSIS='repeat [ count ] [ options ] command'
 declare -A OPTS=(
+    [&USAGE]="$(basename $0) [ count ] [ options ] command"
     [ count     | c :=i # repeat count              ]=1
     [ sleep     | i @=f # interval time             ]=
     [ paragraph | p ?   # print newline after cycle ]=
@@ -14,7 +14,7 @@ declare -A OPTS=(
     [ help      | h     # show help                 ]=
     [ message   | m %=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
 )
-help() { getoptlong help "$SYNOPSIS" ; exit ; }
+help() { getoptlong help ; exit ; }
 set_x() { [[ $1 ]] && set -x || set +x ; }
 
 getoptlong init OPTS
