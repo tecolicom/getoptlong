@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
-[[ $0 =~ getoptlong(\.sh)?$ ]] && { cat $0 ; exit 0 ; }
 # vim: filetype=bash :  -*- mode: sh; sh-shell: bash; -*-
 ###############################################################################
 # GetOptLong: Getopt Library for Bash Script
@@ -8,33 +6,28 @@ declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; e
 # MIT License: See <https://opensource.org/licenses/MIT>
 : ${GOL_VERSION:=0.01}
 ###############################################################################
+declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
+[[ $0 =~ getoptlong(\.sh)?$ ]] && { cat $0 ; exit 0 ; }
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
 _gol_opts() {
     local key="$1"
+    [[ $key =~ ^[$MARKS]$ ]] && { key+="$2" ; shift ; }
     (($# == 2)) && { _opts["$key"]="$2" ; return 0 ; }
     [[ -v _opts[$key] ]] && echo "${_opts[$key]}" || return 1
 }
-_gol_alias() { _gol_opts \/"$1" "${@:2}" ; }
-_gol_hook()  { _gol_opts \!"$1" "${@:2}" ; }
-_gol_check() { _gol_opts \="$1" "${@:2}" ; }
-_gol_help()  { _gol_opts \#"$1" "${@:2}" ; }
+_gol_alias() { _gol_opts "$MK_ALIAS" "$@" ; }
+_gol_saila() { _gol_opts "$MK_SAILA" "$@" ; }
+_gol_hook()  { _gol_opts "$MK_HOOK"  "$@" ; }
+_gol_check() { _gol_opts "$MK_TYPE"  "$@" ; }
+_gol_help()  { _gol_opts "$MK_HELP"  "$@" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
-_gol_validate() {
-    case $1 in
-	i)   [[ "$2" =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
-	f)   [[ "$2" =~ ^[-+]?[0-9]*(\.[0-9]+)?$ ]] || _gol_die "$2: not a number" ;;
-	\(*) declare -a error=([1]="$2: invalid argument" [2]="$1: something wrong")
-	     eval "[[ \"$2\" =~ $1 ]]" || _gol_die "${error[$?]}" ;;
-	*)   _gol_die "$1: unkown validation pattern" ;;
-    esac
-}
 _gol_redirect() { local name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local MARKS='/!&=#' MK_ALIAS='/' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' MK_HELP='#' \
+    local MARKS='><!&=#' MK_ALIAS='>' MK_SAILA='<' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' MK_HELP='#' \
 	  IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
     local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
@@ -94,7 +87,8 @@ gol_init_() { local key aliases alias ;
 	    _opts[$alias]="${_opts[$name]}"
 	    _gol_alias $alias $name
 	done
-	[[ $comment ]] && _gol_help "${aliases[*]}" "$comment"
+	_gol_saila $name "${aliases[*]:1}"
+	[[ $comment ]] && _gol_help "$name" "$comment"
     done
     return 0
 }
@@ -180,6 +174,15 @@ _gol_getopts_store() { local vals ;
 	   target=${val=$(_gol_incr "$target")} ;;
     esac
 }
+_gol_validate() {
+    case $1 in
+	i)   [[ "$2" =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
+	f)   [[ "$2" =~ ^[-+]?[0-9]*(\.[0-9]+)?$ ]] || _gol_die "$2: not a number" ;;
+	\(*) declare -a error=([1]="$2: invalid argument" [2]="$1: something wrong")
+	     eval "[[ \"$2\" =~ $1 ]]" || _gol_die "${error[$?]}" ;;
+	*)   _gol_die "$1: unkown validation pattern" ;;
+    esac
+}
 gol_callback () { _gol_redirect "$@" ; }
 gol_callback_() {
     while (($# > 0)) ; do
@@ -197,8 +200,8 @@ gol_help_() {
 }
 _gol_show_help() { local message ;
     for key in "${!_opts[@]}" ; do
-	[[ $key =~ ^${MK_HELP}([^[:space:]]+)( *(.*)) ]] || continue
-	local NAME=${MATCH[1]} ALIASES="${MATCH[3]}"
+	[[ $key =~ ^${MK_HELP}([^[:space:]]+) ]] || continue
+	local NAME=${MATCH[1]} ALIASES="$(_gol_saila ${MATCH[1]})"
 	message+=( "$(printf '%1s\t%1s\t%1s' \
 		      "$(_gol_optize ${NAME})" "$(_gol_optize $ALIASES)" "${_opts["$key"]}")" )
     done
