@@ -9,16 +9,16 @@ declare -A OPTS=(
     [ count     | c :=i # repeat count              ]=1
     [ sleep     | i @=f # interval time             ]=
     [ paragraph | p ?   # print newline after cycle ]=
-    [ set-x     | x     # trace execution           ]=
+    [ trace     | x     # trace execution           ]=
     [ debug     | d     # debug level               ]=0
     [ help      | h     # show help                 ]=
     [ message   | m %=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
 )
 help() { getoptlong help ; exit ; }
-set_x() { [[ $1 ]] && set -x || set +x ; }
+trace() { [[ $1 ]] && set -x || set +x ; }
 
 getoptlong init OPTS
-getoptlong callback help - set-x -
+getoptlong callback help - trace -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
 (( debug >= 2 )) && getoptlong dump | column >&2

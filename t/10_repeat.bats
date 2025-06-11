@@ -159,7 +159,7 @@ cycle sleep
 cycle sleep"
 }
 
-@test "${script}: -x (set-x) option (check for trace output)" {
+@test "${script}: -x (trace) option (check for trace output)" {
     RUN -x -c 1 echo "trace me"
     assert_success
     # `set -x` output is on stderr.
