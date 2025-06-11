@@ -25,7 +25,7 @@ _gol_validate() {
     case $1 in
 	i)   [[ "$2" =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
 	f)   [[ "$2" =~ ^[-+]?[0-9]*(\.[0-9]+)?$ ]] || _gol_die "$2: not a number" ;;
-	\(*) declare -a error=([1]="$2: invalid argument" [2]="$1: something wrong")
+	\(*) local -a error=([1]="$2: invalid argument" [2]="$1: something wrong")
 	     eval "[[ \"$2\" =~ $1 ]]" || _gol_die "${error[$?]}" ;;
 	*)   _gol_die "$1: unkown validation pattern" ;;
     esac
@@ -34,14 +34,14 @@ _gol_redirect() { local name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local MARKS='/!&=#' MK_ALIAS='/' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' MK_HELP='#' \
-	  IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
+    local MARKS='/!&=#' MK_CONF='&' MK_HELP='#'
+    local IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
     local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM)
-    for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
+    for name in "${CONFIG[@]}" ; do local $name="${_opts[&$name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
 gol_dump () { _gol_redirect "$@" ; }
-gol_dump_() {
+gol_dump_() { local key vname ;
     for key in "${!_opts[@]}" ; do
 	printf '[%s]=%s\n' "${key}" "${_opts["$key"]@Q}"
 	[[ $key =~ ^[[:alnum:]_] && ${_opts[$key]} =~ ([$IS_ANY])($PREFIX(.*)) && ${key//-/_} == ${MATCH[3]} ]] && {
@@ -59,17 +59,17 @@ gol_init() { local key ;
     (( $# > 1 )) && gol_configure "${@:2}"
     _gol_redirect
 } ################################################################################
-gol_init_() { local key aliases alias ;
+gol_init_() { local key aliases alias ; local names vtype type comment initial name vname ;
     [[ $REQUIRE && $GOL_VERSION < $REQUIRE ]] && _gol_die "getoptlong version $GOL_VERSION < $REQUIRE"
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[$MARKS] ]] && continue
 	[[ $key =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*)( *)(=([if]|\(.*\)))?( *)(# *(.*[^[:space:]]))? ]] \
 	    || _gol_die "[$key] -- invalid"
-	local names=${MATCH[1]} vtype=${MATCH[2]} type=${MATCH[5]} comment=${MATCH[8]}
-	local initial="${_opts[$key]}"
+	names=${MATCH[1]} vtype=${MATCH[2]} type=${MATCH[5]} comment=${MATCH[8]}
+	initial="${_opts[$key]}"
 	IFS=$' \t|' read -a aliases <<< ${names}
-	local name=${aliases[0]}
-	local vname="${PREFIX}${name//-/_}"
+	name=${aliases[0]}
+	vname="${PREFIX}${name//-/_}"
 	declare -n target=$vname
 	unset _opts["$key"]
 	case ${vtype:=$IS_INCR} in
@@ -118,7 +118,7 @@ gol_optstring_() { local key string ;
     echo "${SILENT:+:}${string:- }-:"
 }
 gol_getopts () { _gol_redirect "$@" ; }
-gol_getopts_() { local optname val vtype vname name callback ;
+gol_getopts_() {
     local opt="$1"; shift;
     case $opt in
 	[:?]) callback=$(_gol_hook "$opt") && [[ $callback ]] && $callback "$OPTARG"
@@ -146,7 +146,13 @@ _gol_getopts_long() { local no param ;
 	    [$IS_NEED])
 		(( OPTIND > $# )) && _gol_die "option requires an argument -- $optname"
 		val="${@:$((OPTIND++)):1}" ;;
-	    *) [[ $no ]] && val= || unset val ;;
+	    *) # Default case, includes IS_INCR '+'
+		if [[ $no ]]; then # e.g. --no-feature
+		    val="" # Set val to empty for negation
+		else # e.g. --feature
+		    unset val # For IS_INCR type, no argument. Ensure val is unset.
+		fi
+		;;
 	esac
     fi
     return 0
@@ -156,29 +162,41 @@ _gol_getopts_short() {
 	[[ $EXIT_ON_ERROR ]] && _gol_die "no such option -- -$opt" || return 3
     }
     vtype=${MATCH[1]} vname=${MATCH[2]}
-    [[ $vtype =~ [${IS_FREE}${IS_NEED}] ]] && val="${OPTARG:-}"
+    if [[ $vtype =~ [${IS_FREE}${IS_NEED}] ]]; then # Argument value expected
+        val="${OPTARG:-}"
+    else # No argument value expected (e.g. IS_INCR, or a simple flag not using INCR)
+        unset val
+    fi
     return 0
 }
 _gol_getopts_store() { local vals ;
     declare -n target=$vname
     local check=$(_gol_check $name)
-    case $vtype in
-	[$IS_ARRAY]|[$IS_HASH])
-	    [[ $val =~ $'\n' ]] && readarray -t vals <<< ${val%$'\n'} \
-				|| IFS="${DELIM}" read -a vals <<< ${val}
-	    for val in "${vals[@]}" ; do
-		[[ $check ]] && _gol_validate "$check" "$val"
-		case $vtype in
-		[$IS_ARRAY]) target+=("$val") ;;
-		[$IS_HASH])  [[ $val =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
-		esac
+
+    if [[ $vtype == $IS_INCR ]] ; then
+        if [[ ${val+x} && "$val" == "" ]]; then # val is set AND empty (e.g. --no-feature)
+            target=""
+            # val is already "", callback gets empty.
+        else # val is unset (regular increment like --feature or -d)
+            target=$(_gol_incr "$target")
+            val=$target # Callback gets the new count
+        fi
+    elif [[ $vtype == $IS_ARRAY || $vtype == $IS_HASH ]] ; then
+        local v
+	    [[ $val =~ $'\n' ]] && readarray -t vals <<< "${val%$'\n'}" \
+				|| IFS="${DELIM}" read -a vals <<< "${val}"
+	    for v in "${vals[@]}" ; do
+		    [[ $check ]] && _gol_validate "$check" "$v"
+		    case $vtype in
+		    [$IS_ARRAY]) target+=("$v") ;;
+		    [$IS_HASH])  [[ $v =~ = ]] && target["${v%%=*}"]="${v#*=}" || target[$v]=1 ;;
+		    esac
 	    done
-	    ;;
-	[$IS_ARRAY]) target+=($val) ;;
-	[$IS_HASH])  [[ "$val" =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
-	*) [[ $check ]] && _gol_validate "$check" "$val"
-	   target=${val=$(_gol_incr "$target")} ;;
-    esac
+        # Global val remains the original full argument for callback
+    else # IS_WANT, IS_NEED, IS_FREE
+        [[ $check ]] && _gol_validate "$check" "$val"
+        target="$val"
+    fi
 }
 gol_callback () { _gol_redirect "$@" ; }
 gol_callback_() {
@@ -195,19 +213,19 @@ gol_help_() {
     (( $# < 2 )) && { _gol_show_help "$@" ; return 0 ; }
     while (($# > 1)) ; do _gol_help "$1" "$2" ; shift 2 ; done
 }
-_gol_show_help() { local message ;
+_gol_show_help() { local message key NAME ALIASES ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^${MK_HELP}([^[:space:]]+)( *(.*)) ]] || continue
-	local NAME=${MATCH[1]} ALIASES="${MATCH[3]}"
+	NAME=${MATCH[1]} ALIASES="${MATCH[3]}"
 	message+=( "$(printf '%1s\t%1s\t%1s' \
 		      "$(_gol_optize ${NAME})" "$(_gol_optize $ALIASES)" "${_opts["$key"]}")" )
     done
     (( $# > 0 )) && echo "$1"
     printf '    %s\n' "${message[@]}" | sort | column -s $'\t' -t
 }
-_gol_optize() { local name opt opts ;
+_gol_optize() { local name opt opts type eq ;
     for name in "$@"; do
-	local type="${_opts[$name]:0:1}"
+	type="${_opts[$name]:0:1}"
 	(( ${#name} > 1 )) && opt=--$name eq='=' || opt=-$name eq=
 	case "$type" in
 	    [$IS_WANT])  opt+="$eq#" ;;
