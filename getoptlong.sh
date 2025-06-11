@@ -106,8 +106,7 @@ gol_configure_() { local param key val ;
 }
 gol_optstring_() { local key string ;
     for key in "${!_opts[@]}" ; do
-	[[ $key =~ ^[[:alnum:]]$ ]] || continue
-	string+=$key
+	[[ $key =~ ^[[:alnum:]]$ ]] && string+=$key || continue
 	[[ ${_opts[$key]} =~ ^[$IS_REQ] ]] && string+=:
     done
     echo "${SILENT:+:}${string:- }-:"
@@ -200,7 +199,7 @@ gol_help_() {
     while (($# > 1)) ; do _gol_help "$1" "$2" ; shift 2 ; done
 }
 _gol_show_help() { local key aliases ;
-    (( $# > 0 )) && echo "$1" || { [[ ${USAGE-} ]] && echo "$USAGE" ; }
+    echo "${1:-${USAGE:-$(basename $0) [ options ] args}}"
     for key in "${!_opts[@]}" ; do
 	aliases="$(_gol_saila "$key")" || continue
 	msg="$(_gol_help $key)" || {
@@ -208,7 +207,7 @@ _gol_show_help() { local key aliases ;
 		[$IS_FLAG]) msg="enable ${key^^}" ;;
 		[$IS_NEED]) msg="set ${key^^}" ;;
 		[$IS_LIST]) msg="add ${key^^} item(s)" ;;
-		[$IS_HASH]) msg="set ${key^^} in KEY=VALUE style" ;;
+		[$IS_HASH]) msg="set ${key^^} as KEY=VALUE" ;;
 		[$IS_MAYB]) msg="enable/set ${key^^}" ;;
 	    esac
 	}
