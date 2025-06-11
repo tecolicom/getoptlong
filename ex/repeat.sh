@@ -5,7 +5,6 @@
 set -eu
 
 declare -A OPTS=(
-    [&USAGE]="$(basename $0) [ count ] [ options ] command"
     [ count     | c :=i # repeat count              ]=1
     [ sleep     | i @=f # interval time             ]=
     [ paragraph | p ?   # print newline after cycle ]=
@@ -21,9 +20,9 @@ getoptlong init OPTS
 getoptlong callback help - trace -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
-(( debug >= 2 )) && getoptlong dump | column >&2
+(( debug >= 2 )) && getoptlong dump --all | column >&2
 
-[[ ${1:-} =~ ^[0-9]+$ ]] && { count=$1 ; shift ; }
+[[ ${1:-} =~ ^[0-9]+$ ]] && count=$1 && shift
 
 message() { [[ -v message[$1] ]] && echo "${message[$1]}" || : ; }
 

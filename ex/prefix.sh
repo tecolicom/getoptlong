@@ -22,9 +22,9 @@ getoptlong init OPTS
 getoptlong callback help - trace -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
-(( opt_debug >= 2 )) && getoptlong dump | column >&2
+(( opt_debug >= 2 )) && getoptlong dump --all | column >&2
 
-[[ ${1:-} =~ ^[0-9]+$ ]] && { opt_count=$1 ; shift ; }
+[[ ${1:-} =~ ^[0-9]+$ ]] && opt_count=$1 && shift
 
 message() { [[ -v opt_message[$1] ]] && echo "${opt_message[$1]}" || : ; }
 

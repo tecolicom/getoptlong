@@ -23,6 +23,12 @@ RUN() {
     assert_output --partial "--count=#"
 }
 
+@test "${script}: space in arg" {
+    RUN echo "hello  world"
+    assert_success
+    assert_output "hello  world"
+}
+
 @test "${script}: 2 times: echo hello" {
     RUN 2 echo hello
     assert_success
@@ -160,7 +166,7 @@ cycle sleep"
 }
 
 @test "${script}: -x (trace) option (check for trace output)" {
-    RUN -x -c 1 echo "trace me"
+    RUN -x -c 1 echo trace me
     assert_success
     # `set -x` output is on stderr.
     # We check if `stderr` contains a typical trace line.
@@ -169,7 +175,7 @@ cycle sleep"
 }
 
 @test "${script}: -d (debug level 1)" {
-    RUN -d -c 1 echo "debug test"
+    RUN -d echo debug test
     assert_success
     # Debug output is on stderr.
     assert_output --partial "# [ 'echo' 'debug' 'test' ]" # stderr

@@ -240,10 +240,12 @@ result is undefined.
   some parameters (e.g., `PREFIX`) might not take full effect if
   changed after `getoptlong init` has processed option definitions.
 
-- **`getoptlong dump`**:
+- **`getoptlong dump [-a|--all]`**:
 
   Prints the internal state of the options and their values.  Useful
-  for debugging.
+  for debugging.  By default, dumps corresponding variable names and
+  their values.  With `--all` or `-a` option, dumps all administrative
+  parameters.
 
 - **`getoptlong help <SYNOPSIS>`**:
 

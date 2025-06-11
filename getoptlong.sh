@@ -12,8 +12,8 @@ _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
 _gol_opts() {
     local key="$1"
-    [[ $key =~ ^[$MARKS]$ ]] && { key+="$2" ; shift ; }
-    (($# == 2)) && { _opts["$key"]="$2" ; return 0 ; }
+    [[ $key =~ ^[$MARKS]$ ]] && key+="$2" && shift
+    (($# == 2)) && _opts["$key"]="$2" && return 0
     [[ -v _opts[$key] ]] && echo "${_opts[$key]}" || return 1
 }
 _gol_alias() { _gol_opts "$MK_ALIAS" "$@" ; }
@@ -29,15 +29,16 @@ _gol_redirect() { local name ;
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS='><!&=#' MK_ALIAS='>' MK_SAILA='<' MK_HOOK='!' MK_CONF='&' MK_RULE='=' MK_HELP='#' \
-	  IS_ANY='+:?@%' IS_REQ=":@%" IS_FLAG="+" IS_NEED=":" IS_MAYB="?" IS_LIST="@" IS_HASH="%"
-    local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE)
+	  IS_ANY='+:?@%' IS_REQ=":@%" IS_FLAG="+" IS_NEED=":" IS_MAYB="?" IS_LIST="@" IS_HASH="%" \
+	  CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
 gol_dump () { _gol_redirect "$@" ; }
-gol_dump_() {
+gol_dump_() { local all= ;
+    case "${1-}" in -a|--all) all=1 ;; esac
     for key in "${!_opts[@]}" ; do
-	printf '[%s]=%s\n' "${key}" "${_opts["$key"]@Q}"
+	[[ $all ]] && printf '[%s]=%s\n' "${key}" "${_opts["$key"]@Q}"
 	[[ $key =~ ^[[:alnum:]_] && ${_opts[$key]} =~ ([$IS_ANY])($PREFIX(.*)) && ${key//-/_} == ${MATCH[3]} ]] && {
 	    local vname=${MATCH[2]}
 	    [[ $(declare -p $vname 2> /dev/null) =~ declare( )(..)( )(.*) ]] && echo "${MATCH[4]}" || echo "$vname=unset"
@@ -206,8 +207,8 @@ _gol_show_help() { local key aliases ;
 	    case "$(_gol_type $key)" in
 		[$IS_FLAG]) msg="enable ${key^^}" ;;
 		[$IS_NEED]) msg="set ${key^^}" ;;
-		[$IS_LIST]) msg="add ${key^^} item(s)" ;;
-		[$IS_HASH]) msg="set ${key^^} as KEY=VALUE" ;;
+		[$IS_LIST]) msg="add item(s) to ${key^^}" ;;
+		[$IS_HASH]) msg="set KEY=VALUE(s) in ${key^^}" ;;
 		[$IS_MAYB]) msg="enable/set ${key^^}" ;;
 	    esac
 	}
@@ -240,7 +241,7 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
 	: ${SAVEIND:=$OPTIND}
 	[[ ! $PERMUTE || $OPTIND > $# || ${@:$(($OPTIND-1)):1} == -- ]] && break
 	_gol_debug "SAVE PARAM: ${!OPTIND}"
-	SAVEARG+=(${!OPTIND})
+	SAVEARG+=("${!OPTIND}")
     done
     [[ $PERMUTE ]] && set -- "${SAVEARG[@]}" "${@:$OPTIND}" || shift $(( OPTIND - 1 ))
     OPTIND=${SAVEIND:-$OPTIND}
