@@ -29,7 +29,7 @@ _gol_redirect() { local name ;
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS='><!&=#' MK_ALIAS='>' MK_SAILA='<' MK_HOOK='!' MK_CONF='&' MK_RULE='=' MK_HELP='#' \
-	  IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
+	  IS_ANY='+:?@%' IS_REQ=":@%" IS_FLAG="+" IS_NEED=":" IS_MAYB="?" IS_LIST="@" IS_HASH="%"
     local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
@@ -66,20 +66,20 @@ gol_init_() { local key aliases alias ;
 	local vname="${PREFIX}${name//-/_}"
 	declare -n target=$vname
 	unset _opts["$key"]
-	case ${vtype:=$IS_INCR} in
-	    [$IS_FREE])
+	case ${vtype:=$IS_FLAG} in
+	    [$IS_MAYB])
 		[[ $initial ]] && _gol_die "$initial: optional parameter can't be initialized" ;;
-	    [$IS_ARRAY]|[$IS_HASH])
-		[[ $vtype == $IS_ARRAY && ! -v $vname ]] && declare -ga $vname
-		[[ $vtype == $IS_HASH  && ! -v $vname ]] && declare -gA $vname
+	    [$IS_LIST]|[$IS_HASH])
+		[[ $vtype == $IS_LIST && ! -v $vname ]] && declare -ga $vname
+		[[ $vtype == $IS_HASH && ! -v $vname ]] && declare -gA $vname
 		if [[ $initial =~ ^\(.*\)$ ]] ; then
 		    eval "$vname=$initial"
 		else
-		    [[ $vtype == $IS_ARRAY ]] && target=(${initial:+"$initial"})
-		    [[ $vtype == $IS_HASH  ]] && [[ $initial ]] && _gol_die "$initial: invalid hash data"
+		    [[ $vtype == $IS_LIST ]] && target=(${initial:+"$initial"})
+		    [[ $vtype == $IS_HASH ]] && [[ $initial ]] && _gol_die "$initial: invalid hash data"
 		fi
 		;;
-	    [$IS_WANT]|[$IS_INCR])
+	    [$IS_NEED]|[$IS_FLAG])
 		target=$initial ;;
 	esac
 	_opts[$name]="${vtype}${vname}"
@@ -108,7 +108,7 @@ gol_optstring_() { local key string ;
     for key in "${!_opts[@]}" ; do
 	[[ $key =~ ^[[:alnum:]]$ ]] || continue
 	string+=$key
-	[[ ${_opts[$key]} =~ ^[$IS_NEED] ]] && string+=:
+	[[ ${_opts[$key]} =~ ^[$IS_REQ] ]] && string+=:
     done
     echo "${SILENT:+:}${string:- }-:"
 }
@@ -134,11 +134,11 @@ _gol_getopts_long() { local no param ;
     }
     vtype=${MATCH[1]} vname=${MATCH[2]}
     if [[ $param ]] ; then
-	[[ $vtype =~ [${IS_NEED}${IS_FREE}] ]] || _gol_die "does not take an argument -- $optname"
+	[[ $vtype =~ [${IS_REQ}${IS_MAYB}] ]] || _gol_die "does not take an argument -- $optname"
     else
 	case $vtype in
-	    [$IS_FREE]) ;;
-	    [$IS_NEED])
+	    [$IS_MAYB]) ;;
+	    [$IS_REQ])
 		(( OPTIND > $# )) && _gol_die "option requires an argument -- $optname"
 		val="${@:$((OPTIND++)):1}" ;;
 	    *) [[ $no ]] && val= || unset val ;;
@@ -151,26 +151,26 @@ _gol_getopts_short() {
 	[[ $EXIT_ON_ERROR ]] && _gol_die "no such option -- -$opt" || return 3
     }
     vtype=${MATCH[1]} vname=${MATCH[2]}
-    [[ $vtype =~ [${IS_FREE}${IS_NEED}] ]] && val="${OPTARG:-}"
+    [[ $vtype =~ [${IS_MAYB}${IS_REQ}] ]] && val="${OPTARG:-}"
     return 0
 }
 _gol_getopts_store() { local vals ;
     declare -n target=$vname
     local check=$(_gol_rule $name)
     case $vtype in
-	[$IS_ARRAY]|[$IS_HASH])
+	[$IS_LIST]|[$IS_HASH])
 	    [[ $val =~ $'\n' ]] && readarray -t vals <<< ${val%$'\n'} \
 				|| IFS="${DELIM}" read -a vals <<< ${val}
 	    for val in "${vals[@]}" ; do
 		[[ $check ]] && _gol_validate "$check" "$val"
 		case $vtype in
-		[$IS_ARRAY]) target+=("$val") ;;
-		[$IS_HASH])  [[ $val =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
+		[$IS_LIST]) target+=("$val") ;;
+		[$IS_HASH]) [[ $val =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
 		esac
 	    done
 	    ;;
-	[$IS_ARRAY]) target+=($val) ;;
-	[$IS_HASH])  [[ "$val" =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
+	[$IS_LIST]) target+=($val) ;;
+	[$IS_HASH]) [[ "$val" =~ = ]] && target["${val%%=*}"]="${val#*=}" || target[$val]=1 ;;
 	*) [[ $check ]] && _gol_validate "$check" "$val"
 	   target=${val=$(_gol_incr "$target")} ;;
     esac
@@ -205,11 +205,11 @@ _gol_show_help() { local key aliases ;
 	aliases="$(_gol_saila "$key")" || continue
 	msg="$(_gol_help $key)" || {
 	    case "$(_gol_type $key)" in
-		[$IS_INCR])  msg="enable ${key^^}" ;;
-		[$IS_WANT])  msg="set ${key^^}" ;;
-		[$IS_ARRAY]) msg="add ${key^^} item(s)" ;;
-		[$IS_HASH])  msg="set ${key^^} in KEY=VALUE style" ;;
-		[$IS_FREE])  msg="enable/set ${key^^}" ;;
+		[$IS_FLAG]) msg="enable ${key^^}" ;;
+		[$IS_NEED]) msg="set ${key^^}" ;;
+		[$IS_LIST]) msg="add ${key^^} item(s)" ;;
+		[$IS_HASH]) msg="set ${key^^} in KEY=VALUE style" ;;
+		[$IS_MAYB]) msg="enable/set ${key^^}" ;;
 	    esac
 	}
 	printf '    %s\t%1s\t%s\n' "$(_gol_optize $key)" "$(_gol_optize $aliases)" "$msg"
@@ -219,10 +219,10 @@ _gol_optize() { local name opt opts eq ;
     for name in "$@"; do
 	(( ${#name} > 1 )) && opt=--$name eq='=' || opt=-$name eq=
 	case "$(_gol_type $name)" in
-	    [$IS_WANT])  opt+="$eq#" ;;
-	    [$IS_ARRAY]) opt+="$eq#[,#]" ;;
-	    [$IS_HASH])  opt+="$eq#=#" ;;
-	    [$IS_FREE])  (( ${#name} > 1 )) && opt+="[=#]" ;;
+	    [$IS_NEED]) opt+="$eq#" ;;
+	    [$IS_LIST]) opt+="$eq#[,#]" ;;
+	    [$IS_HASH]) opt+="$eq#=#" ;;
+	    [$IS_MAYB]) (( ${#name} > 1 )) && opt+="[=#]" ;;
 	esac
 	opts+=("$opt")
     done
