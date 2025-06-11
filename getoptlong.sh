@@ -19,15 +19,16 @@ _gol_opts() {
 _gol_alias() { _gol_opts "$MK_ALIAS" "$@" ; }
 _gol_saila() { _gol_opts "$MK_SAILA" "$@" ; }
 _gol_hook()  { _gol_opts "$MK_HOOK"  "$@" ; }
-_gol_check() { _gol_opts "$MK_TYPE"  "$@" ; }
+_gol_rule()  { _gol_opts "$MK_RULE"  "$@" ; }
 _gol_help()  { _gol_opts "$MK_HELP"  "$@" ; }
+_gol_type()  { echo "${_opts["$1"]:0:1}" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
 _gol_redirect() { local name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local MARKS='><!&=#' MK_ALIAS='>' MK_SAILA='<' MK_HOOK='!' MK_CONF='&' MK_TYPE='=' MK_HELP='#' \
+    local MARKS='><!&=#' MK_ALIAS='>' MK_SAILA='<' MK_HOOK='!' MK_CONF='&' MK_RULE='=' MK_HELP='#' \
 	  IS_ANY=':@%+?' IS_NEED=":@%" IS_WANT=":" IS_FREE="?" IS_ARRAY="@" IS_HASH="%" IS_INCR="+"
     local CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE)
     for name in "${CONFIG[@]}" ; do declare $name="${_opts[&$name]=}" ; done
@@ -82,7 +83,7 @@ gol_init_() { local key aliases alias ;
 		target=$initial ;;
 	esac
 	_opts[$name]="${vtype}${vname}"
-	[[ $type ]] && _gol_check $name "$type"
+	[[ $type ]] && _gol_rule $name "$type"
 	for alias in "${aliases[@]:1}" ; do
 	    _opts[$alias]="${_opts[$name]}"
 	    _gol_alias $alias $name
@@ -155,7 +156,7 @@ _gol_getopts_short() {
 }
 _gol_getopts_store() { local vals ;
     declare -n target=$vname
-    local check=$(_gol_check $name)
+    local check=$(_gol_rule $name)
     case $vtype in
 	[$IS_ARRAY]|[$IS_HASH])
 	    [[ $val =~ $'\n' ]] && readarray -t vals <<< ${val%$'\n'} \
@@ -202,13 +203,22 @@ _gol_show_help() { local key aliases ;
     (( $# > 0 )) && echo "$1" || { [[ ${USAGE-} ]] && echo "$USAGE" ; }
     for key in "${!_opts[@]}" ; do
 	aliases="$(_gol_saila "$key")" || continue
-	printf '    %s\t%1s\t%s\n' "$(_gol_optize $key)" "$(_gol_optize $aliases)" "$(_gol_help $key)"
+	msg="$(_gol_help $key)" || {
+	    case "$(_gol_type $key)" in
+		[$IS_INCR])  msg="enable ${key^^}" ;;
+		[$IS_WANT])  msg="set ${key^^}" ;;
+		[$IS_ARRAY]) msg="add ${key^^} item(s)" ;;
+		[$IS_HASH])  msg="set ${key^^} in KEY=VALUE style" ;;
+		[$IS_FREE])  msg="enable/set ${key^^}" ;;
+	    esac
+	}
+	printf '    %s\t%1s\t%s\n' "$(_gol_optize $key)" "$(_gol_optize $aliases)" "$msg"
     done | sort | column -s $'\t' -t
 }
 _gol_optize() { local name opt opts eq ;
     for name in "$@"; do
 	(( ${#name} > 1 )) && opt=--$name eq='=' || opt=-$name eq=
-	case "${_opts[$name]:0:1}" in
+	case "$(_gol_type $name)" in
 	    [$IS_WANT])  opt+="$eq#" ;;
 	    [$IS_ARRAY]) opt+="$eq#[,#]" ;;
 	    [$IS_HASH])  opt+="$eq#=#" ;;
