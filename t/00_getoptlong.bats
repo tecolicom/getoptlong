@@ -388,10 +388,6 @@ END
     run bash -c '
         . ../getoptlong.sh
         my_callback() { echo "Callback invoked with value: $1"; }
-        # Export the function so the subshell created by getoptlong can see it.
-        # However, getoptlong runs callbacks in its own context, not a new subshell from here.
-        # The issue might be if `getoptlong parse` itself is in a subshell from `run`.
-        # Let us ensure the callback is defined within the same execution scope as parse.
         declare -A OPTS=([action|a:]=)
         getoptlong init OPTS
         getoptlong callback action my_callback # Register callback
@@ -401,6 +397,19 @@ END
     '
     assert_success
     assert_output --partial "Callback invoked with value: perform_action"
+}
+
+@test "getoptlong: callback type option" {
+    run bash -c '
+        . ../getoptlong.sh
+        action() { echo "Callback invoked with value: $1"; }
+        declare -A OPTS=([action|a!]=)
+        getoptlong init OPTS
+        getoptlong parse --action
+        eval "$(getoptlong set)"
+    '
+    assert_success
+    assert_output --partial "Callback invoked with value: 1"
 }
 
 # Test: PREFIX option

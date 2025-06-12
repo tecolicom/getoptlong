@@ -44,12 +44,12 @@ example to illustrate the use of [getoptlong.sh](getoptlong.sh).
    Create an associative array (e.g., `OPTS`) to define your script's
    options.  Each key is a string representing the option names (short
    and long, separated by `|`) and its storage type character (`:`:
-   required, `?`: optional, `@`: list, `%`: hash).  Storage type can
-   be followed `=` and data type character (e.g., `i`: integer, `f`:
-   float).  White spaces are all ignored.
+   required, `?`: optional, `@`: list, `%`: hash, `!`: callback).
+   Storage type can be followed `=` and data type character (e.g.,
+   `i`: integer, `f`: float).  White spaces are all ignored.
 
    Following `#` is a comment for that option, and they can be used in
-   the automatic generated help message.
+   the generated help message.
 
    Their values are used as an initial value for variables.
 
@@ -58,12 +58,18 @@ example to illustrate the use of [getoptlong.sh](getoptlong.sh).
 
    ```bash
    declare -A OPTS=(
+        # LONG NAME   SHORT NAME
+        # |           | OPTION TYPE
+        # |           | | VALUE RULE
+        # |           | | |   DESCRIPTION                 INITIAL VALUE
+        # |           | | |   |                           |
         [ verbose   | v     # verbose output            ]=  # flag
         [ debug     | d     # debug level               ]=0 # counter
         [ count     | c :=i # repeat count              ]=1 # required
         [ paragraph | p ?   # print newline after cycle ]=  # optional
         [ sleep     | i @=f # interval time             ]=  # list
         [ message   | m %   # print message             ]=  # hash
+        [ trace     | x !   # trace execution           ]=  # callback
    )
    ```
 
@@ -274,6 +280,15 @@ their definition in the "Option Types in Definition" section.
 
   * Prefix `no-` (e.g., `--no-verbose` or `--no-v`) can be used to
     reset the corresponding variable to empty.
+
+* **Callback Options (defined with `!`)**
+
+  * Examples: `-x` or `--trace` for `[trace|x]`.
+
+  * These options are same as flag options, but register the callback
+    function in the name of the option itself.  So funciton `trace()`
+    is called with the value `1` when option `--trace` used, and
+    called with empty string when `--no-trace` is used.
 
 * **Options Requiring an Argument (defined with `:`)**
 
