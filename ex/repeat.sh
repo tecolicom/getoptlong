@@ -10,14 +10,12 @@ declare -A OPTS=(
     [ paragraph | p ?   # print newline after cycle ]=
     [ trace     | x     # trace execution           ]=
     [ debug     | d     # debug level               ]=0
-    [ help      | h     # show help                 ]=
     [ message   | m %=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
 )
-help() { getoptlong help ; exit ; }
 trace() { [[ $1 ]] && set -x || set +x ; }
 
 getoptlong init OPTS
-getoptlong callback help - trace -
+getoptlong callback trace -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
 (( debug >= 2 )) && getoptlong dump --all | column >&2

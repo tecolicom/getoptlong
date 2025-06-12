@@ -56,6 +56,19 @@ load test_helper.bash
     assert_output "verbose_val:1"
 }
 
+@test "getoptlong: - in the option name --help-me" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([help-me|h]=)
+        getoptlong init OPTS
+        getoptlong parse foo --help-me
+        eval "$(getoptlong set)"
+        echo "help_me:$help_me"
+    '
+    assert_success
+    assert_output "help_me:1"
+}
+
 # Test: Flag option, incrementing (-d -d)
 @test "getoptlong: flag - incrementing -d -d -dd --debug" {
     run bash -c '
