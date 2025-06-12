@@ -286,21 +286,19 @@ result is undefined.
 
 ## Help Message Generation
 
-`getoptlong.sh` provides robust capabilities for automatically generating help messages for your script. This simplifies the process of providing clear usage instructions to your users.
+`getoptlong.sh` provides robust capabilities for automatically generating help messages for your script. This simplifies the process of providing clear usage instructions to your users. These automatically generated messages are then displayed in alphabetical order by option name (long name, then short name if no long name exists).
 
 Key features of the help message generation include:
 
-- **User-Defined Descriptions are Prioritized**: The most important aspect of help message generation is that **if you provide a comment (description) in your option definition (e.g., `[option|o # This is a custom description]`), this description will be used as the help text for that option.** The automatic generation based on option types (discussed next) serves as a fallback if no such comment is provided.
+- **Custom Option Descriptions**: If you include a comment next to an option definition (e.g., `[myoption|m # This text becomes the help message]`), that comment will be used as the help message for that option. This is the primary way to set help text.
 
 - **Automatic `--help` and `-h` Options**: If you don't define a help option explicitly in your `OPTS` array, `getoptlong.sh` automatically defines `--help` and `-h` options. When invoked, these options will display the generated help message and exit.
 
-- **Help Messages Reflect Option Types**: When a custom description isn't provided for an option, the generated help message will automatically reflect its type, indicating, for example, whether it's a simple flag, if it requires an argument (and its type, like integer or float), if an argument is optional, or if it accepts multiple values (for array/list and hash types).
+- **Fallback to Type-Based Messages**: When a custom description isn't provided for an option, the generated help message will automatically reflect its type. This indicates, for example, whether it's a simple flag, if it requires an argument (and its type, like integer or float), if an argument is optional, or if it accepts multiple values (for array/list and hash types).
 
 - **Default Option Specification in `HELP` Config Parameter**:
     - You can customize the default help option (names, description) using the `HELP` configuration parameter during `getoptlong init`. For example: `getoptlong init OPTS HELP="myhelp|H#Show custom help"`.
     - The `HELP` parameter can also be set via the `&HELP` key in your option definition array itself (e.g., `declare -A OPTS=([&HELP]="myhelp|H#Show custom help" ...)`). This definition in the array takes precedence over the `init` option.
-
-- **Alphabetical Sorting**: Options in the help message are sorted alphabetically by their long option name. If an option only has a short name, it's sorted by that.
 
 - **Display of Default Values**: If an option has an initial value assigned in the `OPTS` array (e.g., `[count|c:=i]=1`), this default value will be displayed in the help message (e.g., `(default: 1)`).
 
