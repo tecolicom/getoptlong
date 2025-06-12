@@ -21,6 +21,7 @@ _gol_saila() { _gol_opts "$MK_SAILA" "$@" ; }
 _gol_hook()  { _gol_opts "$MK_HOOK"  "$@" ; }
 _gol_rule()  { _gol_opts "$MK_RULE"  "$@" ; }
 _gol_help()  { _gol_opts "$MK_HELP"  "$@" ; }
+_gol_init()  { _gol_opts "$MK_INIT"  "$@" ; }
 _gol_type()  { echo "${_opts["$1"]:0:1}" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
@@ -28,7 +29,7 @@ _gol_redirect() { local _name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local MARKS='><!&=#' MK_ALIAS='>' MK_SAILA='<' MK_HOOK='!' MK_CONF='&' MK_RULE='=' MK_HELP='#' \
+    local MARKS='><!&=#^' MK_ALIAS='>' MK_SAILA='<' MK_HOOK='!' MK_CONF='&' MK_RULE='=' MK_HELP='#' MK_INIT='^' \
 	  IS_ANY='+:?@%!' IS_REQ=":@%" IS_FLAG="+" IS_NEED=":" IS_MAYB="?" IS_LIST="@" IS_HASH="%" IS_HOOK='!' \
 	  CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE HELP)
     for _name in "${CONFIG[@]}" ; do declare $_name="${_opts[&$_name]=}" ; done
@@ -48,7 +49,7 @@ gol_dump_() { local _all= _key ;
 gol_init() { local _key ;
     (( $# == 0 )) && { echo '(( ${#FUNCNAME[@]} > 0 )) && local GOL_OPTHASH OPTIND=1 || OPTIND=1' ; return ; }
     declare -n _opts=$1
-    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [DELIM]=$' \t,' [HELP]='help|h!')
+    declare -A GOL_CONFIG=([PERMUTE]=GOL_ARGV [EXIT_ON_ERROR]=1 [DELIM]=$' \t,' [HELP]='help|h!#show HELP')
     for _key in "${!GOL_CONFIG[@]}" ; do : ${_opts["&$_key"]="${GOL_CONFIG[$_key]}"} ; done
     GOL_OPTHASH=$1
     (( $# > 1 )) && gol_configure "${@:2}"
@@ -74,6 +75,7 @@ _gol_init_entry() { local _entry="$1" ;
     local _initial="${_opts[$_entry]-}"
     IFS=$' \t|' read -a _aliases <<< ${_names}
     local _name=${_aliases[0]}
+    _gol_init $_name "$_initial"
     [[ $_name =~ ^[[:alpha:]] ]] || _gol_die "$_name: option name must start with alphabet"
     local _vname="${PREFIX}${_name//-/_}"
     unset _opts["$_entry"]
@@ -136,9 +138,7 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback ;
     _callback="$(_gol_hook $_name)" && _gol_call_hook $_callback "$_val"
     return 0
 }
-_gol_call_hook() {
-    declare -F $1 > /dev/null && "$@" || _gol_die "$1() is not defined"
-}
+_gol_call_hook() { declare -F $1 > /dev/null && "$@" || _gol_die "$1() is not defined" ; }
 _gol_getopts_long() { local _non _param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
     _non="${MATCH[1]}" _optname="${MATCH[2]}" _param="${MATCH[3]}" _val="${MATCH[4]}"
@@ -217,20 +217,22 @@ gol_help_() {
     (( $# < 2 )) && { _gol_show_help "$@" ; return 0 ; }
     while (($# > 1)) ; do _gol_help "$1" "$2" ; shift 2 ; done
 }
-_gol_show_help() { local _key aliases ;
+_gol_show_help() { local _key _aliases _init= _default= ;
     echo "${1:-${USAGE:-$(basename $0) [ options ] args}}"
     for _key in "${!_opts[@]}" ; do
-	aliases="$(_gol_saila "$_key")" || continue
+	_aliases="$(_gol_saila "$_key")" || continue
 	msg="$(_gol_help $_key)" || {
+	    _init="$(_gol_init $_key)" && _default="${_init:+ (default:$_init)}"
+	    [[ $_init =~ ^[0-9]+$ ]] && _flag=bump || _flag=enable
 	    case "$(_gol_type $_key)" in
-		[$IS_FLAG]) msg="enable ${_key^^}" ;;
-		[$IS_NEED]) msg="set ${_key^^}" ;;
+		[$IS_FLAG]) msg="$_flag ${_key^^}$_default" ;;
+		[$IS_NEED]) msg="set ${_key^^}$_default" ;;
 		[$IS_LIST]) msg="add item(s) to ${_key^^}" ;;
 		[$IS_HASH]) msg="set KEY=VALUE(s) in ${_key^^}" ;;
 		[$IS_MAYB]) msg="enable/set ${_key^^}" ;;
 	    esac
 	}
-	printf '    %s\t%1s\t%s\n' "$(_gol_optize $_key)" "$(_gol_optize $aliases)" "$msg"
+	printf '    %s\t%1s\t%s\n' "$(_gol_optize $_key)" "$(_gol_optize $_aliases)" "$msg"
     done | sort | column -s $'\t' -t
 }
 _gol_optize() { local _name _opt _optlist _eq ;
