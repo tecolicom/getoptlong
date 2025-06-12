@@ -28,6 +28,25 @@ followings.
   is implemented without explicit definition.  Help message is
   generated from the option definition.
 
+## Table of Contents
+- [Usage](#usage)
+- [Option Types in Definition](#option-types-in-definition)
+- [Functions](#functions)
+- [Help Message Generation](#help-message-generation)
+- [How to Specify Option Values](#how-to-specify-option-values)
+  - [Flag Options (defined with no suffix)](#flag-options-defined-with-no-suffix)
+  - [Callback Options (defined with !)](#callback-options-defined-with-)
+  - [Options Requiring an Argument (defined with :)](#options-requiring-an-argument-defined-with-)
+  - [Options with Optional Arguments (defined with ?)](#options-with-optional-arguments-defined-with-)
+  - [Array Options (defined with @)](#array-options-defined-with-)
+  - [Hash Options (defined with %)](#hash-options-defined-with-)
+- [Data Validation](#data-validation)
+  - [Built-in Type Validation](#built-in-type-validation)
+  - [Custom Regex Validation](#custom-regex-validation)
+  - [Using Callbacks for Validation](#using-callbacks-for-validation)
+- [Examples](#examples)
+- [See Also](#see-also)
+
 ## Usage
 
 The following is a sample script from [repeat.sh](ex/repeat.sh) as an
@@ -271,16 +290,11 @@ result is undefined.
 
 Key features of the help message generation include:
 
+- **User-Defined Descriptions are Prioritized**: The most important aspect of help message generation is that **if you provide a comment (description) in your option definition (e.g., `[option|o # This is a custom description]`), this description will be used as the help text for that option.** The automatic generation based on option types (discussed next) serves as a fallback if no such comment is provided.
+
 - **Automatic `--help` and `-h` Options**: If you don't define a help option explicitly in your `OPTS` array, `getoptlong.sh` automatically defines `--help` and `-h` options. When invoked, these options will display the generated help message and exit.
 
-- **Help Messages Based on Option Types**: The generated help message intelligently reflects the type of each option:
-    - **Flag Options**: Options defined without a suffix (e.g., `[verbose|v]`). The help message will indicate it's a flag.
-    - **Required Argument Options**: Options defined with `:` (e.g., `[file|f:]`). The help message will indicate that an argument is required.
-    - **Optional Argument Options**: Options defined with `?` (e.g., `[output|o?]`). The help message will indicate that an argument is optional.
-    - **List/Array Options**: Options defined with `@` (e.g., `[include|I@]`). The help message will show that it accepts multiple values.
-    - **Hash Options**: Options defined with `%` (e.g., `[define|D%]`). The help message will indicate it accepts key-value pairs.
-
-- **User-Defined Help Messages Take Precedence**: Any description you provide in the `OPTS` array (e.g., `[count|c:=i # Number of iterations]`) will be used in the help message for that option. This allows you to customize the help text.
+- **Help Messages Reflect Option Types**: When a custom description isn't provided for an option, the generated help message will automatically reflect its type, indicating, for example, whether it's a simple flag, if it requires an argument (and its type, like integer or float), if an argument is optional, or if it accepts multiple values (for array/list and hash types).
 
 - **Default Option Specification in `HELP` Config Parameter**:
     - You can customize the default help option (names, description) using the `HELP` configuration parameter during `getoptlong init`. For example: `getoptlong init OPTS HELP="myhelp|H#Show custom help"`.
