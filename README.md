@@ -294,7 +294,7 @@ Key features of the help message generation include:
 
 - **Automatic `--help` and `-h` Options**: If you don't define a help option explicitly in your `OPTS` array, `getoptlong.sh` automatically defines `--help` and `-h` options. When invoked, these options will display the generated help message and exit.
 
-- **Fallback to Type-Based Messages**: When a custom description isn't provided for an option, the generated help message will automatically reflect its type. This indicates, for example, whether it's a simple flag, if it requires an argument (and its type, like integer or float), if an argument is optional, or if it accepts multiple values (for array/list and hash types).
+- **Fallback to Type-Based Messages**: When a custom description isn't provided for an option, the generated help message will automatically reflect its type. This indicates, for example, whether it's a simple flag, if it requires an argument (and its type, like integer or float), if an argument is optional, or if it accepts multiple values (for array/list and hash types). Using descriptive long option names (e.g., `--backup-location` instead of just `--loc`) can significantly enhance the clarity of these automatically generated messages.
 
 - **Default Option Specification in `HELP` Config Parameter**:
     - You can customize the default help option (names, description) using the `HELP` configuration parameter during `getoptlong init`. For example: `getoptlong init OPTS HELP="myhelp|H#Show custom help"`.
