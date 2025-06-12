@@ -217,8 +217,9 @@ gol_help_() {
     (( $# < 2 )) && { _gol_show_help "$@" ; return 0 ; }
     while (($# > 1)) ; do _gol_help "$1" "$2" ; shift 2 ; done
 }
-_gol_show_help() { local _key _aliases _init= _default= ;
+_gol_show_help() { local _key _aliases _init= _default= _column ;
     echo "${1:-${USAGE:-$(basename $0) [ options ] args}}"
+    _column=($(command -v column)) && _column+=(-s $'\t' -t) || _column=(cat)
     for _key in "${!_opts[@]}" ; do
 	_aliases="$(_gol_saila "$_key")" || continue
 	msg="$(_gol_help $_key)" || {
@@ -233,7 +234,7 @@ _gol_show_help() { local _key _aliases _init= _default= ;
 	    esac
 	}
 	printf '    %s\t%1s\t%s\n' "$(_gol_optize $_key)" "$(_gol_optize $_aliases)" "$msg"
-    done | sort | column -s $'\t' -t
+    done | sort | "${_column[@]}"
 }
 _gol_optize() { local _name _opt _optlist _eq ;
     for _name in "$@"; do

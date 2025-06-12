@@ -17,8 +17,9 @@ trace() { [[ $1 ]] && set -x || set +x ; }
 getoptlong init OPTS
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
+column=$(command -v column) || column=cat
 (( debug >= 3 )) && dumpopt=(--all)
-(( debug >= 2 )) && getoptlong dump ${dumpopt[@]} | column >&2
+(( debug >= 2 )) && getoptlong dump ${dumpopt[@]} | ${column} >&2
 
 [[ ${1:-} =~ ^[0-9]+$ ]] && count=$1 && shift
 
