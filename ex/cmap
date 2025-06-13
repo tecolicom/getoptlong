@@ -102,8 +102,8 @@ declare -A OPTS=(
 getoptlong init OPTS PERMUTE= DEBUG=${DEBUG_ME:-}
 getoptlong callback man   'myhelp --man'  \
                     usage 'myhelp --usage'
-getoptlong callback X xyz Y xyz Z xyz
-xyz() { declare -n _xyz=$1 && _xyz=() ; }
+getoptlong callback --before X xyz Y xyz Z xyz
+xyz() { eval "$1=()" ; }
 
 opt()   { declare -n x=$1; [[ ${x} ]] ; }
 
