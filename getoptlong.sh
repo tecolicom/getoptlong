@@ -18,6 +18,7 @@ _gol_opts() {
 }
 _gol_alias() { _gol_opts "$MK_ALIAS" "$@" ; }
 _gol_saila() { _gol_opts "$MK_SAILA" "$@" ; }
+_gol_trig()  { _gol_opts "$MK_TRIG"  "$@" ; }
 _gol_hook()  { _gol_opts "$MK_HOOK"  "$@" ; }
 _gol_rule()  { _gol_opts "$MK_RULE"  "$@" ; }
 _gol_help()  { _gol_opts "$MK_HELP"  "$@" ; }
@@ -29,7 +30,7 @@ _gol_redirect() { local _name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local MARKS='><!&=#^' MK_ALIAS='>' MK_SAILA='<' MK_HOOK='!' MK_CONF='&' MK_RULE='=' MK_HELP='#' MK_INIT='^' \
+    local MARKS='><()&=#^' MK_ALIAS='>' MK_SAILA='<' MK_TRIG='(' MK_HOOK=')' MK_CONF='&' MK_RULE='=' MK_HELP='#' MK_INIT='^' \
 	  IS_ANY='+:?@%!' IS_REQ=":@%" IS_FLAG="+" IS_NEED=":" IS_MAYB="?" IS_LIST="@" IS_HASH="%" IS_HOOK='!' \
 	  CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE HELP)
     for _name in "${CONFIG[@]}" ; do declare $_name="${_opts[&$_name]=}" ; done
@@ -125,7 +126,7 @@ gol_optstring_() { local _key _string ;
     echo "${SILENT:+:}${_string:- }-:"
 }
 gol_getopts () { _gol_redirect "$@" ; }
-gol_getopts_() { local _optname _val _vtype _vname _name _callback ;
+gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger ;
     local _opt="$1"; shift;
     case $_opt in
 	[:?]) _callback=$(_gol_hook "$_opt") && [[ $_callback ]] && $_callback "$OPTARG"
@@ -135,8 +136,9 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback ;
     esac
     [[ -v _val ]] || _val="$(_gol_incr "$(_gol_value $_vname)")"
     _name=$(_gol_alias ${_optname:-$_opt}) || _name=${_optname:=$_opt}
-    _callback="$(_gol_hook $_name)" && _gol_call_hook $_callback "$_name" "$_val"
+    _trigger="$(_gol_trig $_name)" && _gol_call_hook $_trigger "$_name" "$_val"
     _gol_getopts_store
+    _callback="$(_gol_hook $_name)" && _gol_call_hook $_callback "$_name" "$_val"
     return 0
 }
 _gol_call_hook() { declare -F $1 > /dev/null && "$@" || _gol_die "$1() is not defined" ; }
@@ -205,10 +207,15 @@ _gol_validate() {
 }
 gol_callback () { _gol_redirect "$@" ; }
 gol_callback_() {
+    local _setter=_gol_hook
+    case ${1-} in
+	-b|--before) _setter=_gol_trig ; shift ;;
+	-a|--after)  _setter=_gol_hook ; shift ;;
+    esac
     while (($# > 0)) ; do
 	local _name=$1 _callback=${2:-$1}
 	[[ $_callback =~ ^[_[:alnum:]] ]] || _callback=$_name
-	_gol_hook "$_name" "${_callback//-/_}"
+	$_setter "$_name" "${_callback//-/_}"
 	shift $(( $# >= 2 ? 2 : 1 ))
     done
     return 0
