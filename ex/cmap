@@ -102,10 +102,8 @@ declare -A OPTS=(
 getoptlong init OPTS PERMUTE= DEBUG=${DEBUG_ME:-}
 getoptlong callback man   'myhelp --man'  \
                     usage 'myhelp --usage'
-getoptlong callback X - Y - Z -
-X() { X=() ; }
-Y() { Y=() ; }
-Z() { Z=() ; }
+getoptlong callback X xyz Y xyz Z xyz
+xyz() { declare -n _xyz=$1 && _xyz=() ; }
 
 opt()   { declare -n x=$1; [[ ${x} ]] ; }
 
@@ -114,8 +112,9 @@ trace() { [[ $1 ]] && set -x || set +x ; }
 getoptlong callback $(printf "%s - \n" label trace)
 
 format() {
-    [[ $# == 0 ]] && return
-    case $1 in
+    (( $# == 0 )) && return
+    local _fmt=${@:$#}
+    case $_fmt in
     hsl)
 	order="x z y"
 	X=($(seq 0 60 359))  # Hue
@@ -146,7 +145,7 @@ format() {
 	Z=(20,60,100)            # Chroma
 	;;
     *)
-	die "$1: unknown format"
+	die "$_fmt: unknown format"
     esac
 }
 getoptlong callback format -
@@ -157,7 +156,7 @@ getoptlong parse "$@" && eval "$(getoptlong set)"
 [[ $pkg     ]] && export TAC_COLOR_PACKAGE=${pkg}
 [[ $include ]] && export PERL5LIB=${include}:$PERL5LIB
 [[ $debug   ]] && {
-    gol_dump | column
+    gol_dump -a | column
     declare -p mods
     declare -p message
 }
