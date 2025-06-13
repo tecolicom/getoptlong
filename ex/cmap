@@ -73,9 +73,9 @@ declare -A OPTS=(
     [    mods | m @ # set color modifier (ex. +r180%y50)    ]=
     [     pkg | M : # select color handling package         ]=
     [    lead | L : # set leader string                     ]="██  "
-    [           X : # set X values                          ]=
-    [           Y : # set Y values                          ]=
-    [           Z : # set Z values                          ]=
+    [           X @ # set X values                          ]=
+    [           Y @ # set Y values                          ]=
+    [           Z @ # set Z values                          ]=
     [   order | o : # set X,Y,Z order                       ]=
     [   terse | t   # terse message                         ]=
     [   quiet | q   # quiet mode                            ]=
@@ -109,22 +109,22 @@ format() {
     case $1 in
     hsl)
 	order="x z y"
-	X="$(seq -s, 0 60 359)"  # Hue
-	Y="$(seq -s, 0 5 99)"    # Lightness
-	Z="20,80,100"            # Saturation
+	X=($(seq 0 60 359))  # Hue
+	Y=($(seq 0 5 99))    # Lightness
+	Z=(20,80,100)            # Saturation
 	;;
     rgb)
 	order="x y z"
-	X="0 51 102 153 204 255" # Red
-	Y="$(seq -s, 0 15 255)"  # Green
-	Z="0,128,255"            # Blue
+	X=(0 51 102 153 204 255) # Red
+	Y=($(seq 0 15 255))  # Green
+	Z=(0,128,255)            # Blue
 	;;
     rgb-chart)
 	format=rgb
 	order="x y z"
-	X="$(seq -s, 0 2 255)"   # Red
-	Y="$(seq -s, 0 15 255)"  # Green
-	Z="0,128,255"            # Blue
+	X=($(seq 0 2 255))   # Red
+	Y=($(seq 0 15 255))  # Green
+	Z=(0,128,255)            # Blue
 	label=" "
 	terse=yes
 	lead=
@@ -132,9 +132,9 @@ format() {
 	;;
     lch)
 	order="y z x"
-	X="$(seq -s, 0 60 359)"  # Hue
-	Y="$(seq -s, 0 5 99)"    # Luminance
-	Z="20,60,100"            # Chroma
+	X=($(seq 0 60 359))  # Hue
+	Y=($(seq 0 5 99))    # Luminance
+	Z=(20,60,100)            # Chroma
 	;;
     *)
 	die "$1: unknown format"
@@ -169,15 +169,12 @@ reorder() {
 table() {
     local mod=$1
     local IFS=$' \t\n,'
-    _Z=($Z)
-    for z in ${_Z[@]} ; do
+    for z in ${Z[@]} ; do
 	local option=(--separate $'\n')
-	_X=($X)
-	for x in ${_X[@]} ; do
-	    _Y=($Y)
-	    local ys=${_Y[0]} ye=${_Y[$(( ${#_Y[@]} - 1 ))]}
+	for x in ${X[@]} ; do
+	    local ys=${Y[0]} ye=${Y[$(( ${#Y[@]} - 1 ))]}
 	    [[ $terse ]] || option+=("x=$x,y=$ys-$ye,z=$z")
-	    for y in ${_Y[@]} ; do
+	    for y in ${Y[@]} ; do
 		col=$(printf "%s(%03d,%03d,%03d)" ${format} $(reorder $x $y $z))
 		[[ $reverse ]] && arg="$col/$col$mod" \
 		            || arg="$col$mod/$col"
@@ -188,7 +185,7 @@ table() {
 	if [[ $dryrun ]] ; then
 	    echo ansiecho "${option[@]}"
 	else
-	    ansiecho "${option[@]}" | ansicolumn -C ${column:-${#_X[@]}} --cu=1 --margin=0
+	    ansiecho "${option[@]}" | ansicolumn -C ${column:-${#X[@]}} --cu=1 --margin=0
 	fi
     done
 }
