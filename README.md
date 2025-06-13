@@ -110,12 +110,12 @@ example to illustrate the use of [getoptlong.sh](getoptlong.sh).
    <opt_name> [callback_function]`.  If `callback_function` is omitted
    or is `-`, it defaults to `opt_name`.
 
-   Callback function is called with the value as `$1`.  Next code
-   execute `set -x` by `--trace` option, and `set +x` by `--no-trace`
-   option.
+   Callback function is called with the option name as `$1` and the
+   value as `$2`.  Next code execute `set -x` by `--trace` option, and
+   `set +x` by `--no-trace` option.
 
    ```bash
-   trace() { [[ $1 ]] && set -x || set +x ; }
+   trace() { [[ $2 ]] && set -x || set +x ; }
    getoptlong callback help - trace -
    ```
 
@@ -265,6 +265,10 @@ result is undefined.
   contains a hyphens (`-`), they are changed to underscores (`_`).
   The callback is invoked with the option's value when the option is
   parsed.
+
+  The callback function is called with the option name as the first
+  argument and the value as the second argument, before setting the
+  value to the corresponding variable.
 
 - **`getoptlong configure <CONFIG_PARAM=VALUE> ...`**:
 
@@ -513,7 +517,7 @@ simple type or regex checks, callback functions offer maximum
 flexibility.
 
 When a callback is defined for an option, the option's argument
-(value) is passed as the first parameter (`$1`) to the callback
+(value) is passed as the second parameter (`$2`) to the callback
 function.  The callback can then perform any necessary checks.  If
 validation fails, the callback should typically `exit 1` often after
 printing a custom error message to `stderr`.
@@ -523,10 +527,10 @@ For example, to check if a 'count' option is a positive number:
 ```bash
 # Callback function for the 'count' option
 count_check() {
-    if [[ "$1" =~ ^[0-9]+$ && "$1" -gt 0 ]]; then
+    if [[ "$2" =~ ^[0-9]+$ && "$1" -gt 0 ]]; then
         return 0
     else
-        echo "Error: 'count' must be a positive integer, got '$1'." >&2
+        echo "Error: 'count' must be a positive integer, got '$2'." >&2
         exit 1
     fi
 }

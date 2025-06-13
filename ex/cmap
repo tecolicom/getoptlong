@@ -42,7 +42,7 @@ note()   { [[ $quiet ]] && return ; echo "$@" ; }
 warn()   { note "$@" >&2 ; }
 die()    { warn "$@" ; exit 1 ; }
 
-help() {
+myhelp() {
     local man help usage continue
     eval "$(getoptlong init)"
     declare -A OPTS=(
@@ -67,7 +67,14 @@ help() {
     return 0
 }
 
+define USAGE <<END
+cmap - Term::ANSIColor::Concise demo/test script
+
+cmap [ options ]
+END
+
 declare -A OPTS=(
+    [&USAGE]="$USAGE"
     [  format | f : # specify color format (*hsl, rgb, lch) ]=hsl
     [ default | D : #                                       ]="+r180%y50"
     [    mods | m @ # set color modifier (ex. +r180%y50)    ]=
@@ -86,7 +93,6 @@ declare -A OPTS=(
     [  dryrun | n   # dry-run                               ]=
     [   debug | d + # debug                                 ]=
     [   trace | x   # trace execution                       ]=
-    [    help | h   # show help                             ]=
     [   usage | u   # show usage                            ]=
     [     man       # show man page                         ]=
     [ include | I : # include Perl module path              ]=./lib
@@ -94,9 +100,8 @@ declare -A OPTS=(
 #   [ message     % #                                       ]="([BEGIN]=$'HELLO\n' [END]=$'\nGOODBY')"
 )
 getoptlong init OPTS PERMUTE= DEBUG=${DEBUG_ME:-}
-getoptlong callback help  'help --help' \
-                    man   'help --man'  \
-                    usage 'help --usage'
+getoptlong callback man   'myhelp --man'  \
+                    usage 'myhelp --usage'
 getoptlong callback X - Y - Z -
 X() { X=() ; }
 Y() { Y=() ; }
