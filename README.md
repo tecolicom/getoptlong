@@ -257,18 +257,23 @@ result is undefined.
   Returns a string of shell commands to set the variables based on
   parsed options.  This should be evaluated using `eval`.
 
-- **`getoptlong callback <opt_name> [callback_function] ...`**:
+- **`getoptlong callback [-b|--before] <opt_name> [callback_function] ...`**:
 
   Registers a callback function.  Provide the option name and the
   corresponding callback function name.  If the function name is `-`
-  or omitted, it defaults to the option name.  If the option string
-  contains a hyphens (`-`), they are changed to underscores (`_`).
-  The callback is invoked with the option's value when the option is
+  or omitted, it defaults to the option name.  In that case, hyphens
+  (`-`) in the option name are changed to underscores (`_`).  The
+  callback is invoked with the option's value when the option is
   parsed.
 
   The callback function is called with the option name as the first
-  argument and the value as the second argument, before setting the
-  value to the corresponding variable.
+  argument and the value as the second.
+
+  Default is same as with `--after` (or `-a`) and the function is
+  called after setting the value.  With the `--before` (or `-b`)
+  option, the function is called before setting the value.  Array type
+  options can only be used to add values, but can also be pre-cleared
+  by using a `before` type callback function.
 
 - **`getoptlong configure <CONFIG_PARAM=VALUE> ...`**:
 
