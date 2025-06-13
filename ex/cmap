@@ -42,7 +42,7 @@ note()   { [[ $quiet ]] && return ; echo "$@" ; }
 warn()   { note "$@" >&2 ; }
 die()    { warn "$@" ; exit 1 ; }
 
-help() {
+myhelp() {
     local man help usage continue
     eval "$(getoptlong init)"
     declare -A OPTS=(
@@ -67,36 +67,41 @@ help() {
     return 0
 }
 
+define USAGE <<END
+cmap - Term::ANSIColor::Concise demo/test script
+
+cmap [ options ]
+END
+
 declare -A OPTS=(
-    [  format | f : ]=hsl
-    [ default | D : ]="+r180%y50"
-    [    mods | m @ ]=
-    [     pkg | M : ]=
-    [    lead | L : ]="██  "
-    [           X : ]=
-    [           Y : ]=
-    [           Z : ]=
-    [   order | o : ]=
-    [   terse | t   ]=
-    [   quiet | q   ]=
-    [   label | l ? ]=
-    [ reverse | r   ]=
-    [  column | C : ]=
-    [ verbose | v   ]=
-    [  dryrun | n   ]=
-    [   debug | d + ]=
-    [   trace | x   ]=
-    [    help | h   ]=
-    [   usage | u   ]=
-    [     man       ]=
-    [ include | I : ]=./lib
-    [ message     % ]=
-#   [ message     % ]="([BEGIN]=$'HELLO\n' [END]=$'\nGOODBY')"
+    [&USAGE]="$USAGE"
+    [  format | f : # specify color format (*hsl, rgb, lch) ]=hsl
+    [ default | D : #                                       ]="+r180%y50"
+    [    mods | m @ # set color modifier (ex. +r180%y50)    ]=
+    [     pkg | M : # select color handling package         ]=
+    [    lead | L : # set leader string                     ]="██  "
+    [           X : # set X values                          ]=
+    [           Y : # set Y values                          ]=
+    [           Z : # set Z values                          ]=
+    [   order | o : # set X,Y,Z order                       ]=
+    [   terse | t   # terse message                         ]=
+    [   quiet | q   # quiet mode                            ]=
+    [   label | l ? # set label string                      ]=
+    [ reverse | r   # flip foreground/background color      ]=
+    [  column | C : # set column number                     ]=
+    [ verbose | v   # verbose mode                          ]=
+    [  dryrun | n   # dry-run                               ]=
+    [   debug | d + # debug                                 ]=
+    [   trace | x   # trace execution                       ]=
+    [   usage | u   # show usage                            ]=
+    [     man       # show man page                         ]=
+    [ include | I : # include Perl module path              ]=./lib
+    [ message     % # set message                           ]=
+#   [ message     % #                                       ]="([BEGIN]=$'HELLO\n' [END]=$'\nGOODBY')"
 )
 getoptlong init OPTS PERMUTE= DEBUG=${DEBUG_ME:-}
-getoptlong callback help  'help --help' \
-                    man   'help --man'  \
-                    usage 'help --usage'
+getoptlong callback man   'myhelp --man'  \
+                    usage 'myhelp --usage'
 
 opt()   { declare -n x=$1; [[ ${x} ]] ; }
 
