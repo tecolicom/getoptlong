@@ -97,6 +97,10 @@ getoptlong init OPTS PERMUTE= DEBUG=${DEBUG_ME:-}
 getoptlong callback help  'help --help' \
                     man   'help --man'  \
                     usage 'help --usage'
+getoptlong callback X - Y - Z -
+X() { X=() ; }
+Y() { Y=() ; }
+Z() { Z=() ; }
 
 opt()   { declare -n x=$1; [[ ${x} ]] ; }
 
