@@ -133,9 +133,10 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback ;
 	-) _gol_getopts_long "$@" || return $? ;;
 	*) _gol_getopts_short || return $? ;;
     esac
+    [[ -v _val ]] || _val="$(_gol_incr "$(_gol_value $_vname)")"
     _name=$(_gol_alias ${_optname:-$_opt}) || _name=${_optname:=$_opt}
+    _callback="$(_gol_hook $_name)" && _gol_call_hook $_callback "$_name" "$_val"
     _gol_getopts_store
-    _callback="$(_gol_hook $_name)" && _gol_call_hook $_callback "$_val"
     return 0
 }
 _gol_call_hook() { declare -F $1 > /dev/null && "$@" || _gol_die "$1() is not defined" ; }
@@ -167,24 +168,24 @@ _gol_getopts_short() {
     [[ $_vtype =~ [${IS_MAYB}${IS_REQ}] ]] && _val="${OPTARG:-}"
     return 0
 }
-_gol_getopts_store() { local _vals ;
+_gol_getopts_store() { local _vals _v ;
     local _check=$(_gol_rule $_name)
     case $_vtype in
 	[$IS_LIST]|[$IS_HASH])
 	    [[ $_val =~ $'\n' ]] && readarray -t _vals <<< ${_val%$'\n'} \
 				|| IFS="${DELIM}" read -a _vals <<< ${_val}
-	    for _val in "${_vals[@]}" ; do
-		[[ $_check ]] && _gol_validate "$_check" "$_val"
+	    for _v in "${_vals[@]}" ; do
+		[[ $_check ]] && _gol_validate "$_check" "$_v"
 		case $_vtype in
-		[$IS_LIST]) _gol_set_array $_vname "$_val" ;;
+		[$IS_LIST]) _gol_set_array $_vname "$_v" ;;
 		[$IS_HASH])
-		    [[ $_val =~ = ]] && _gol_set_hash $_vname "${_val%%=*}" "${_val#*=}" \
-				    || _gol_set_hash $_vname "$_val" 1 ;;
+		    [[ $_v =~ = ]] && _gol_set_hash $_vname "${_v%%=*}" "${_v#*=}" \
+				   || _gol_set_hash $_vname "$_v" 1 ;;
 		esac
 	    done
 	    ;;
 	*) [[ $_check ]] && _gol_validate "$_check" "$_val"
-	   _gol_value $_vname "${_val=$(_gol_incr "$(_gol_value $_vname)")}" ;;
+	   _gol_value $_vname "$_val" ;;
     esac
 }
 _gol_value() {

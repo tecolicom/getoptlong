@@ -387,7 +387,7 @@ END
 @test "getoptlong: callback - basic execution" {
     run bash -c '
         . ../getoptlong.sh
-        my_callback() { echo "Callback invoked with value: $1"; }
+        my_callback() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a:]=)
         getoptlong init OPTS
         getoptlong callback action my_callback # Register callback
@@ -396,20 +396,20 @@ END
         # Callback output should be part of stdout if it echos.
     '
     assert_success
-    assert_output --partial "Callback invoked with value: perform_action"
+    assert_output --partial "Callback invoked with value: action perform_action"
 }
 
 @test "getoptlong: callback type option" {
     run bash -c '
         . ../getoptlong.sh
-        action() { echo "Callback invoked with value: $1"; }
+        action() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a!]=)
         getoptlong init OPTS
         getoptlong parse --action
         eval "$(getoptlong set)"
     '
     assert_success
-    assert_output --partial "Callback invoked with value: 1"
+    assert_output --partial "Callback invoked with value: action 1"
 }
 
 # Test: PREFIX option

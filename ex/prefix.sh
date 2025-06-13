@@ -12,7 +12,7 @@ declare -A OPTS=(
     [ debug     | d     # debug level               ]=0
     [ message   | m %=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
 )
-trace() { [[ $1 ]] && set -x || set +x ; }
+trace() { [[ $2 ]] && set -x || set +x ; }
 
 getoptlong init OPTS PREFIX=opt_
 getoptlong callback trace -
