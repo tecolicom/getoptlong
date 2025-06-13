@@ -295,31 +295,77 @@ result is undefined.
 
 ## Help Message Generation
 
-`getoptlong.sh` provides robust capabilities for automatically generating help messages for your script. This simplifies the process of providing clear usage instructions to your users. These automatically generated messages are then displayed in alphabetical order by option name (long name, then short name if no long name exists).
+`getoptlong.sh` provides robust capabilities for automatically
+generating help messages for your script. This simplifies the process
+of providing clear usage instructions to your users. These
+automatically generated messages are then displayed in alphabetical
+order by option name (long name, then short name if no long name
+exists).
 
 Key features of the help message generation include:
 
-- **Custom Option Descriptions**: If you include a comment next to an option definition (e.g., `[myoption|m # This text becomes the help message]`), that comment will be used as the help message for that option. This is the primary way to set help text.
+- **Custom Option Descriptions**: If you include a comment next to an
+  option definition (e.g., `[myoption|m # This text becomes the help
+  message]`), that comment will be used as the help message for that
+  option. This is the primary way to set help text.
 
-- **Automatic `--help` and `-h` Options**: If you don't define a help option explicitly in your `OPTS` array, `getoptlong.sh` automatically defines `--help` and `-h` options. When invoked, these options will display the generated help message and exit.
+- **Automatic `--help` and `-h` Options**: If you don't define a help
+  option explicitly in your `OPTS` array, `getoptlong.sh`
+  automatically defines `--help` and `-h` options. When invoked, these
+  options will display the generated help message and exit.
 
-- **Fallback to Type-Based Messages**: When a custom description isn't provided for an option, the generated help message will automatically reflect its type. This indicates, for example, whether it's a simple flag, if it requires an argument (and its type, like integer or float), if an argument is optional, or if it accepts multiple values (for array/list and hash types). Using descriptive long option names (e.g., `--backup-location` instead of just `--loc`) can significantly enhance the clarity of these automatically generated messages.
+- **Fallback to Type-Based Messages**: When a custom description isn't
+  provided for an option, the generated help message will
+  automatically reflect its type. This indicates, for example, whether
+  it's a simple flag, if it requires an argument (and its type, like
+  integer or float), if an argument is optional, or if it accepts
+  multiple values (for array/list and hash types). Using descriptive
+  long option names (e.g., `--backup-location` instead of just
+  `--loc`) can significantly enhance the clarity of these
+  automatically generated messages.
 
 - **Default Option Specification in `HELP` Config Parameter**:
-    - You can customize the default help option (names, description) using the `HELP` configuration parameter during `getoptlong init`. For example: `getoptlong init OPTS HELP="myhelp|H#Show custom help"`.
-    - The `HELP` parameter can also be set via the `&HELP` key in your option definition array itself (e.g., `declare -A OPTS=([&HELP]="myhelp|H#Show custom help" ...)`). This definition in the array takes precedence over the `init` option.
 
-- **Display of Default Values**: If an option has an initial value assigned in the `OPTS` array (e.g., `[count|c:=i]=1`), this default value will be displayed in the help message (e.g., `(default: 1)`).
+  - You can customize the default help option (names, description)
+    using the `HELP` configuration parameter during `getoptlong
+    init`. For example: `getoptlong init OPTS HELP="myhelp|H#Show
+    custom help"`.
 
-- **Counter Type for Flag Options**: If a flag option is given a numeric initial value in the `OPTS` array (e.g., `[debug|d]=0`), it's treated as a counter. The help message will reflect this, and its default value will be shown.
+  - The `HELP` parameter can also be set via the `&HELP` key in your
+    option definition array itself (e.g., `declare -A
+    OPTS=([&HELP]="myhelp|H#Show custom help" ...)`). This definition
+    in the array takes precedence over the `init` option.
+
+- **Display of Default Values**: If an option has an initial value
+  assigned in the `OPTS` array (e.g., `[count|c:=i]=1`), this default
+  value will be displayed in the help message (e.g., `(default: 1)`).
+
+- **Counter Type for Flag Options**: If a flag option is given a
+  numeric initial value in the `OPTS` array (e.g., `[debug|d]=0`),
+  it's treated as a counter. The help message will reflect this, and
+  its default value will be shown.
 
 - **`USAGE` Config Parameter for Custom First Line**:
-    - You can specify a custom first line (synopsis) for the help message using the `USAGE` configuration parameter during `getoptlong init`. For example: `getoptlong init OPTS USAGE="Usage: myscript [options] <file>"`.
-    - The `USAGE` parameter can also be set via the `&USAGE` key in your option definition array (e.g., `declare -A OPTS=([&USAGE]="Usage: myscript [options] <file>" ...)`). This definition in the array takes precedence over the `init` option.
+
+  - You can specify a custom first line (synopsis) for the help
+    message using the `USAGE` configuration parameter during
+    `getoptlong init`. For example: `getoptlong init OPTS
+    USAGE="Usage: myscript [options] <file>"`.
+
+  - The `USAGE` parameter can also be set via the `&USAGE` key in your
+    option definition array (e.g., `declare -A OPTS=([&USAGE]="Usage:
+    myscript [options] <file>" ...)`). This definition in the array
+    takes precedence over the `init` option.
 
 - **Manual Display with `getoptlong help`**:
-    - You can manually trigger the display of the help message from anywhere in your script using the `getoptlong help` command.
-    - Optionally, you can provide an argument to `getoptlong help` which will be used as the first line of the help message, overriding any `USAGE` parameter for that specific invocation. Example: `getoptlong help "Custom usage for this specific context"`.
+
+  - You can manually trigger the display of the help message from
+    anywhere in your script using the `getoptlong help` command.
+
+  - Optionally, you can provide an argument to `getoptlong help` which
+    will be used as the first line of the help message, overriding any
+    `USAGE` parameter for that specific invocation. Example:
+    `getoptlong help "Custom usage for this specific context"`.
 
 ## How to Specify Option Values
 
@@ -547,13 +593,14 @@ getoptlong callback count count_check
 The `ex/` directory contains example scripts demonstrating various
 features of `getoptlong.sh`:
 
-- [repeat.sh](ex/repeat.sh): A utility to repeat commands, showcasing various
-  option types including array, hash and incrementals.
+- [repeat.sh](ex/repeat.sh): A utility to repeat commands, showcasing
+  various option types including array, hash and incrementals.
 
-- [prefix.sh](ex/prefix.sh): Shows usage with the `PREFIX` configuration.
+- [prefix.sh](ex/prefix.sh): Shows usage with the `PREFIX`
+  configuration.
 
-- [cmap](ex/cmap): Demonstrates color mapping, complex option parsing, and
-  callbacks.
+- [cmap](ex/cmap): Demonstrates color mapping, complex option parsing,
+  and callbacks.
 
 Refer to these examples for practical usage patterns.
 
