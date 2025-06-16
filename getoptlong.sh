@@ -136,12 +136,16 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger ;
     esac
     [[ -v _val ]] || _val="$(_gol_incr "$(_gol_value $_vname)")"
     _name=$(_gol_alias ${_optname:-$_opt}) || _name=${_optname:=$_opt}
-    _trigger="$(_gol_trig $_name)" && _gol_call_hook $_trigger "$_name" "$_val"
+    _trigger="$(_gol_trig $_name)" && _gol_call_hook "$_trigger" "$_name"
     _gol_getopts_store
-    _callback="$(_gol_hook $_name)" && _gol_call_hook $_callback "$_name" "$_val"
+    _callback="$(_gol_hook $_name)" && _gol_call_hook "$_callback" "$_name" "$_val"
     return 0
 }
-_gol_call_hook() { declare -F $1 > /dev/null && "$@" || _gol_die "$1() is not defined" ; }
+_gol_call_hook() {
+    local _call=($1)
+    local exec=(${_call[0]} $2 ${_call[@]:1} ${@:3})
+    declare -F "${_call[0]}" > /dev/null && ${exec[@]} || _gol_die "${_call[0]}() is not defined"
+}
 _gol_getopts_long() { local _non _param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
     _non="${MATCH[1]}" _optname="${MATCH[2]}" _param="${MATCH[3]}" _val="${MATCH[4]}"
@@ -208,14 +212,12 @@ _gol_validate() {
 gol_callback () { _gol_redirect "$@" ; }
 gol_callback_() {
     local _setter=_gol_hook
-    case ${1-} in
-	-b|--before) _setter=_gol_trig ; shift ;;
-	-a|--after)  _setter=_gol_hook ; shift ;;
-    esac
+    case ${1-} in -b|--before) _setter=_gol_trig ; shift ;; esac
     while (($# > 0)) ; do
 	local _name=$1 _callback=${2:-$1}
 	[[ $_callback =~ ^[_[:alnum:]] ]] || _callback=$_name
-	$_setter "$_name" "${_callback//-/_}"
+	local args=($_callback)
+	$_setter "$_name" "${args[0]//-/_} ${args[@]:1}"
 	shift $(( $# >= 2 ? 2 : 1 ))
     done
     return 0

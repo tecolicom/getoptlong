@@ -29,6 +29,7 @@ followings.
   generated from the option definition.
 
 ## Table of Contents
+
 - [Usage](#usage)
 - [Option Types in Definition](#option-types-in-definition)
 - [Functions](#functions)
@@ -263,15 +264,16 @@ result is undefined.
   corresponding callback function name.  If the function name is `-`
   or omitted, it defaults to the option name.  In that case, hyphens
   (`-`) in the option name are changed to underscores (`_`).  The
-  callback is invoked with the option's value when the option is
-  parsed.
+  callback is invoked when the option is parsed.
 
-  The callback function is called with the option name as the first
-  argument and the value as the second.
+  By default the function is called after setting the value.  This
+  type function is called with the option name as the first argument
+  and the value as the second.  If any arguments are given in the
+  callback function name, they are placed between name and value.
 
-  Default is same as with `--after` (or `-a`) and the function is
-  called after setting the value.  With the `--before` (or `-b`)
-  option, the function is called before setting the value.  Array type
+  With the `--before` (or `-b`) option, the function is called before
+  setting the value.  This type function is called without vaue, so
+  that you can detect it is called before or after.  Array type
   options can only be used to add values, but can also be pre-cleared
   by using a `before` type callback function.
 

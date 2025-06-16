@@ -390,13 +390,28 @@ END
         my_callback() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a:]=)
         getoptlong init OPTS
-        getoptlong callback action my_callback # Register callback
+        getoptlong callback action "my_callback --with-option" # Register callback
         getoptlong parse --action perform_action # Parse options
         eval "$(getoptlong set)" # Set variables
         # Callback output should be part of stdout if it echos.
     '
     assert_success
-    assert_output --partial "Callback invoked with value: action perform_action"
+    assert_output --partial "Callback invoked with value: action --with-option perform_action"
+}
+
+@test "getoptlong: callback --before" {
+    run bash -c '
+        . ../getoptlong.sh
+        my_callback() { echo "Callback invoked with value: $*"; }
+        declare -A OPTS=([action|a:]=)
+        getoptlong init OPTS
+        getoptlong callback --before action "my_callback --with-option" # Register callback
+        getoptlong parse --action perform_action # Parse options
+        eval "$(getoptlong set)" # Set variables
+        # Callback output should be part of stdout if it echos.
+    '
+    assert_success
+    assert_output --partial "Callback invoked with value: action --with-option"
 }
 
 @test "getoptlong: callback type option" {
