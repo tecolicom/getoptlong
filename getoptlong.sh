@@ -7,7 +7,11 @@
 : ${GOL_VERSION:=0.01}
 ###############################################################################
 declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
-[[ $0 =~ getoptlong(\.sh)?$ ]] && { cat $0 ; exit 0 ; }
+if [[ $0 =~ /getoptlong(\.sh)?$ ]] ; then
+    cat $0
+    [[ ${1-} ]] && echo -n "gol_init ${1@Q} && "'gol_parse "$@" && eval "$(gol_set)" #'
+    exit 0
+fi
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
 _gol_opts() {
@@ -22,7 +26,7 @@ _gol_trig()  { _gol_opts "$MK_TRIG"  "$@" ; }
 _gol_hook()  { _gol_opts "$MK_HOOK"  "$@" ; }
 _gol_rule()  { _gol_opts "$MK_RULE"  "$@" ; }
 _gol_help()  { _gol_opts "$MK_HELP"  "$@" ; }
-_gol_init()  { _gol_opts "$MK_INIT"  "$@" ; }
+_gol_ival()  { _gol_opts "$MK_INIT"  "$@" ; }
 _gol_type()  { echo "${_opts["$1"]:0:1}" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
@@ -76,7 +80,7 @@ _gol_init_entry() { local _entry="$1" ;
     local _initial="${_opts[$_entry]-}"
     IFS=$' \t|' read -a _aliases <<< ${_names}
     local _name=${_aliases[0]}
-    _gol_init $_name "$_initial"
+    _gol_ival $_name "$_initial"
     [[ $_name =~ ^[[:alpha:]] ]] || _gol_die "$_name: option name must start with alphabet"
     local _vname="${PREFIX}${_name//-/_}"
     unset _opts["$_entry"]
@@ -233,7 +237,7 @@ _gol_show_help() { local _key _aliases _init= _default= _column ;
     for _key in "${!_opts[@]}" ; do
 	_aliases="$(_gol_saila "$_key")" || continue
 	msg="$(_gol_help $_key)" || {
-	    _init="$(_gol_init $_key)" && _default="${_init:+ (default:$_init)}"
+	    _init="$(_gol_ival $_key)" && _default="${_init:+ (default:$_init)}"
 	    [[ $_init =~ ^[0-9]+$ ]] && _flag=bump || _flag=enable
 	    case "$(_gol_type $_key)" in
 		[$IS_FLAG]) msg="$_flag ${_key^^}$_default" ;;
@@ -288,7 +292,8 @@ gol_set_() {
 getoptlong () {
     case $1 in
 	init|parse|set|configure|getopts|callback|dump|help) gol_$1 "${@:2}" ;;
+	run) gol_init $2 && gol_parse "${@:3}" ;;
 	version) echo ${GOL_VERSION} ;;
-	*)       _gol_die "unknown subcommand -- $1" ;;
+	*) _gol_die "unknown subcommand -- $1" ;;
     esac
 }
