@@ -84,6 +84,7 @@ _gol_init_entry() { local _entry="$1" ;
     [[ $_name =~ ^[[:alpha:]] ]] || _gol_die "$_name: option name must start with alphabet"
     local _vname="${PREFIX}${_name//-/_}"
     unset _opts["$_entry"]
+    [[ $_vtype =~ $IS_HOOK ]] && { _vtype=${_vtype//$IS_HOOK/} ; _gol_hook $_name $_name ; }
     case ${_vtype:=$IS_FLAG} in
 	"$IS_MAYB")
 	    [[ $_initial ]] && _gol_die "$_initial: optional parameter can't be initialized" ;;
@@ -97,7 +98,6 @@ _gol_init_entry() { local _entry="$1" ;
 		[[ $_vtype == $IS_HASH ]] && [[ $_initial ]] && _gol_die "$_initial: invalid hash data"
 	    fi
 	    ;;
-	"$IS_HOOK") _gol_hook $_name $_name ; _vtype=$IS_FLAG ;&
 	"$IS_NEED"|"$IS_FLAG") _gol_value $_vname "$_initial" ;;
 	*) _gol_die "$_vtype: unknown option type" ;;
     esac

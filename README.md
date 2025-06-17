@@ -63,10 +63,11 @@ example to illustrate the use of [getoptlong.sh](getoptlong.sh).
 
    Create an associative array (e.g., `OPTS`) to define your script's
    options.  Each key is a string representing the option names (short
-   and long, separated by `|`) and its storage type character (`:`:
-   required, `?`: optional, `@`: list, `%`: hash, `!`: callback).
-   Storage type can be followed `=` and data type character (e.g.,
-   `i`: integer, `f`: float).  White spaces are all ignored.
+   and long, separated by `|`) and its storage type character (`+`:
+   switch flag, `:`: required, `?`: optional, `@`: list, `%`: hash,
+   `!`: callback).  Storage type can be followed `=` and data type
+   character (e.g., `i`: integer, `f`: float).  White spaces are all
+   ignored.
 
    Following `#` is a comment for that option, and they can be used in
    the generated help message.
@@ -84,7 +85,7 @@ example to illustrate the use of [getoptlong.sh](getoptlong.sh).
         # |           | | |   DESCRIPTION                 INITIAL VALUE
         # |           | | |   |                           |
         [ verbose   | v     # verbose output            ]=  # flag
-        [ debug     | d     # debug level               ]=0 # counter
+        [ debug     | d +   # debug level               ]=0 # counter
         [ count     | c :=i # repeat count              ]=1 # required
         [ paragraph | p ?   # print newline after cycle ]=  # optional
         [ sleep     | i @=f # interval time             ]=  # list
@@ -215,6 +216,10 @@ When defining options in the associative array:
 - `%` (e.g., `[message|m%]`): **Hash option**.  Collects one or more
   `key=value` pairs into a Bash associative array.  Hash options
   inherently expect arguments (the `key=value` pairs).
+
+- `!` (e.g., `[count|c:!]`): **Callback option**.  This type can be
+  appended to all of the above types.  If it is specified, a function
+  with the same name as the option is set as the callback function.
 
 You may be able to put prefix `no-` for non-flag type options, but the
 result is undefined.
