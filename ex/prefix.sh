@@ -8,17 +8,18 @@ declare -A OPTS=(
     [ count     | c :=i # repeat count              ]=1
     [ sleep     | i @=f # interval time             ]=
     [ paragraph | p ?   # print newline after cycle ]=
-    [ trace     | x     # trace execution           ]=
+    [ trace     | x !   # trace execution           ]=
     [ debug     | d     # debug level               ]=0
     [ message   | m %=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
 )
 trace() { [[ $2 ]] && set -x || set +x ; }
 
 getoptlong init OPTS PREFIX=opt_
-getoptlong callback trace -
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
-(( opt_debug >= 2 )) && getoptlong dump --all | column >&2
+column=$(command -v column) || column=cat
+(( opt_debug >= 3 )) && dumpopt=(--all) filter=$column
+(( opt_debug >= 2 )) && getoptlong dump ${dumpopt[@]} | ${filter:-cat} >&2
 
 [[ ${1:-} =~ ^[0-9]+$ ]] && opt_count=$1 && shift
 

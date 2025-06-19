@@ -18,8 +18,8 @@ getoptlong init OPTS
 getoptlong parse "$@" && eval "$(getoptlong set)"
 
 column=$(command -v column) || column=cat
-(( debug >= 3 )) && dumpopt=(--all)
-(( debug >= 2 )) && getoptlong dump ${dumpopt[@]} | ${column} >&2
+(( debug >= 3 )) && dumpopt=(--all) filter=$column
+(( debug >= 2 )) && getoptlong dump ${dumpopt[@]} | ${filter:-cat} >&2
 
 [[ ${1:-} =~ ^[0-9]+$ ]] && count=$1 && shift
 
