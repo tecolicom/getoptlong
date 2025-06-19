@@ -427,6 +427,19 @@ END
     assert_output --partial "Callback invoked with value: action 1"
 }
 
+@test "getoptlong: callback type option with arg" {
+    run bash -c '
+        . ../getoptlong.sh
+        action() { echo "Callback invoked with value: $*"; }
+        declare -A OPTS=([action|a:!]=)
+        getoptlong init OPTS
+        getoptlong parse --action=hiho
+        eval "$(getoptlong set)"
+    '
+    assert_success
+    assert_output --partial "Callback invoked with value: action hiho"
+}
+
 # Test: PREFIX option
 @test "getoptlong: configuration - PREFIX=test_" {
     run bash -c '
