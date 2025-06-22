@@ -36,7 +36,7 @@ _gol_redirect() { local _name ;
     declare -n MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local MARKS='><()&=#^.' MK_ALIAS='>' MK_SAILA='<' MK_TRIG='(' MK_HOOK=')' MK_CONF='&' MK_RULE='=' MK_HELP='#' MK_INIT='^' MK_DEST='.' \
-	  IS_ANY='+:?@%' IS_MOD='!>' IS_REQ=':@%' IS_FLAG='+' IS_NEED=':' IS_MAYB='?' IS_LIST='@' IS_HASH='%' IS_HOOK='!' IS_PASS='>' \
+	  IS_ANY='+:?@%' IS_MOD='!-' IS_REQ=':@%' IS_FLAG='+' IS_NEED=':' IS_MAYB='?' IS_LIST='@' IS_HASH='%' IS_HOOK='!' IS_PASS='-' \
 	  CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE HELP)
     for _name in "${CONFIG[@]}" ; do declare $_name="${_opts[&$_name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
@@ -90,7 +90,7 @@ _gol_init_entry() { local _entry="$1" _pass= _dtype ;
     unset _opts["$_entry"]
     [[ $_vtype =~ $IS_HOOK ]] && { _vtype=${_vtype//$IS_HOOK/} ; _gol_hook $_name $_name ; }
     [[ $_vtype =~ ([$IS_ANY]*[$IS_MOD]*)([_[:alnum:]]+)$ ]] && { _vname=${MATCH[2]} ; _vtype=${MATCH[1]} ; }
-    [[ $_vtype =~ [$IS_PASS] ]] && { _vtype=${_vtype//$IS_PASS/} ; _pass="$IS_PASS" ; }
+    [[ $_vtype =~ [$IS_PASS] ]] && { _vtype=${_vtype//[$IS_PASS]/} ; _pass="$IS_PASS" ; }
     [[ $_vname =~ ^[[:alpha:]] ]] || _gol_die "$_vname: destination name must start with alphabet"
     _gol_dest $_name $_vname
     : ${_vtype:=$IS_FLAG} ${_dtype:=${_pass:+$IS_LIST}}
@@ -134,7 +134,7 @@ gol_configure_() { local _param _key _val ;
 gol_optstring_() { local _key _string ;
     for _key in "${!_opts[@]}" ; do
 	[[ $_key =~ ^[[:alnum:]]$ ]] && _string+=$_key || continue
-	[[ ${_opts[$_key]} =~ ^[$IS_REQ] ]] && _string+=:
+	[[ ${_opts[$_key]} =~ [${IS_REQ}] ]] && _string+=:
     done
     echo "${SILENT:+:}${_string:- }-:"
 }
