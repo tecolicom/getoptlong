@@ -30,10 +30,14 @@ jobs:
       if: runner.os == 'macOS'
       uses: tecolicom/actions-use-homebrew-tools@v1
       with:
-        tools: bash bats-core
+        tools: make bash bats-core
 
     - name: run test
       run: |
+        shopt -s extglob
         echo PATH="$PATH"
         which bash
-        make test
+        bash --version
+        which gmake
+        gmake --version
+        gmake test
