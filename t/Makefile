@@ -6,8 +6,13 @@ SHELL := bash
 BATS=bats
 
 test:
-	$(BATS) !(10_repeat).bats
-	@for script in ../ex/repeat.sh ../ex/prefix.sh; do
-	    echo $(BATS) $$script
-	    SCRIPT_UNDER_TEST=$$script bats 10_repeat.bats
+	for t in *.bats ; do
+	    if [[ $$t =~ _repeat.bats$$ ]] ; then
+		for script in ../ex/repeat.sh ../ex/prefix.sh; do
+		    echo $(BATS) $$script
+		    SCRIPT_UNDER_TEST=$$script bats $$t
+		done
+	    else
+		bats $$t
+	    fi
 	done

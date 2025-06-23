@@ -32,12 +32,20 @@ jobs:
       with:
         tools: make bash bats-core
 
+    - name: Set up ENV (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+        sed 's/^ *//' << END >> $GITHUB_ENV
+            PATH=$PATH
+        END
+
     - name: run test
       run: |
-        shopt -s extglob
         echo PATH="$PATH"
         which bash
         bash --version
         which gmake
+        cd t
         gmake --version
         gmake test
