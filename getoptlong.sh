@@ -31,7 +31,7 @@ _gol_dest()  {
     [[ $1 =~ ^[[:alpha:]] ]] || _gol_die "$1: variable name must start with alphabet"
     _gol_opts "$MK_DEST"  "$@"
 }
-_gol_type()  { echo "${_opts["$1"]:0:1}" ; }
+_gol_type()  { [[ ${_opts["$1"]} =~ ^([^[:alnum:]]+) ]] && echo "${MATCH[1]}" || gol_die "$1: unexpected" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
 _gol_redirect() { local _name ;
@@ -54,10 +54,11 @@ gol_dump_() { local _key ;
     gol_vdump_
 }
 gol_vdump () { _gol_redirect "$@" ; }
-gol_vdump_() { local _declare ;
+gol_vdump_() { local _declare ; declare -A _seen ;
     for _key in "${!_opts[@]}" ; do
-	[[ $_key =~ ^[$MK_DEST](.*) ]] || continue
+	[[ $_key =~ ^[$MK_DEST](.*) ]] && [[ -z ${_seen[${_opts[$_key]}]-} ]] || continue
 	_declare=$(declare -p "${_opts[$_key]}" 2> /dev/null) && echo "$_declare"
+	_seen[${_opts[$_key]}]=1
     done | sort
 }
 gol_init() { local _key ;
@@ -84,7 +85,7 @@ gol_init_() { local _key _aliases _alias _help ;
 }
 _gol_q() { local s=${1//!/\\!} ; echo "${s//]/\\]}" ; }
 _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
-    [[ $_entry =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*[$IS_MOD]*[_[:alnum:]]+|[$IS_ANY]*[$IS_MOD]*)( *)(=([if]|\(.*\)))?( *)(# *(.*[^[:space:]]))? ]] \
+    [[ $_entry =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*[$IS_MOD]*[_[:alnum:]]*)( *)(=([if]|\(.*\)))?( *)(# *(.*[^[:space:]]))? ]] \
 	|| _gol_die "[$_entry] -- invalid"
     local _names=${MATCH[1]} _vtype=${MATCH[2]} _type=${MATCH[5]} _comment=${MATCH[8]}
     local _initial="${_opts[$_entry]-}"
@@ -258,12 +259,14 @@ _gol_show_help() { local _key _aliases _init= _default= _column ;
 	msg="$(_gol_help $_key)" || {
 	    _init="$(_gol_ival $_key)" && _default="${_init:+ (default:$_init)}"
 	    [[ $_init =~ ^[0-9]+$ ]] && _flag=bump || _flag=enable
-	    case "$(_gol_type $_key)" in
-		[$IS_FLAG]) msg="$_flag ${_key^^}$_default" ;;
-		[$IS_NEED]) msg="set ${_key^^}$_default" ;;
-		[$IS_LIST]) msg="add item(s) to ${_key^^}" ;;
-		[$IS_HASH]) msg="set KEY=VALUE(s) in ${_key^^}" ;;
-		[$IS_MAYB]) msg="enable/set ${_key^^}" ;;
+	    [[ "${_opts[$_key]}" =~ ([^[:alnum:]]+)(.*) ]] || _gol_die "${_opts[$_key]}: invalid entry"
+	    case "${MATCH[1]}" in
+		*[$IS_PASS]) msg="passthrough to ${MATCH[2]^^}" ;;
+		*[$IS_FLAG]) msg="$_flag ${_key^^}$_default" ;;
+		*[$IS_NEED]) msg="set ${_key^^}$_default" ;;
+		*[$IS_LIST]) msg="add item(s) to ${_key^^}" ;;
+		*[$IS_HASH]) msg="set KEY=VALUE(s) in ${_key^^}" ;;
+		*[$IS_MAYB]) msg="enable/set ${_key^^}" ;;
 	    esac
 	}
 	printf '    %s\t%1s\t%s\n' "$(_gol_optize $_key)" "$(_gol_optize $_aliases)" "$msg"
