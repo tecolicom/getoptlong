@@ -27,7 +27,10 @@ _gol_hook()  { _gol_opts "$MK_HOOK"  "$@" ; }
 _gol_rule()  { _gol_opts "$MK_RULE"  "$@" ; }
 _gol_help()  { _gol_opts "$MK_HELP"  "$@" ; }
 _gol_ival()  { _gol_opts "$MK_INIT"  "$@" ; }
-_gol_dest()  { _gol_opts "$MK_DEST"  "$@" ; }
+_gol_dest()  {
+    [[ $1 =~ ^[[:alpha:]] ]] || _gol_die "$1: variable name must start with alphabet"
+    _gol_opts "$MK_DEST"  "$@"
+}
 _gol_type()  { echo "${_opts["$1"]:0:1}" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
@@ -42,11 +45,12 @@ _gol_redirect() { local _name ;
     "${FUNCNAME[1]}_" "$@"
 }
 gol_dump () { _gol_redirect "$@" ; }
-gol_dump_() { local _all= _key _dest=() ;
-    case "${1-}" in -a|--all) _all=1 ;; esac
-    for _key in "${!_opts[@]}" ; do
-	[[ $_all ]] && printf '[%s]=%s\n' "${_key}" "${_opts["$_key"]@Q}"
-    done | sort
+gol_dump_() { local _key ;
+    if [[ ${1-} =~ ^(-a|--all)$ ]] ; then
+	for _key in "${!_opts[@]}" ; do
+	    printf '[%s]=%s\n' "${_key}" "${_opts["$_key"]@Q}"
+	done | sort
+    fi
     gol_vdump_
 }
 gol_vdump () { _gol_redirect "$@" ; }
@@ -78,6 +82,7 @@ gol_init_() { local _key _aliases _alias _help ;
     fi
     return 0
 }
+_gol_q() { local s=${1//!/\\!} ; echo "${s//]/\\]}" ; }
 _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
     [[ $_entry =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*[$IS_MOD]*[_[:alnum:]]+|[$IS_ANY]*[$IS_MOD]*)( *)(=([if]|\(.*\)))?( *)(# *(.*[^[:space:]]))? ]] \
 	|| _gol_die "[$_entry] -- invalid"
@@ -88,11 +93,9 @@ _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
     _gol_ival $_name "$_initial"
     unset _opts["$_entry"]
     [[ $_vtype =~ ([$IS_ANY]*[$IS_MOD]*)([_[:alnum:]]+)$ ]] && { _vname=${MATCH[2]} ; _vtype=${MATCH[1]} ; }
-    [[ $_vtype =~ [$IS_PASS] ]] && { _vtype=${_vtype//[$IS_PASS]/} ; _pass="$IS_PASS" ; }
-    [[ $_vtype =~ $IS_HOOK ]] && { _vtype=${_vtype//$IS_HOOK/} ; _gol_hook $_name ${_vname-$_name} ; }
-    : ${_vname="${PREFIX}${_name//-/_}"}
-    [[ $_vname =~ ^[[:alpha:]] ]] || _gol_die "$_vname: destination name must start with alphabet"
-    _gol_dest $_name $_vname
+    [[ $_vtype =~ [$(_gol_q $IS_PASS)] ]] && { _vtype=${_vtype//[$(_gol_q $IS_PASS)]/} ; _pass="$IS_PASS" ; }
+    [[ $_vtype =~ [$(_gol_q $IS_HOOK)] ]] && { _vtype=${_vtype//[$(_gol_q $IS_HOOK)]/} ; _gol_hook $_name ${_vname-$_name} ; }
+    _gol_dest $_name ${_vname="${PREFIX}${_name//-/_}"}
     : ${_vtype:=$IS_FLAG} ${_dtype:=${_pass:+$IS_LIST}}
     case ${_dtype:-$_vtype} in
 	"$IS_MAYB")
@@ -147,7 +150,7 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pas
 	-) _gol_getopts_long "$@" || return $? ;;
 	*) _gol_getopts_short || return $? ;;
     esac
-    [[ -v _val ]] || _val="$(_gol_incr "$(_gol_value $_vname)")"
+    [[ -v _val || $_pass ]] || _val="$(_gol_incr "$(_gol_value $_vname)")"
     _name=$(_gol_alias ${_optname:-$_opt}) || _name=${_optname:=$_opt}
     _trigger="$(_gol_trig $_name)" && _gol_call_hook "$_trigger" "$_name"
     [[ $_pass ]] && _gol_getopts_passthru || _gol_getopts_store
