@@ -78,19 +78,19 @@ gol_init_() { local _key _aliases _alias _help ;
     fi
     return 0
 }
-_gol_init_entry() { local _entry="$1" _pass= _dtype ;
+_gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
     [[ $_entry =~ ^([-_ \|[:alnum:]]+)([$IS_ANY]*[$IS_MOD]*[_[:alnum:]]+|[$IS_ANY]*[$IS_MOD]*)( *)(=([if]|\(.*\)))?( *)(# *(.*[^[:space:]]))? ]] \
 	|| _gol_die "[$_entry] -- invalid"
     local _names=${MATCH[1]} _vtype=${MATCH[2]} _type=${MATCH[5]} _comment=${MATCH[8]}
     local _initial="${_opts[$_entry]-}"
     IFS=$' \t|' read -a _aliases <<< ${_names}
-    local _name=${_aliases[0]}
+    _name=${_aliases[0]}
     _gol_ival $_name "$_initial"
-    local _vname="${PREFIX}${_name//-/_}"
     unset _opts["$_entry"]
-    [[ $_vtype =~ $IS_HOOK ]] && { _vtype=${_vtype//$IS_HOOK/} ; _gol_hook $_name $_name ; }
     [[ $_vtype =~ ([$IS_ANY]*[$IS_MOD]*)([_[:alnum:]]+)$ ]] && { _vname=${MATCH[2]} ; _vtype=${MATCH[1]} ; }
     [[ $_vtype =~ [$IS_PASS] ]] && { _vtype=${_vtype//[$IS_PASS]/} ; _pass="$IS_PASS" ; }
+    [[ $_vtype =~ $IS_HOOK ]] && { _vtype=${_vtype//$IS_HOOK/} ; _gol_hook $_name ${_vname-$_name} ; }
+    : ${_vname="${PREFIX}${_name//-/_}"}
     [[ $_vname =~ ^[[:alpha:]] ]] || _gol_die "$_vname: destination name must start with alphabet"
     _gol_dest $_name $_vname
     : ${_vtype:=$IS_FLAG} ${_dtype:=${_pass:+$IS_LIST}}
@@ -157,7 +157,8 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pas
 _gol_call_hook() {
     local _call=($1)
     local exec=(${_call[0]} $2 ${_call[@]:1} ${@:3})
-    declare -F "${_call[0]}" > /dev/null && ${exec[@]} || _gol_die "${_call[0]}() is not defined"
+    declare -F "${_call[0]}" > /dev/null \
+	&& "${exec[@]}" || _gol_die "callback function ${_call[0]}() is not defined"
 }
 _gol_getopts_long() { local _non _param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
