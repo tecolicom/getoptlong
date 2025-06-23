@@ -613,6 +613,10 @@ Refer to these examples for practical usage patterns.
 
 ## See Also
 
-- [Getopt::Long](https://metacpan.org/dist/Getopt-Long)
+- [`Getopt::Long`](https://metacpan.org/dist/Getopt-Long)
 
-- [getoptions](https://github.com/ko1nksm/getoptions)
+- [`getoptions`](https://github.com/ko1nksm/getoptions)
+
+- [`bash_option_parser`](https://github.com/MihirLuthra/bash_option_parser)
+
+- [`getopts_long.sh`](https://github.com/stephane-chazelas/misc-scripts/blob/master/getopts_long.sh)

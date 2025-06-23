@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+declare -A OPTS=(
+    [ debug | d ]=0
+    [ border-style | bs :-ansicolumn ]=
+    [ pane         | C  :-ansicolumn ]=
+    [ paragraph    | p  +-ansicolumn ]=
+)
+
+if [[ ${ONESTOP-} ]] ; then
+    eval "$(getoptlong.sh OPTS)"
+else
+    . $(dirname $0)/../getoptlong.sh
+    getoptlong init OPTS
+    getoptlong parse "$@" && eval "$(getoptlong set)"
+fi
+
+if   (( $debug == 1 )) ; then getoptlong dump
+elif (( $debug >  1 )) ; then getoptlong dump -a | column
+fi
+
+   BOLD=(--cm '<blue3>D'   -E '\*\*.*?\*\*')
+     H1=(--cm '555DE/#009' -E '^#\h+.*')
+      H=(--cm 'L00D/#ddf'  -E '^##+.*')
+LITERAL=(--cm '/L23'       -E '(?<!`)`(?!`)(?s:.*?)`')
+  QUOTE=(--cm '/L23;E'     -E '^\h*(?<bt>`{3,}).*\n((?s:.*?))^\h*\g{bt}' --exclude '`{3,}')
+
+for tag in BOLD H1 H LITERAL QUOTE ; do
+    declare -n array=$tag
+    grepleopt+=( "${array[@]}" )
+done
+
+while (( $# > 0 )) ; do
+    greple -G --all --need=0 "${grepleopt[@]}" $1 \
+	| ansicolumn -DP -C 85/,DUP,1,GE,EXCH,1,IF "${ansicolumn[@]}" \
+	| less +Gg
+    shift
+done
