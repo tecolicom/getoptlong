@@ -41,7 +41,7 @@ _gol_redirect() { local _name ;
     local MARKS='><()&=#^.' MK_ALIAS='>' MK_SAILA='<' MK_TRIG='(' MK_HOOK=')' MK_CONF='&' MK_RULE='=' MK_HELP='#' MK_INIT='^' MK_DEST='.' \
 	  IS_ANY='+:?@%' IS_MOD='!-' IS_REQ=':@%' IS_FLAG='+' IS_NEED=':' IS_MAYB='?' IS_LIST='@' IS_HASH='%' IS_HOOK='!' IS_PASS='-' \
 	  CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE HELP)
-    for _name in "${CONFIG[@]}" ; do declare $_name="${_opts[&$_name]=}" ; done
+    for _name in "${CONFIG[@]}" ; do declare _$_name="${_opts[&$_name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
 }
 gol_dump () { _gol_redirect "$@" ; }
@@ -72,13 +72,13 @@ gol_init() { local _key ;
 }
 ################################################################################
 gol_init_() { local _key _aliases _alias _help ;
-    [[ $REQUIRE && $GOL_VERSION < $REQUIRE ]] && _gol_die "getoptlong version $GOL_VERSION < $REQUIRE"
+    [[ $_REQUIRE && $GOL_VERSION < $_REQUIRE ]] && _gol_die "getoptlong version $GOL_VERSION < $_REQUIRE"
     for _key in "${!_opts[@]}" ; do
 	[[ $_key =~ ^[$MARKS] ]] && continue
 	_gol_init_entry "$_key"
     done
-    if [[ $HELP =~ ^( *)([[:alpha:]]+) ]] && _help=${MATCH[2]} && [[ ! -v _opts[$_help] ]] ; then
-	_gol_init_entry "$HELP"
+    if [[ $_HELP =~ ^( *)([[:alpha:]]+) ]] && _help=${MATCH[2]} && [[ ! -v _opts[$_help] ]] ; then
+	_gol_init_entry "$_HELP"
 	declare -F $_help > /dev/null || eval "$_help() { getoptlong help ; exit ; }"
     fi
     return 0
@@ -96,7 +96,7 @@ _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
     [[ $_vtype =~ ([$IS_ANY]*[$IS_MOD]*)([_[:alnum:]]+)$ ]] && { _vname=${MATCH[2]} ; _vtype=${MATCH[1]} ; }
     [[ $_vtype =~ [$(_gol_q $IS_PASS)] ]] && { _vtype=${_vtype//[$(_gol_q $IS_PASS)]/} ; _pass="$IS_PASS" ; }
     [[ $_vtype =~ [$(_gol_q $IS_HOOK)] ]] && { _vtype=${_vtype//[$(_gol_q $IS_HOOK)]/} ; _gol_hook $_name ${_vname-$_name} ; }
-    _gol_dest $_name ${_vname="${PREFIX}${_name//-/_}"}
+    _gol_dest $_name ${_vname="${_PREFIX}${_name//-/_}"}
     : ${_vtype:=$IS_FLAG} ${_dtype:=${_pass:+$IS_LIST}}
     case ${_dtype:-$_vtype} in
 	"$IS_MAYB")
@@ -140,14 +140,14 @@ gol_optstring_() { local _key _string ;
 	[[ $_key =~ ^[[:alnum:]]$ ]] && _string+=$_key || continue
 	[[ ${_opts[$_key]} =~ [${IS_REQ}] ]] && _string+=:
     done
-    echo "${SILENT:+:}${_string:- }-:"
+    echo "${_SILENT:+:}${_string:- }-:"
 }
 gol_getopts () { _gol_redirect "$@" ; }
 gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pass= ;
     local _opt="$1"; shift;
     case $_opt in
 	[:?]) _callback=$(_gol_hook "$_opt") && [[ $_callback ]] && $_callback "$OPTARG"
-	      [[ $EXIT_ON_ERROR ]] && exit 1 || return 1 ;;
+	      [[ $_EXIT_ON_ERROR ]] && exit 1 || return 1 ;;
 	-) _gol_getopts_long "$@" || return $? ;;
 	*) _gol_getopts_short || return $? ;;
     esac
@@ -168,7 +168,7 @@ _gol_getopts_long() { local _non _param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
     _non="${MATCH[1]}" _optname="${MATCH[2]}" _param="${MATCH[3]}" _val="${MATCH[4]}"
     [[ $(_gol_opts $_optname) =~ ^([$IS_ANY]+)([$IS_MOD]?)([_[:alnum:]]+) ]] || {
-	[[ $EXIT_ON_ERROR ]] && _gol_die "no such option -- --$_optname" || return 2
+	[[ $_EXIT_ON_ERROR ]] && _gol_die "no such option -- --$_optname" || return 2
     }
     _vtype=${MATCH[1]} _pass="${MATCH[2]}" _vname=${MATCH[3]}
     if [[ $_param ]] ; then
@@ -186,7 +186,7 @@ _gol_getopts_long() { local _non _param ;
 }
 _gol_getopts_short() {
     [[ ${_opts[$_opt]-} =~ ^([$IS_ANY])([$IS_MOD]?)([_[:alnum:]]+) ]] || {
-	[[ $EXIT_ON_ERROR ]] && _gol_die "no such option -- -$_opt" || return 3
+	[[ $_EXIT_ON_ERROR ]] && _gol_die "no such option -- -$_opt" || return 3
     }
     _vtype=${MATCH[1]} _pass="${MATCH[2]}" _vname=${MATCH[3]}
     [[ $_vtype =~ [${IS_MAYB}${IS_REQ}] ]] && _val="${OPTARG:-}"
@@ -197,7 +197,7 @@ _gol_getopts_store() { local _vals _v ;
     case $_vtype in
 	[$IS_LIST]|[$IS_HASH])
 	    [[ $_val =~ $'\n' ]] && readarray -t _vals <<< ${_val%$'\n'} \
-				|| IFS="${DELIM}" read -a _vals <<< ${_val}
+				|| IFS="${_DELIM}" read -a _vals <<< ${_val}
 	    for _v in "${_vals[@]}" ; do
 		[[ $_check ]] && _gol_validate "$_check" "$_v"
 		case $_vtype in
@@ -252,7 +252,7 @@ gol_help_() {
     while (($# > 1)) ; do _gol_help "$1" "$2" ; shift 2 ; done
 }
 _gol_show_help() { local _key _aliases _init= _default= _column ;
-    echo "${1:-${USAGE:-$(basename $0) [ options ] args}}"
+    echo "${1:-${_USAGE:-$(basename $0) [ options ] args}}"
     _column=($(command -v column)) && _column+=(-s $'\t' -t) || _column=(cat)
     for _key in "${!_opts[@]}" ; do
 	_aliases="$(_gol_saila "$_key")" || continue
@@ -296,19 +296,19 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
 	    }
 	done
 	: ${SAVEIND:=$OPTIND}
-	[[ ! $PERMUTE || $OPTIND > $# || ${@:$(($OPTIND-1)):1} == -- ]] && break
+	[[ ! $_PERMUTE || $OPTIND > $# || ${@:$(($OPTIND-1)):1} == -- ]] && break
 	_gol_debug "SAVE PARAM: ${!OPTIND}"
 	SAVEARG+=("${!OPTIND}")
     done
-    [[ $PERMUTE ]] && set -- "${SAVEARG[@]}" "${@:$OPTIND}" || shift $(( OPTIND - 1 ))
+    [[ $_PERMUTE ]] && set -- "${SAVEARG[@]}" "${@:$OPTIND}" || shift $(( OPTIND - 1 ))
     OPTIND=${SAVEIND:-$OPTIND}
     _gol_debug "ARGV=(${@@Q})"
-    [[ $PERMUTE ]] && { declare -n _gol_argv=$PERMUTE ; _gol_argv=("$@") ; }
+    [[ $_PERMUTE ]] && { declare -n _gol_argv=$_PERMUTE ; _gol_argv=("$@") ; }
     return 0
 }
 gol_set () { _gol_redirect "$@" ; }
 gol_set_() {
-    [[ $PERMUTE ]] && printf 'set -- "${%s[@]}"\n' "$PERMUTE" \
+    [[ $_PERMUTE ]] && printf 'set -- "${%s[@]}"\n' "$_PERMUTE" \
 		   || echo 'shift $(( OPTIND-1 ))'
 }
 getoptlong () {
