@@ -21,7 +21,8 @@ if   (( $debug == 1 )) ; then getoptlong dump
 elif (( $debug >  1 )) ; then getoptlong dump -a | column
 fi
 
-   BOLD=(--cm '<blue3>D'   -E '\*\*.*?\*\*')
+   BOLD=(--cm '<blue3>DI'  -E '(?<ast>[*_]{3,})(.*?)(\g{ast})'
+         --cm '<blue3>D'   -E '(?<![*])(?<ast>[*]{2})(?!\*)([^*]*?)(\g{ast})')
      H1=(--cm '555DE/#009' -E '^#\h+.*')
       H=(--cm 'L00D/#ddf'  -E '^##+.*')
 LITERAL=(--cm '/L23'       -E '(?<!`)`(?!`)(?s:.*?)`')
