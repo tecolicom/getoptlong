@@ -83,7 +83,6 @@ gol_init_() { local _key _aliases _alias _help ;
     fi
     return 0
 }
-_gol_q() { local s=${1//!/\\!} ; echo "${s//]/\\]}" ; }
 _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
     [[ $_entry =~ ^([-_ \|[:alnum:]]+)([$_IS_ANY]*[$_IS_MOD]*[_[:alnum:]]*)( *)(=([if]|\(.*\)))?( *)(# *(.*[^[:space:]]))? ]] \
 	|| _gol_die "[$_entry] -- invalid"
@@ -93,9 +92,9 @@ _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
     _name=${_aliases[0]}
     _gol_ival $_name "$_initial"
     unset _opts["$_entry"]
-    [[ $_vtype =~ ([$_IS_ANY]*[$_IS_MOD]*)([_[:alnum:]]+)$ ]] && { _vname=${MATCH[2]} ; _vtype=${MATCH[1]} ; }
-    [[ $_vtype =~ [$(_gol_q $_IS_PASS)] ]] && { _vtype=${_vtype//[$(_gol_q $_IS_PASS)]/} ; _pass="$_IS_PASS" ; }
-    [[ $_vtype =~ [$(_gol_q $_IS_HOOK)] ]] && { _vtype=${_vtype//[$(_gol_q $_IS_HOOK)]/} ; _gol_hook $_name ${_vname-$_name} ; }
+    [[ $_vtype =~ ([$_IS_ANY]*[$_IS_MOD]*)([_[:alnum:]]+)$ ]] && { _vtype=${MATCH[1]} ; _vname=${MATCH[2]} ; }
+    [[ $_vtype =~ $_IS_PASS ]] && { _vtype=${_vtype//$_IS_PASS/} ; _pass="$_IS_PASS" ; }
+    [[ $_vtype =~ $_IS_HOOK ]] && { _vtype=${_vtype//$_IS_HOOK/} ; _gol_hook $_name ${_vname-$_name} ; }
     _gol_dest $_name ${_vname="${_PREFIX}${_name//-/_}"}
     : ${_vtype:=$_IS_FLAG} ${_dtype:=${_pass:+$_IS_LIST}}
     case ${_dtype:-$_vtype} in
