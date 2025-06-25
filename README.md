@@ -879,8 +879,7 @@ Options:
     *   `EXIT_ON_ERROR=0` の場合は、このコマンドの返り値をチェックしてエラー処理を行う必要があります。
 
 ### 7.3. `getoptlong set`
-パースされたオプションの値に基づいて、対応するシェル変数を設定するための一連の
-`eval` 可能なシェルコマンド文字列を標準出力に生成します。
+パースされたオプションの値に基づいて、対応するシェル変数を設定するための一連の `eval` 可能なシェルコマンド文字列を標準出力に生成します。
 
 *   通常、`eval "$(getoptlong set)"` のようにして使用します。これにより、オプションに対応する変数が現在のシェル環境に設定されます。
     (例: `--file /tmp/f` → `file="/tmp/f"`)
@@ -1149,3 +1148,5 @@ esac
 -   **Python `argparse`**: Python の標準ライブラリで、コマンドライン引数をパースするための強力なモジュールです。
 -   [`getoptions` (ko1nksm/getoptions)](https://github.com/ko1nksm/getoptions): Another powerful option parser for shell scripts, which inspired some features in `getoptlong.sh`.
 -   [`argh` (adrienverge/argh)](https://github.com/adrienverge/argh): A minimalist argument handler for bash.
+
+[end of README.md]
