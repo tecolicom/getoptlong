@@ -944,9 +944,14 @@ these values in a specified associative array.
 ### 5.3. Option Pass-through
 
 Sometimes you want to pass some of the options received by your script
-directly to another internal or external command. (The method to
-achieve this may vary depending on the `getoptlong.sh` version and
-design).
+directly to another internal or external command. `getoptlong.sh` offers
+two main ways to achieve this: general argument pass-through and specific
+option collection.
+
+#### 5.3.1. General Argument Pass-through (using `PERMUTE` and `--`)
+
+This method is suitable when you want to pass all arguments after a certain
+point, or all non-option arguments, to another command.
 
 *   **`PERMUTE` and `--` (Double Dash):**
 
@@ -992,37 +997,74 @@ design).
         script is a wrapper for a specific command, process its own
         options, then pass the remaining or transformed arguments to
         that command. Using `--` for explicit separation is robust.
+        (Example code omitted for brevity, see previous version if needed)
 
-        ```bash
-        # ./mywrapper.sh --wrapper-opt -- cmd_to_wrap --cmd-opt arg
-        declare -a AllArgs=("$@")
-        declare -a ScriptArgs
-        declare -a CommandToWrapArgs
+#### 5.3.2. Specific Option Collection (using `-` in Option Definition)
 
-        found_double_dash=0
-        for i in "${!AllArgs[@]}"; do
-            if [[ "${AllArgs[$i]}" == "--" ]]; then
-                ScriptArgs=("${AllArgs[@]:0:$i}")
-                CommandToWrapArgs=("${AllArgs[@]:((i+1))}")
-                found_double_dash=1
-                break
-            fi
-        done
+This method allows you to collect specific options, along with their potential
+values, into a designated array as they are parsed. This is useful when you
+want to gather certain options for later processing or to pass them selectively
+to another function or command.
 
-        if (( found_double_dash == 0 )); then
-            # If '--' is not found, decide whether to interpret all as script args or error out.
-            echo "Error: Please specify arguments for the wrapped command after '--'." >&2
-            exit 1
-            # ScriptArgs=("${AllArgs[@]}") # Or treat all as script arguments
-        fi
+To use this feature, append a hyphen (`-`) to the option type specifier in your
+option definition.
 
-        getoptlong init OPTS # Define options like --wrapper-opt in OPTS
-        getoptlong parse "${ScriptArgs[@]}" && eval "$(getoptlong set)"
+*   **Basic Usage:**
 
-        # Use $wrapper_opt etc. here
-        # Then pass CommandToWrapArgs to the wrapped command
-        # cmd_to_wrap "${CommandToWrapArgs[@]}"
-        ```
+    When an option is defined with a trailing `-`, the option itself (e.g.,
+    `--option-name` or `-o`) and its value (if it takes one) are added as
+    consecutive elements to a specified array.
+
+    ```bash
+    declare -A OPTS=(
+        [collect-this|c:-:my_collection_array # Collect this option and its value]=
+        [another-opt|a-:my_collection_array  # Collect this one too, into the same array]=
+        [flag-collect|f-:flag_array          # Collect this flag]=
+    )
+    declare -a my_collection_array=()
+    declare -a flag_array=()
+
+    getoptlong init OPTS
+    # Example: ./myscript.sh --collect-this foo -a bar --flag-collect
+    # After parsing:
+    # my_collection_array would contain: ("--collect-this" "foo" "-a" "bar")
+    # flag_array would contain: ("--flag-collect")
+    ```
+
+*   **Destination Array:**
+
+    *   The array where options are collected is determined by the string
+        following the `-` (and other type specifiers like `!` or `:`).
+        For example, in `[myopt|m:-:destination_array]`, options will be
+        collected into the `destination_array`.
+    *   If no array name is specified after the `-` (e.g., `[myopt|m:-]`),
+        the options are collected into an array named after the option's
+        long name, with hyphens converted to underscores (e.g., `myopt`
+        would collect into `myopt` array, or if defined as `my-opt`,
+        it would collect into `my_opt` array). Ensure this array is
+        declared (e.g., `declare -a my_opt`).
+
+*   **Combining with Other Types:**
+
+    The `-` specifier can be combined with other type specifiers, such as
+    `:` (required argument) or `!` (callback).
+
+    *   `[myopt|m:-!:log_array # Log this option then collect it]`
+        In this case, the callback associated with `myopt` would execute first,
+        and then `--myopt` (and its value, if any, based on other type
+        specifiers) would be added to `log_array`.
+    *   `[param|p::my_params # Collect parameter and its required value]`
+        If parsed as `--param value`, `my_params` would get `("--param" "value")`.
+
+*   **Help Message:**
+
+    Options defined with the `-` pass-through specifier will be described
+    in the help message typically as "passthrough to ARRAY_NAME", where
+    `ARRAY_NAME` is the name of the collection array in uppercase.
+
+This specific option collection provides a flexible way to gather arguments
+that might not be directly used by the script's main logic but are important
+for other parts of the process or for passing to sub-commands.
 
 ### 5.4. Runtime Configuration Changes (`getoptlong configure`)
 
