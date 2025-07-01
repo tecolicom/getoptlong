@@ -42,6 +42,7 @@ followings.
     - [3.2.4. Array Options (`@`)](#324-array-options--)
     - [3.2.5. Hash Options (`%`)](#325-hash-options--)
     - [3.2.6. Callback Options (`!`)](#326-callback-options--)
+    - [3.2.7. Specifying Destination Variable Name](#327-specifying-destination-variable-name)
   - [3.3. Value Validation](#33-value-validation)
     - [3.3.1. Integer Validation (`=i`)](#331-integer-validation-i)
     - [3.3.2. Float Validation (`=f`)](#332-float-validation-f)
@@ -172,34 +173,34 @@ fi
 and non-zero otherwise. If `EXIT_ON_ERROR` is `1` (default), the
 script will automatically exit on a parse error.
 
-### 2.5. Setting Parsed Results to Variables
+### 2.5. Setting Parsed Arguments and Shell Variables
 
-After `getoptlong parse` succeeds, execute the output of the
-`getoptlong set` command with `eval` to set the parsed option values
-to corresponding shell variables.
+After `getoptlong parse` successfully processes the command-line arguments,
+the `getoptlong set` command is used with `eval` to update the shell's state.
+This performs two main actions:
+
+1.  **Sets Positional Parameters:** It re-sets the script's positional
+    parameters (`$1`, `$2`, etc.) to the remaining non-option arguments
+    as determined by the parsing process (respecting `PERMUTE` behavior
+    if configured). For example, if `myscript --opt val arg1 arg2` was called,
+    after `eval "$(getoptlong set)"`, `$1` would be `arg1` and `$2` would be `arg2`.
+
+2.  **Sets Shell Variables for Options:** It defines or modifies shell variables
+    corresponding to the parsed options and their values. For example, if an
+    option `[output|o:]` was parsed with `--output /tmp/out`, a shell
+    variable like `$output` (or a custom destination variable) would be
+    set to `/tmp/out`.
 
 ```bash
 eval "$(getoptlong set)"
 ```
 
-This means, for example, if an option defined as `[output|o:]` in the
-`OPTS` array was passed as `--output /tmp/out`, the shell variable
-`$output` will be set to `/tmp/out`.
-
-*   If a flag option (e.g., `[verbose|v]`) is specified, the
-    corresponding variable (e.g., `$verbose`) will be set to `1`.
-
-*   If a counter option (e.g., `[debug|d+]`) is specified, the
-    variable value will be incremented for each occurrence.
-
-*   Values for array options (e.g., `[library|L@]`) are stored in a
-    Bash array (e.g., `"${library[@]}"`).
-
-*   Values for hash options (e.g., `[define|D%]`) are stored in a Bash
-    associative array (e.g., `declare -A define_vars="${define[@]}"`).
-
-*   Hyphens (`-`) in option names are converted to underscores (`_`)
-    in variable names (e.g., `--long-option` becomes `$long_option`).
+*   **Variable Assignment Details:**
+    *   Flag options (e.g., `[verbose|v]`) typically set the variable to `1`.
+    *   Counter options (e.g., `[debug|d+]` initialized numerically) will have their variable incremented.
+    *   Array options (e.g., `[library|L@]`) populate a Bash array (e.g., `"${library[@]}"`).
+    *   Hash options (e.g., `[define|D%]`) populate a Bash associative array.
+    *   Hyphens (`-`) in default option variable names are converted to underscores (`_`) (e.g., `--long-option` results in `$long_option`).
 
 ### 2.6. Accessing and Using Variables
 
@@ -245,16 +246,15 @@ if (( ${#define[@]} > 0 )); then
     done
 fi
 
-# If PERMUTE=ARGS was specified in 'getoptlong init',
-# non-option arguments are stored in the ARGS array.
-# Ensure 'declare -a ARGS' was done beforehand.
-if declare -p ARGS &>/dev/null && [[ "$(declare -p ARGS)" =~ "declare -a" ]]; then
-    if (( ${#ARGS[@]} > 0 )); then
-        echo "Remaining arguments (${#ARGS[@]}):"
-        for arg in "${ARGS[@]}"; do
-            echo "  - $arg"
-        done
-    fi
+# Non-option arguments are available as positional parameters ($1, $2, etc.)
+# after `eval "$(getoptlong set)"`.
+# If PERMUTE=<array_name> was used during `getoptlong init` (or via &PERMUTE in OPTS),
+# those non-option arguments are also available in the specified array.
+if (( $# > 0 )); then
+    echo "Remaining arguments ($#):"
+    for arg in "$@"; do # Loop through positional parameters
+        echo "  - $arg"
+    done
 fi
 ```
 
@@ -269,7 +269,7 @@ method and available option types.
 Options are defined as keys in an associative array. The key string
 takes the following format:
 
-`long_name[|short_name...][<type_char>][<modifiers>][=<destination_var>][=<validation_type>] # Description`
+`long_name[|short_name...][<type_char>[<modifiers>]][destination_var][=<validation_type>] # Description`
 
 The value corresponding to this key in the associative array specifies the initial value of the
 option. Anything after a `#` in the key string is treated as a comment and used as the
@@ -282,53 +282,58 @@ declare -A OPTS=(
     # LONG NAME   SHORT NAME(S)
     # |           | TYPE CHAR
     # |           | | MODIFIERS (e.g., !, -)
-    # |           | | | DESTINATION VARIABLE
-    # |           | | | | VALIDATION TYPE
-    # |           | | | | |   DESCRIPTION                 INITIAL VALUE
-    # |           | | | | |   |                           |
+    # |           | | |DESTINATION VARIABLE
+    # |           | | |  VALIDATION TYPE
+    # |           | | |  |   DESCRIPTION                 INITIAL VALUE
+    # |           | | |  |   |                           |
     [verbose    |v          # Output verbose information  ]=
-    [level      |+          # Set log level (cumulative)  ]=0
+    [level      |+LEVEL     # Set log level (cumulative)  ]=0
     [output     |o:OUTFILE  # Specify output file         ]=/dev/stdout
-    [mode       |m?         # Operation mode (optional)   ]=
-    [include    |i@         # Include path (multiple ok)  ]=()
-    [define     |D%         # Definition (KEY=VALUE)      ]=()
-    [execute    |x!         # Execute command             ]=my_execute_function
-    [collect    |c:-COLL    # Collect for later           ]=()
-    [logexec    |l:!LOGEXEC # Log and execute             ]=my_log_exec_function
-    [count      |N:=i       # Number of iterations (int)  ]=1
-    [ratio      |r:=f       # Ratio (float)               ]=0.5
-    [id         |K:ID=(^[a-z0-9_]+$) # ID (alphanum & _)   ]=default_id
+    [mode       |m?MODE     # Operation mode (optional)   ]=
+    [include    |i@INCLUDE_PATHS # Include path (multiple ok)  ]=()
+    [define     |D%DEFINES  # Definition (KEY=VALUE)      ]=()
+    [execute    |x!CALLBACK_EXEC # Execute command         ]=my_execute_function
+    [collect    |c:+ -COLL  # Collect for later (flag type) ]=() # Note: type '+' explicitly stated for clarity with '-'
+    [logexec    |l:!LOG_AND_EXEC # Log and execute         ]=my_log_exec_function
+    [count      |N:COUNT=i  # Number of iterations (int)  ]=1
+    [ratio      |r:RATIO=f  # Ratio (float)               ]=0.5
+    [id         |K:ID_VAR=(^[a-z0-9_]+$) # ID (alphanum & _) ]=default_id
 )
 ```
 
 *   **`long_name`:** (Required) The long option name following `--` (e.g., `verbose`).
     Can contain hyphens (e.g., `very-verbose`). This is also the default base for
-    the variable name where the option's value is stored (hyphens replaced by underscores).
+    the variable name where the option's value is stored (hyphens replaced by underscores),
+    unless `destination_var` is provided.
 
 *   **`short_name`:** (Optional) One or more short option names, each following a `-` (e.g., `v`).
     Multiple short names can be specified, separated by `|` (e.g., `long|s|t`).
-    If only a short name is defined (e.g., `[s:]`), it also serves as the base for the variable name.
+    If only a short name is defined (e.g., `[s:]`), it also serves as the base for the variable name,
+    unless `destination_var` is provided.
 
 *   **`type_char` (Type Specifier):** (Optional) A single character that specifies how the option
     handles arguments. If omitted, it defaults to `+` (flag/counter type).
     Possible values are:
-    *   `+`: Flag option. Increments a counter if an initial numeric value is set, otherwise acts as a boolean flag.
+    *   `+`: Flag option. See section 3.2.1 for behavior.
     *   `:`: Option requires an argument.
     *   `?`: Option takes an optional argument.
     *   `@`: Option can be specified multiple times; values are stored in an array.
     *   `%`: Option takes `key=value` pairs, stored in an associative array.
 
-*   **`modifiers`:** (Optional) Special characters that alter the option's behavior:
-    *   `!`: Callback. The specified function (or a default one based on the option name) is called when this option is parsed.
-    *   `-`: Passthrough. The option and its argument (if any) are collected into a specified array instead of (or in addition to) normal processing.
-    These can be combined (e.g., `!-`). The order might matter depending on the desired behavior (e.g., callback before or after passthrough).
+*   **`modifiers`:** (Optional) Special characters that alter the option's behavior, immediately following the `type_char` (if any):
+    *   `!`: Callback. The specified function (or a default one based on the option name or `destination_var`) is called when this option is parsed.
+    *   `-`: Passthrough. The option and its argument (if any) are collected into a specified array. This must follow a `type_char`. See Section "5.3. Option Pass-through".
+    These can be combined (e.g., `!-`).
 
-*   **`=<destination_var>`:** (Optional) Specifies a custom variable name where the option's value
-    will be stored. If not provided, the variable name is derived from `long_name` (or `short_name`
-    if `long_name` is absent), with hyphens converted to underscores. For example, `[output|o:OUTFILE]`
-    will store the value in the variable `OUTFILE`.
+*   **`destination_var`:** (Optional) Specifies a custom variable name where the option's value
+    will be stored. This name appears directly after the `type_char` and any `modifiers`.
+    If not provided, the variable name is derived from `long_name` (or `short_name`
+    if `long_name` is absent), with hyphens converted to underscores.
+    For example, `[output|o:OUTFILE]` will store the value in the variable `OUTFILE`.
+    See Section "3.2.x Specifying Destination Variable Name" (to be added) for more details.
 
-*   **`=<validation_type>`:** (Optional) Specifies validation for the argument's value.
+*   **`=<validation_type>`:** (Optional) Specifies validation for the argument's value. This follows
+    the `destination_var` if present, or the `type_char`/`modifiers` otherwise.
     See details in Section "3.3. Value Validation". Examples: `=i` (integer), `=f` (float), `=(<regex>)`.
 
 *   **`# Description`:** Text following `#` is used as the option's description in the help message.
@@ -358,22 +363,21 @@ Act as switches that generally do not take arguments. The `+` type specifier is 
 
 *   **Variable Storage and Behavior:**
 
-    *   **If no initial value is specified or the initial value is not a number (e.g., `]=` or `]=true`):**
-        *   Initial value: Empty string `""`.
-        *   When option specified (e.g., `--feature`): The variable is set to `1`.
-        *   Multiple specifications: Remains `1`.
-        *   Specifying with `no-` prefix (e.g., `--no-feature`): The variable is reset to an empty string `""`.
-        *   In this mode, the option acts like a boolean flag. You can check its presence with `[[ -n "$feature" ]]` or `[[ "$feature" -eq 1 ]]`.
+    *   **If no initial value is specified, or if the initial value is not a number (e.g., `[flag]=` or `[flag]=true`):**
+        *   Initial value in the variable: Empty string `""`.
+        *   When option specified once (e.g., `--flag`): The variable is set to `1`.
+        *   Multiple specifications (e.g., `--flag --flag`): The variable remains `1`.
+        *   Specifying with `no-` prefix (e.g., `--no-flag`): The variable is reset to an empty string `""`.
+        *   This mode is primarily for boolean-like flags.
 
-    *   **If an initial numeric value is specified (e.g., `]=0`):**
-        *   Initial value: The specified number (e.g., `0`).
-        *   When option specified (e.g., `--count`): The variable's numeric value increments by `1`.
-        *   Multiple specifications (e.g., `-ccc` or `--count --count`): Increments for each occurrence.
-        *   Specifying with `no-` prefix (e.g., `--no-count`): The variable is reset to an empty string `""`, regardless of its previous numeric value or initial numeric value.
-        *   This makes the option a counter. It can be used in arithmetic expressions like `(( count > 0 ))`.
-        *   Note: Even if initialized with `0`, using `--no-count` will result in an empty string, not `0`. If you need to reset to `0` specifically, you might need to handle it in your script logic.
+    *   **If an initial numeric value is specified (e.g., `[counter+]=0` or `[verbose+VLEVEL]=0`):**
+        *   Initial value in the variable: The specified number (e.g., `0`).
+        *   When option specified (e.g., `--counter` or `-v`): The variable's numeric value increments by `1`.
+        *   Multiple specifications (e.g., `-vvv` or `--counter --counter`): The variable increments for each occurrence.
+        *   Specifying with `no-` prefix (e.g., `--no-counter` or `--no-verbose`): The variable is reset to an empty string `""` (not its initial numeric value).
+        *   This mode makes the option function as a counter.
 
-*   **Use Cases:** Toggling features ON/OFF, incrementally increasing verbosity or counters. For example, `(( debug > 0 ))` can be used if `debug` is defined with an initial value of `0`. An empty string in such a numeric test would likely cause an error.
+*   **Use Cases:** Toggling features ON/OFF (non-numeric initial value), or incrementally increasing verbosity/counters (numeric initial value). For example, `(( debug > 0 ))` can be used if `debug` is defined with an initial value of `0` (e.g., `[debug+DEBUG_LEVEL]=0`). An empty string in such a numeric test would likely cause an error.
 
 #### 3.2.2. Required Argument Options (`:`)
 
@@ -499,6 +503,53 @@ types (`+`, `:`, `?`, `@`, `%`).
 
 *   **Use Cases:** Executing custom actions during option parsing,
     complex value processing, immediate configuration changes.
+
+#### 3.2.7 Specifying Destination Variable Name
+
+By default, `getoptlong.sh` stores the value of a parsed option (e.g., `--my-option value`)
+into a shell variable derived from the option's long name (e.g., `$my_option`, with hyphens replaced by underscores).
+However, you can specify a custom variable name for an option's value directly
+within its definition string.
+
+This is achieved by writing the desired variable name directly after the option type specifier
+(e.g., `+`, `:`, `?`, `@`, `%`) and any modifiers (e.g., `!`, `-`).
+
+*   **Syntax in Option Definition:** Refer back to Section "3.1. Basic Syntax" for the full structure:
+    `long_name[|short_name...][<type_char>[<modifiers>]][DEST_VAR_NAME][=<validation_type>] # Description`
+    The `DEST_VAR_NAME` is the custom variable name.
+
+*   **Example from `ex/dest.sh`:**
+    The script `ex/dest.sh` demonstrates this feature:
+    ```bash
+    declare -A OPTS=(
+        [ count     | c :COUNT=i # repeat count              ]=1
+        [ sleep     | i @SLEEP=f # interval time             ]=
+        [ paragraph | p ?PARA    # print newline after cycle ]=
+        [ trace     | x !TRACE   # trace execution           ]= # TRACE becomes var name for callback context
+        [ debug     | d +DEBUG   # debug level               ]=0
+        [ message   | m %MSG=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
+    )
+    ```
+    In this example:
+    *   `[count|c:COUNT=i]`: Stores the value of `--count` into `COUNT` (validated as integer).
+    *   `[sleep|i@SLEEP=f]`: Stores values for `--sleep` into array `SLEEP` (validated as floats).
+    *   `[paragraph|p?PARA]`: Stores optional arg of `--paragraph` into `PARA`.
+    *   `[debug|d+DEBUG]`: Stores incrementing value of `--debug` into `DEBUG`.
+    *   `[message|m%MSG=(...)]`: Stores key-value pairs from `--message` into associative array `MSG`.
+
+*   **Behavior:**
+    *   After `getoptlong parse "$@"` and `eval "$(getoptlong set)"`, the specified variables (`COUNT`, `SLEEP`, `PARA`, `DEBUG`, `MSG` in the example) will contain the parsed values.
+    *   This per-option destination variable specification overrides the default variable naming convention based on `long_name` or `short_name`.
+    *   The `PREFIX` configuration setting (see Section "7.1. `getoptlong init ...`") will also apply to these custom variable names. For example, if `PREFIX=MY_` and an option is `[opt:VAR]`, the value will be stored in `$MY_VAR`.
+
+*   **Use Cases:**
+    *   Using more descriptive or conventional variable names (e.g., `ALL_CAPS` for global settings).
+    *   Avoiding naming conflicts with other variables or functions.
+    *   Improving code readability by explicitly showing where an option's value is stored.
+
+*   **Note on Deprecated `DESTINATION` Global Setting:**
+    The global `DESTINATION=<array_name>` configuration for `getoptlong init` is **deprecated**.
+    The per-option variable specification described here is more flexible and is the recommended method.
 
 ### 3.3. Value Validation
 
@@ -867,53 +918,6 @@ validation features (`=i`, `=f`, `=(regex)`) can be implemented using
 callback functions. Typically, a normal (post-processing) callback
 receives the value and executes the validation logic.
 
-### 5.2. Specifying Destination Variable for Option Values
-
-By default, `getoptlong.sh` stores the value of a parsed option (e.g., `--my-option value`)
-into a shell variable derived from the option's long name (e.g., `$my_option`).
-However, you can specify a custom variable name for an option's value directly
-within its definition string.
-
-This is achieved by appending `=[VAR_NAME]` after the option type and any modifiers,
-but before any validation specifier. `VAR_NAME` is the desired variable name.
-
-*   **Syntax in Option Definition:**
-    `long_name[|short_name...][<type_char>[modifiers]]=[VAR_NAME][=<validation_type>] # Description`
-
-*   **Example from `ex/dest.sh`:**
-
-    The script `ex/dest.sh` demonstrates this feature:
-    ```bash
-    declare -A OPTS=(
-        [ count     | c :COUNT=i # repeat count              ]=1
-        [ sleep     | i @SLEEP=f # interval time             ]=
-        [ paragraph | p ?PARA    # print newline after cycle ]=
-        [ trace     | x !TRACE   # trace execution           ]=
-        [ debug     | d +DEBUG   # debug level               ]=0
-        [ message   | m %MSG=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
-    )
-    ```
-    In this example:
-    *   `[count|c:COUNT=i]` stores the value of `--count` or `-c` into the variable `COUNT` and validates it as an integer.
-    *   `[sleep|i@SLEEP=f]` stores the values for `--sleep` or `-i` into the array `SLEEP` and validates them as floats.
-    *   `[paragraph|p?PARA]` stores the optional argument of `--paragraph` or `-p` into the variable `PARA`.
-    *   `[trace|x!TRACE]` uses `TRACE` as the base name for the callback function, and if it were a value-taking option, `TRACE` would be the variable.
-    *   `[debug|d+DEBUG]` stores the incrementing value of `--debug` or `-d` into the variable `DEBUG`.
-    *   `[message|m%MSG=(...)]` stores the key-value pairs from `--message` or `-m` into the associative array `MSG`.
-
-*   **Behavior:**
-    *   After `getoptlong parse "$@"` and `eval "$(getoptlong set)"`, the specified variables (`COUNT`, `SLEEP`, `PARA`, `TRACE`, `DEBUG`, `MSG` in the example) will contain the parsed values.
-    *   This per-option destination variable specification overrides the default variable naming convention.
-    *   The `PREFIX` configuration setting (see Section "7.1. `getoptlong init ...`") will also apply to these custom variable names if `PREFIX` is set. For example, if `PREFIX=MY_` and an option is `[opt:VAR]`, the value will be stored in `$MY_VAR`.
-
-*   **Use Cases:**
-    *   Using more descriptive or conventional variable names in your script (e.g., uppercase for global settings).
-    *   Avoiding naming conflicts with other variables or functions in your script.
-    *   Improving code readability by explicitly stating where an option's value will be stored.
-
-*   **Deprecated `DESTINATION` Global Setting:**
-    Previously, `getoptlong.sh` had a global `DESTINATION=<array_name>` configuration for `getoptlong init`. This setting would redirect *all* option values into a single associative array. This global `DESTINATION` setting is now **deprecated**. The per-option variable specification described here is more flexible and provides finer-grained control. It is the recommended way to customize value storage.
-
 ### 5.3. Option Pass-through
 
 Sometimes you want to pass some of the options received by your script
@@ -1153,61 +1157,36 @@ that, when `eval`ed, performs the necessary initialization, parsing, and variabl
     ```bash
     #!/usr/bin/env bash
 
-    # Define options in an associative array
+    # 1. Define options
     declare -A OPTS=(
-        [help|h     # Display help message and exit]=
-        [verbose|v+ # Increase verbosity level]=0
-        [output|o:  # Specify output file]=/dev/stdout
-        # Add other options here
+        [verbose|v+] # Flag, increments 'verbose' variable
+        [file|f:]    # Option with required argument, sets 'file' variable
+        [name?N]     # Option with optional argument, sets 'N' variable
     )
+    # Set initial values if needed, e.g., OPTS[verbose|v+]=0
 
-    # Standalone getoptlong.sh invocation:
-    # This single line sources getoptlong.sh, initializes it with OPTS,
-    # parses command-line arguments, and sets corresponding variables.
+    # 2. Invoke getoptlong.sh for parsing and variable/parameter setting
     eval "$(getoptlong.sh OPTS) exit 1"
 
-    # --- Script logic starts here ---
-    # Parsed option values are now available in variables (e.g., $help, $verbose, $output)
+    # 3. Use the variables and positional parameters
+    echo "Verbose: ${verbose:-0}" # Default to 0 if not set
+    echo "File: ${file:-}"       # Default to empty if not set
+    echo "Name (N): ${N:-}"      # Default to empty if not set
 
-    # Example: Handle help option
-    # Note: If 'help' is defined with '!' or the default help mechanism is active,
-    # getoptlong.sh might exit automatically when --help is parsed.
-    # This is an explicit check if further action is needed or if help was defined differently.
-    if [[ -n "$help" ]]; then
-        echo "Usage: ./myscript.sh [options] [arguments]"
-        echo ""
-        echo "Options:"
-        # You might want a more sophisticated way to show help,
-        # perhaps by calling a function that uses 'getoptlong help'.
-        echo "  --help, -h           Show this help message."
-        echo "  --verbose, -v        Increase verbosity (current: $verbose)."
-        echo "  --output <file>, -o  Specify output file (default: $output)."
-        # The automatic 'getoptlong help' would typically be more comprehensive.
-        exit 0
-    fi
-
-    echo "Verbose level: $verbose"
-    echo "Output file: $output"
-
-    # Access non-option arguments if PERMUTE was configured (e.g., via &PERMUTE=ARGS in OPTS)
-    # if [[ -v ARGS ]]; then
-    #     echo "Remaining arguments: ${ARGS[@]}"
-    # fi
-
-    echo "Script execution continues..."
-    # Add your main script logic here
+    echo "Remaining arguments:"
+    for arg in "$@"; do
+      echo "  - $arg"
+    done
     ```
 
 *   **Important Considerations:**
-    *   `getoptlong.sh` must be executable and located in a directory listed in your system's `PATH`,
-        or you must provide the full path to `getoptlong.sh`.
-    *   This method relies on the specific behavior of `getoptlong.sh` when called with only the
-        options array name as an argument.
-    *   Configuration parameters (like `PERMUTE`, `PREFIX`, `EXIT_ON_ERROR`, `USAGE`, `HELP`)
-        should be set within the `OPTS` array using the `&KEY=VALUE` syntax (e.g., `[&PERMUTE]=ARGS`)
-        as they cannot be passed as separate command-line arguments to `getoptlong.sh` in this invocation style.
+    *   `getoptlong.sh` must be executable and in your `PATH`, or called via its full path.
+    *   This usage relies on `getoptlong.sh`'s specific output when called with only the `OPTS` array name.
+    *   All configurations (like `PERMUTE`, `PREFIX`, `EXIT_ON_ERROR`, `USAGE`, `HELP`) must be
+        defined within the `OPTS` array using `&KEY=VALUE` syntax (e.g., `[&PERMUTE]=REMAINING_ARGS`),
+        as they cannot be passed as command-line arguments to `getoptlong.sh` in this invocation.
 
-This standalone usage offers a very streamlined way to incorporate `getoptlong.sh` into scripts.
+This standalone usage demonstrates a very direct way to integrate `getoptlong.sh`.
 
 ## 7. Command Reference
 
