@@ -42,11 +42,11 @@ followings.
     - [3.2.4. Array Options (`@`)](#324-array-options--)
     - [3.2.5. Hash Options (`%`)](#325-hash-options--)
     - [3.2.6. Callback Options (`!`)](#326-callback-options--)
-    - [3.2.7. Specifying Destination Variable Name](#327-specifying-destination-variable-name)
-  - [3.3. Value Validation](#33-value-validation)
-    - [3.3.1. Integer Validation (`=i`)](#331-integer-validation-i)
-    - [3.3.2. Float Validation (`=f`)](#332-float-validation-f)
-    - [3.3.3. Custom Regex Validation (`=(<regex>)`](#333-custom-regex-validation-regex)
+  - [3.3. Specifying Destination Variable Name](#33-specifying-destination-variable-name)
+  - [3.4. Value Validation](#34-value-validation)
+    - [3.4.1. Integer Validation (`=i`)](#341-integer-validation-i)
+    - [3.4.2. Float Validation (`=f`)](#342-float-validation-f)
+    - [3.4.3. Custom Regex Validation (`=(<regex>)`](#343-custom-regex-validation-regex)
 - [4. Help Message Generation and Customization](#4-help-message-generation-and-customization)
   - [4.1. Automatic Help Option](#41-automatic-help-option)
   - [4.2. Help Message Content](#42-help-message-content)
@@ -282,34 +282,32 @@ declare -A OPTS=(
     # LONG NAME   SHORT NAME(S)
     # |           | TYPE CHAR
     # |           | | MODIFIERS (e.g., !, -)
-    # |           | | |DESTINATION VARIABLE
-    # |           | | |  VALIDATION TYPE
-    # |           | | |  |   DESCRIPTION                 INITIAL VALUE
-    # |           | | |  |   |                           |
+    # |           | |  VALIDATION TYPE
+    # |           | |  |   DESCRIPTION                 INITIAL VALUE
+    # |           | |  |   |                           |
     [verbose    |v          # Output verbose information  ]=
-    [level      |+LEVEL     # Set log level (cumulative)  ]=0
-    [output     |o:OUTFILE  # Specify output file         ]=/dev/stdout
-    [mode       |m?MODE     # Operation mode (optional)   ]=
-    [include    |i@INCLUDE_PATHS # Include path (multiple ok)  ]=()
-    [define     |D%DEFINES  # Definition (KEY=VALUE)      ]=()
-    [execute    |x!CALLBACK_EXEC # Execute command         ]=my_execute_function
-    [collect    |c:+ -COLL  # Collect for later (flag type) ]=() # Note: type '+' explicitly stated for clarity with '-'
-    [logexec    |l:!LOG_AND_EXEC # Log and execute         ]=my_log_exec_function
-    [count      |N:COUNT=i  # Number of iterations (int)  ]=1
-    [ratio      |r:RATIO=f  # Ratio (float)               ]=0.5
-    [id         |K:ID_VAR=(^[a-z0-9_]+$) # ID (alphanum & _) ]=default_id
+    [level      |+          # Set log level (cumulative)  ]=0
+    [output     |o:         # Specify output file         ]=/dev/stdout
+    [mode       |m?         # Operation mode (optional)   ]=
+    [include    |i@         # Include path (multiple ok)  ]=()
+    [define     |D%         # Definition (KEY=VALUE)      ]=()
+    [execute    |x!         # Execute command             ]=my_execute_function
+    [collect    |c:+ -MY_COLLECTION_ARRAY # Collect for later (flag type) ]=() # Note: type '+' explicitly stated
+    [count      |N:=i       # Number of iterations (int)  ]=1
+    [ratio      |r:=f       # Ratio (float)               ]=0.5
+    [id         |K:=(^[a-z0-9_]+$) # ID (alphanum & _)     ]=default_id
 )
 ```
 
 *   **`long_name`:** (Required) The long option name following `--` (e.g., `verbose`).
     Can contain hyphens (e.g., `very-verbose`). This is also the default base for
     the variable name where the option's value is stored (hyphens replaced by underscores),
-    unless `destination_var` is provided.
+    unless a `destination_var` is provided (see Section 3.3).
 
 *   **`short_name`:** (Optional) One or more short option names, each following a `-` (e.g., `v`).
     Multiple short names can be specified, separated by `|` (e.g., `long|s|t`).
     If only a short name is defined (e.g., `[s:]`), it also serves as the base for the variable name,
-    unless `destination_var` is provided.
+    unless a `destination_var` is provided (see Section 3.3).
 
 *   **`type_char` (Type Specifier):** (Optional) A single character that specifies how the option
     handles arguments. If omitted, it defaults to `+` (flag/counter type).
@@ -321,16 +319,13 @@ declare -A OPTS=(
     *   `%`: Option takes `key=value` pairs, stored in an associative array.
 
 *   **`modifiers`:** (Optional) Special characters that alter the option's behavior, immediately following the `type_char` (if any):
-    *   `!`: Callback. The specified function (or a default one based on the option name or `destination_var`) is called when this option is parsed.
+    *   `!`: Callback. The specified function (or a default one based on the option name or `destination_var`) is called when this option is parsed. See Section 3.3 if specifying a destination variable.
     *   `-`: Passthrough. The option and its argument (if any) are collected into a specified array. This must follow a `type_char`. See Section "5.3. Option Pass-through".
     These can be combined (e.g., `!-`).
 
 *   **`destination_var`:** (Optional) Specifies a custom variable name where the option's value
     will be stored. This name appears directly after the `type_char` and any `modifiers`.
-    If not provided, the variable name is derived from `long_name` (or `short_name`
-    if `long_name` is absent), with hyphens converted to underscores.
-    For example, `[output|o:OUTFILE]` will store the value in the variable `OUTFILE`.
-    See Section "3.2.x Specifying Destination Variable Name" (to be added) for more details.
+    See Section "3.3. Specifying Destination Variable Name" for full details and examples.
 
 *   **`=<validation_type>`:** (Optional) Specifies validation for the argument's value. This follows
     the `destination_var` if present, or the `type_char`/`modifiers` otherwise.
@@ -504,7 +499,7 @@ types (`+`, `:`, `?`, `@`, `%`).
 *   **Use Cases:** Executing custom actions during option parsing,
     complex value processing, immediate configuration changes.
 
-#### 3.2.7 Specifying Destination Variable Name
+### 3.3. Specifying Destination Variable Name
 
 By default, `getoptlong.sh` stores the value of a parsed option (e.g., `--my-option value`)
 into a shell variable derived from the option's long name (e.g., `$my_option`, with hyphens replaced by underscores).
@@ -551,39 +546,40 @@ This is achieved by writing the desired variable name directly after the option 
     The global `DESTINATION=<array_name>` configuration for `getoptlong init` is **deprecated**.
     The per-option variable specification described here is more flexible and is the recommended method.
 
-### 3.3. Value Validation
+### 3.4. Value Validation
 
 There is a feature to validate the values of arguments passed to
 options. Validation is specified by appending `=<validation_type>` to
 the end of the option definition.
 
-#### 3.3.1. Integer Validation (`=i`)
+#### 3.4.1. Integer Validation (`=i`)
 
 Validates if the argument is an integer.
 
-*   **Definition Example:** `[count|c:=i # Number of iterations]`
+*   **Definition Example:** `[count|c:COUNT=i # Number of iterations]` (assuming COUNT is the destination variable)
+    or `[count|c:=i # Number of iterations]` (if using default variable name).
 
 *   **Behavior:** If the argument is not an integer, an error message
     is displayed, and the script exits (default behavior, if
     `EXIT_ON_ERROR=1`).
 
-*   Applicable to array options (`@=i`) and the value part of hash
-    options (`%=i`).
+*   Applicable to array options (`@...=i`) and the value part of hash
+    options (`%...=i`).
 
-#### 3.3.2. Float Validation (`=f`)
+#### 3.4.2. Float Validation (`=f`)
 
 Validates if the argument is a floating-point number.
 
-*   **Definition Example:** `[ratio|r:=f # Ratio]`
+*   **Definition Example:** `[ratio|r:RATIO=f # Ratio]` or `[ratio|r:=f # Ratio]`
 
 *   **Behavior:** If the argument is not a floating-point number
     (e.g., `123.45` is OK, `1.2e-3` may not be supported), an error
     message is displayed, and the script exits.
 
-*   Applicable to array options (`@=f`) and the value part of hash
-    options (`%=f`).
+*   Applicable to array options (`@...=f`) and the value part of hash
+    options (`%...=f`).
 
-#### 3.3.3. Custom Regex Validation (`=(<regex>)`)
+#### 3.4.3. Custom Regex Validation (`=(<regex>)`)
 
 Validates if the argument matches the specified Bash extended regular
 expression (ERE). The regex is from the `(` immediately following `=`
