@@ -1118,90 +1118,96 @@ the `getoptlong dump` command.
 
 ## 6. Standalone Usage
 
-While `getoptlong.sh` is typically used as a library by `source`-ing it into your script,
-it can also be invoked as a standalone command to perform all necessary option parsing
-and variable setting steps in one go.
-
-This is useful for simpler scripts or when you prefer a more compact way to integrate `getoptlong.sh`.
+`getoptlong.sh` can be invoked as a standalone command, which is a concise way to integrate its functionality.
+When called with the name of your options definition array as an argument, `getoptlong.sh` outputs a string
+that, when `eval`ed, performs the necessary initialization, parsing, and variable setting.
 
 *   **Command Invocation:**
 
     ```bash
-    eval "$(getoptlong.sh <opts_array_name> [CONFIGURATIONS...] -- "$@")" || exit 1
-    ```
-
-    Or, if you want `getoptlong.sh` to handle exit on error internally based on `EXIT_ON_ERROR` (which defaults to 1):
-    ```bash
-    eval "$(getoptlong.sh <opts_array_name> [CONFIGURATIONS...] -- "$@")"
-    ```
-    If `getoptlong.sh` itself is not found or fails critically before it can manage `EXIT_ON_ERROR`, the script might continue. A more robust way to ensure exit if `getoptlong.sh` is missing or fails very early is:
-    ```bash
-    # Ensure OPTS is defined before this line
-    eval "$(getoptlong.sh OPTS -- "$@")" || exit 1
-    # A common pattern is to include 'exit 1' directly in the eval string
-    # if getoptlong.sh is expected to output it on error.
-    # However, the '|| exit 1' covers the case where getoptlong.sh is not found.
+    eval "$(getoptlong.sh <opts_array_name>) exit 1"
     ```
 
 *   **Explanation:**
 
-    1.  **`<opts_array_name>`:** (Required) The name of your pre-defined Bash associative array
-        containing the option definitions (e.g., `OPTS`). This array must be declared and
-        populated in your script *before* this `eval` line.
-    2.  **`[CONFIGURATIONS...]`:** (Optional) Any configuration parameters normally passed to
-        `getoptlong init` (e.g., `PERMUTE=ARGS`, `PREFIX=MY_`).
-    3.  **`--`:** This is crucial. It separates the `getoptlong.sh` configurations from the actual
-        script arguments that need to be parsed.
-    4.  **`"$@"`:** Passes all arguments received by your script to `getoptlong.sh` for parsing.
-        It's important to quote it.
-    5.  **`eval "$(...)"`:** `getoptlong.sh` when called this way will perform the `init`, `parse`,
-        and `set` operations internally and output the shell commands (e.g., `verbose=1`, `output_file="/tmp/out"`)
-        that `eval` then executes, setting the variables in the current shell.
-    6.  **`|| exit 1`:** This part is important for error handling. If `getoptlong.sh` command is not found,
-        or if it returns a non-zero exit status (indicating a parse error, and `EXIT_ON_ERROR` is not 0),
-        the `|| exit 1` will cause your script to terminate. The `getoptlong.sh` script itself typically
-        outputs error messages to stderr before exiting. If `EXIT_ON_ERROR` is set to `0` within
-        the configurations, then `getoptlong.sh` would return non-zero on error, and `|| exit 1`
-        would still trigger, unless you specifically want to handle that return code differently.
+    1.  **`<opts_array_name>`:** (Required) The name of your Bash associative array that holds
+        the option definitions (e.g., `OPTS`). This array must be declared and populated in
+        your script *before* this `eval` line.
+    2.  **`getoptlong.sh <opts_array_name>`:** When invoked this way (e.g., `getoptlong.sh OPTS`),
+        the `getoptlong.sh` script itself first prints its own source code, then it appends a line similar to:
+        `gol_init <opts_array_name> && gol_parse "$@" && eval "$(gol_set)" #`
+    3.  **`eval "$(...)"`:** The `eval` command executes the entire output. This means it effectively
+        sources `getoptlong.sh` and then runs the initialization, parsing, and variable setting commands.
+    4.  **`exit 1`:** This is appended directly after the `eval`'s command substitution.
+        *   If `getoptlong.sh` is found and executes correctly, the line output by `getoptlong.sh` ends
+            with a `#` (comment symbol). This `#` comments out the `exit 1`, so it is *not* executed.
+            The script then continues with the parsed option variables set.
+        *   If `getoptlong.sh` is *not* found (e.g., not in `PATH` or incorrect name), the command
+            substitution `$(getoptlong.sh <opts_array_name>)` will likely result in an empty string or an error
+            message. In this scenario, the `#` is not present to comment out `exit 1`, so `eval " exit 1"`
+            (or similar if there was an error message) is executed, causing the script to terminate
+            with status 1. This provides a built-in way to handle the case where `getoptlong.sh` is missing.
 
 *   **Example Script (`myscript.sh`):**
 
     ```bash
     #!/usr/bin/env bash
 
-    # Define options
+    # Define options in an associative array
     declare -A OPTS=(
-        [help|h     # Display help message]=
-        [verbose|v+ # Increase verbosity]=0
+        [help|h     # Display help message and exit]=
+        [verbose|v+ # Increase verbosity level]=0
         [output|o:  # Specify output file]=/dev/stdout
+        # Add other options here
     )
 
-    # Standalone getoptlong.sh invocation
-    # This single line initializes, parses, and sets variables.
-    eval "$(getoptlong.sh OPTS -- "$@")" || exit 1
-    # The 'exit 1' above handles cases like getoptlong.sh not found or parse errors.
+    # Standalone getoptlong.sh invocation:
+    # This single line sources getoptlong.sh, initializes it with OPTS,
+    # parses command-line arguments, and sets corresponding variables.
+    eval "$(getoptlong.sh OPTS) exit 1"
 
-    # Now you can use the variables: $help, $verbose, $output
+    # --- Script logic starts here ---
+    # Parsed option values are now available in variables (e.g., $help, $verbose, $output)
+
+    # Example: Handle help option
+    # Note: If 'help' is defined with '!' or the default help mechanism is active,
+    # getoptlong.sh might exit automatically when --help is parsed.
+    # This is an explicit check if further action is needed or if help was defined differently.
     if [[ -n "$help" ]]; then
-        # Note: getoptlong.sh might have already displayed help and exited if
-        # the HELP option was configured and EXIT_ON_ERROR is 1.
-        # This is a fallback or for custom help display.
-        echo "Usage: ./myscript.sh [options]"
+        echo "Usage: ./myscript.sh [options] [arguments]"
+        echo ""
         echo "Options:"
-        echo " --help, -h             Show this help"
-        echo " --verbose, -v          Increase verbosity (current: $verbose)"
-        echo " --output <file>, -o    Output file (current: $output)"
+        # You might want a more sophisticated way to show help,
+        # perhaps by calling a function that uses 'getoptlong help'.
+        echo "  --help, -h           Show this help message."
+        echo "  --verbose, -v        Increase verbosity (current: $verbose)."
+        echo "  --output <file>, -o  Specify output file (default: $output)."
+        # The automatic 'getoptlong help' would typically be more comprehensive.
         exit 0
     fi
 
     echo "Verbose level: $verbose"
     echo "Output file: $output"
-    # Rest of your script logic...
+
+    # Access non-option arguments if PERMUTE was configured (e.g., via &PERMUTE=ARGS in OPTS)
+    # if [[ -v ARGS ]]; then
+    #     echo "Remaining arguments: ${ARGS[@]}"
+    # fi
+
+    echo "Script execution continues..."
+    # Add your main script logic here
     ```
 
-This standalone usage simplifies scripts by reducing the boilerplate code for option parsing.
-Remember that `getoptlong.sh` must be executable and in your `PATH`, or you must provide
-the full path to `getoptlong.sh`.
+*   **Important Considerations:**
+    *   `getoptlong.sh` must be executable and located in a directory listed in your system's `PATH`,
+        or you must provide the full path to `getoptlong.sh`.
+    *   This method relies on the specific behavior of `getoptlong.sh` when called with only the
+        options array name as an argument.
+    *   Configuration parameters (like `PERMUTE`, `PREFIX`, `EXIT_ON_ERROR`, `USAGE`, `HELP`)
+        should be set within the `OPTS` array using the `&KEY=VALUE` syntax (e.g., `[&PERMUTE]=ARGS`)
+        as they cannot be passed as separate command-line arguments to `getoptlong.sh` in this invocation style.
+
+This standalone usage offers a very streamlined way to incorporate `getoptlong.sh` into scripts.
 
 ## 7. Command Reference
 
