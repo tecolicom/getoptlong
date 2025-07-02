@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-. "$(dirname $0)"/../getoptlong.sh
-
 set -eu
 
 declare -A OPTS=(
@@ -14,8 +12,7 @@ declare -A OPTS=(
 )
 TRACE() { [[ $2 ]] && set -x || set +x ; }
 
-getoptlong init OPTS
-getoptlong parse "$@" && eval "$(getoptlong set)"
+. "$(dirname $0)"/../getoptlong.sh OPTS "$@"
 
 column=$(command -v column) || column=cat
 (( DEBUG >= 3 )) && dumpopt=(--all) filter=$column

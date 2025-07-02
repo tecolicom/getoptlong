@@ -11,8 +11,8 @@ declare -A OPTS=(
 
 . getoptlong.sh OPTS "$@"
 
-if   (( $debug == 1 )) ; then getoptlong dump
-elif (( $debug >  1 )) ; then getoptlong dump -a | column
+if   (( debug == 1 )) ; then getoptlong dump
+elif (( debug >  1 )) ; then getoptlong dump -a | column
 fi
 
    BOLD=(--cm '<blue3>DI'  -E '(?<ast>[*_]{3,})(.*?)(\g{ast})'

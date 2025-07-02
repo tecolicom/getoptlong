@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
-. "$(dirname $0)"/../getoptlong.sh
-
 set -eu
 
 declare -A OPTS=(
+    [&PREFIX]=opt_
     [ count     | c :=i # repeat count              ]=1
     [ sleep     | i @=f # interval time             ]=
     [ paragraph | p ?   # print newline after cycle ]=
@@ -14,8 +13,7 @@ declare -A OPTS=(
 )
 trace() { [[ $2 ]] && set -x || set +x ; }
 
-getoptlong init OPTS PREFIX=opt_
-getoptlong parse "$@" && eval "$(getoptlong set)"
+. "$(dirname $0)"/../getoptlong.sh OPTS "$@"
 
 column=$(command -v column) || column=cat
 (( opt_debug >= 3 )) && dumpopt=(--all) filter=$column
