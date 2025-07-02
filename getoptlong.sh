@@ -7,13 +7,6 @@
 : ${GOL_VERSION:=0.01}
 ###############################################################################
 declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
-_gol_evalme() {
-    echo -n "gol_init ${@@Q} && "'{ gol_parse "$@" && eval "$(gol_set)" ; } || exit 1'
-}
-if [[ $0 =~ /getoptlong(\.sh)?$ ]] ; then
-    cat $0
-    [[ ${1-} ]] && _gol_evalme "$@" && exit 0
-fi
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
 _gol_opts() {
@@ -315,8 +308,10 @@ gol_set_() {
 getoptlong () {
     case $1 in
 	init|parse|set|configure|getopts|callback|dump|help) gol_$1 "${@:2}" ;;
-	run) gol_init $2 && gol_parse "${@:3}" ;;
 	version) echo ${GOL_VERSION} ;;
-	*) declare -p $1 2>&1 > /dev/null && _gol_evalme "$@" || _gol_die "unknown subcommand -- $1" ;;
+	*) _gol_die "unknown subcommand -- $1" ;;
     esac
 }
+if [[ $(declare -p "${1-}" 2> /dev/null) =~ ^declare\ -A ]] ; then
+    gol_init "$1" && gol_parse "${@:2}" && eval "$(gol_set)"
+fi

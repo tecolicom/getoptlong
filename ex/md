@@ -9,7 +9,7 @@ declare -A OPTS=(
     [ paragraph    | p  +-ansicolumn ]=
 )
 
-. getoptlong.sh && eval "$(getoptlong OPTS)" || exit 1
+. getoptlong.sh OPTS "$@"
 
 if   (( $debug == 1 )) ; then getoptlong dump
 elif (( $debug >  1 )) ; then getoptlong dump -a | column
