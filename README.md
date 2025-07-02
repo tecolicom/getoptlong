@@ -27,12 +27,14 @@ followings.
 
 - [1. Introduction](#1-introduction)
 - [2. Basic Usage](#2-basic-usage)
-  - [2.1. Sourcing the Library](#21-sourcing-the-library)
-  - [2.2. Creating the Option Definition Array](#22-creating-the-option-definition-array)
-  - [2.3. Initializing getoptlong](#23-initializing-getoptlong)
-  - [2.4. Parsing Command-Line Arguments](#24-parsing-command-line-arguments)
-  - [2.5. Setting Parsed Results to Variables](#25-setting-parsed-results-to-variables)
-  - [2.6. Accessing and Using Variables](#26-accessing-and-using-variables)
+  - [2.1. Simplified Usage (One-liner)](#21-simplified-usage-one-liner)
+  - [2.2. Standard Multi-step Usage](#22-standard-multi-step-usage)
+    - [2.2.1. Creating the Option Definition Array](#221-creating-the-option-definition-array)
+    - [2.2.2. Sourcing the Library](#222-sourcing-the-library)
+    - [2.2.3. Initializing getoptlong](#223-initializing-getoptlong)
+    - [2.2.4. Parsing Command-Line Arguments](#224-parsing-command-line-arguments)
+    - [2.2.5. Setting Parsed Results to Variables](#225-setting-parsed-results-to-variables)
+    - [2.2.6. Accessing and Using Variables](#226-accessing-and-using-variables)
 - [3. Detailed Option Definition](#3-detailed-option-definition)
   - [3.1. Basic Syntax](#31-basic-syntax)
   - [3.2. Option Types and Type Specifiers](#32-option-types-and-type-specifiers)
@@ -68,21 +70,20 @@ followings.
   - [5.3. Option Pass-through](#53-option-pass-through)
   - [5.4. Runtime Configuration Changes (`getoptlong configure`)](#54-runtime-configuration-changes-getoptlong-configure)
   - [5.5. Dumping Internal State (`getoptlong dump`)](#55-dumping-internal-state-getoptlong-dump)
-- [6. Standalone Usage](#6-standalone-usage)
-- [7. Command Reference](#7-command-reference)
-  - [7.1. `getoptlong init <opts_array_name> [CONFIGURATIONS...]`](#71-getoptlong-init-opts_array_name-configurations)
-  - [7.2. `getoptlong parse "$@"`](#72-getoptlong-parse--)
-  - [7.3. `getoptlong set`](#73-getoptlong-set)
-  - [7.4. `getoptlong callback [-b|--before] <opt_name> [callback_function] ...`](#74-getoptlong-callback--b---before-opt_name-callback_function--)
-  - [7.5. `getoptlong configure <CONFIG_PARAM=VALUE> ...`](#75-getoptlong-configure-config_paramvalue--)
-  - [7.6. `getoptlong dump [-a|--all]`](#76-getoptlong-dump--a---all)
-  - [7.7. `getoptlong help <SYNOPSIS>`](#77-getoptlong-help-synopsis)
-- [8. Practical Examples](#8-practical-examples)
-  - [8.1. Combining Required Options and Optional Arguments](#81-combining-required-options-and-optional-arguments)
-  - [8.2. Script with Subcommands (Simple Version)](#82-script-with-subcommands-simple-version)
-  - [8.3. Sample Scripts in `ex/` Directory](#83-sample-scripts-in-ex-directory)
-- [9. Configuration Keys](#9-configuration-keys)
-- [10. See Also](#10-see-also)
+- [6. Command Reference](#6-command-reference)
+  - [6.1. `getoptlong init <opts_array_name> [CONFIGURATIONS...]`](#61-getoptlong-init-opts_array_name-configurations)
+  - [6.2. `getoptlong parse "$@"`](#62-getoptlong-parse--)
+  - [6.3. `getoptlong set`](#63-getoptlong-set)
+  - [6.4. `getoptlong callback [-b|--before] <opt_name> [callback_function] ...`](#64-getoptlong-callback--b---before-opt_name-callback_function--)
+  - [6.5. `getoptlong configure <CONFIG_PARAM=VALUE> ...`](#65-getoptlong-configure-config_paramvalue--)
+  - [6.6. `getoptlong dump [-a|--all]`](#66-getoptlong-dump--a---all)
+  - [6.7. `getoptlong help <SYNOPSIS>`](#67-getoptlong-help-synopsis)
+- [7. Practical Examples](#7-practical-examples)
+  - [7.1. Combining Required Options and Optional Arguments](#71-combining-required-options-and-optional-arguments)
+  - [7.2. Script with Subcommands (Simple Version)](#72-script-with-subcommands-simple-version)
+  - [7.3. Sample Scripts in `ex/` Directory](#73-sample-scripts-in-ex-directory)
+- [8. Configuration Keys](#8-configuration-keys)
+- [9. See Also](#9-see-also)
 
 ## 1. Introduction
 
@@ -97,23 +98,69 @@ Bash, making scripts more user-friendly and maintainable.
 
 ## 2. Basic Usage
 
-Here are the basic steps to process command-line options in your
-script using `getoptlong.sh`.
+`getoptlong.sh` offers two primary ways to integrate option parsing into your scripts: a simplified one-liner approach and a standard multi-step approach.
 
-### 2.1. Sourcing the Library
+### 2.1. Simplified Usage (One-liner)
 
-First, source the `getoptlong.sh` file from within your script using
-the `source` command (or the `.` command).
+For many common use cases, `getoptlong.sh` can be invoked with a single line that sources the library, defines options, parses arguments, and sets variables. This is the quickest way to get started.
+
+**Steps:**
+
+1.  **Define your options array:** Create a Bash associative array (e.g., `OPTS`) that holds your option definitions.
+2.  **Source and execute:** Use the `.` (source) command followed by `getoptlong.sh`, the name of your options array, and `"$@"`.
+
+**Example (inspired by `ex/md`):**
 
 ```bash
-. /path/to/getoptlong.sh # Replace with the actual path to getoptlong.sh
-# Or, if getoptlong.sh is in your execution path:
-# . getoptlong.sh
+#!/usr/bin/env bash
+
+# 1. Define the options array
+declare -A OPTS=(
+    [debug|d]    # Simple flag, sets 'debug' variable to 1 if present
+    [output|o:]  # Option with a required argument, sets 'output' variable
+)
+# Set initial values if needed, e.g.:
+# OPTS[debug|d]=0
+# OPTS[output|o:]=/dev/stdout
+
+# 2. Source getoptlong.sh, passing the OPTS array and script arguments
+# This line handles sourcing, initialization, parsing, and variable setting.
+. getoptlong.sh OPTS "$@"
+
+# 3. Use the parsed options
+if [[ "${debug:-0}" -eq 1 ]]; then
+    echo "Debug mode is ON"
+fi
+
+if [[ -n "${output:-}" ]]; then
+    echo "Output file: $output"
+else
+    echo "Output file not specified."
+fi
+
+echo "Remaining arguments:"
+for arg in "$@"; do
+  echo "  - $arg"
+done
 ```
 
-### 2.2. Creating the Option Definition Array
+**How it Works:**
 
-Next, define the options your script will accept as a Bash associative
+When `getoptlong.sh` is sourced with the options array name and arguments (`. getoptlong.sh OPTS "$@"`), it performs the following internally:
+*   Sources itself, making its functions available.
+*   Initializes using the provided `OPTS` array.
+*   Parses the `"$@"` arguments.
+*   Sets the corresponding shell variables and updates positional parameters.
+
+This approach is concise and sufficient for many scripts. If you need more control over the parsing process (e.g., custom error handling after parsing, or re-initializing with different options for subcommands), the standard multi-step usage described next might be more suitable.
+
+### 2.2. Standard Multi-step Usage
+
+This method breaks down the process into distinct steps, offering more flexibility.
+
+#### 2.2.1. Creating the Option Definition Array
+
+First, define the options your script will accept as a Bash associative
 array.  The array name is arbitrary, but `OPTS` is commonly used by
 convention.  For the format of each option key and the available
 types, refer to Section "3. Detailed Option Definition".
@@ -134,7 +181,19 @@ See Section "4. Help Message Generation and Customization" for details on its
 behavior and customization. You can also define it explicitly if needed, as shown
 in the example above.
 
-### 2.3. Initializing getoptlong
+#### 2.2.2. Sourcing the Library
+
+Next, source the `getoptlong.sh` file from within your script using
+the `source` command (or the `.` command). This makes the `getoptlong`
+function and its subcommands available.
+
+```bash
+. /path/to/getoptlong.sh # Replace with the actual path to getoptlong.sh
+# Or, if getoptlong.sh is in your execution path:
+# . getoptlong.sh
+```
+
+#### 2.2.3. Initializing getoptlong
 
 Pass the defined option array to the `getoptlong init` command to
 initialize the library.
@@ -155,7 +214,7 @@ declare -a ARGS # It's good practice to declare the array specified by PERMUTE b
 getoptlong init OPTS PERMUTE=ARGS EXIT_ON_ERROR=0
 ```
 
-### 2.4. Parsing Command-Line Arguments
+#### 2.2.4. Parsing Command-Line Arguments
 
 Pass all script arguments (`"$@"`) to the `getoptlong parse` command
 to parse them based on your definitions.
@@ -173,7 +232,7 @@ fi
 and non-zero otherwise. If `EXIT_ON_ERROR` is `1` (default), the
 script will automatically exit on a parse error.
 
-### 2.5. Setting Parsed Arguments and Shell Variables
+#### 2.2.5. Setting Parsed Results to Variables
 
 After `getoptlong parse` successfully processes the command-line arguments,
 the `getoptlong set` command is used with `eval` to update the shell's state.
@@ -202,7 +261,7 @@ eval "$(getoptlong set)"
     *   Hash options (e.g., `[define|D%]`) populate a Bash associative array.
     *   Hyphens (`-`) in default option variable names are converted to underscores (`_`) (e.g., `--long-option` results in `$long_option`).
 
-### 2.6. Accessing and Using Variables
+#### 2.2.6. Accessing and Using Variables
 
 Use the variables set in the previous step in your script to perform
 actions based on the options.
@@ -1116,80 +1175,12 @@ the `getoptlong dump` command.
     *   Debugging if variables are set as expected.
     *   Checking the current option state within callback functions.
 
-## 6. Standalone Usage
-
-`getoptlong.sh` can be invoked as a standalone command, which is a concise way to integrate its functionality.
-When called with the name of your options definition array as an argument, `getoptlong.sh` outputs a string
-that, when `eval`ed, performs the necessary initialization, parsing, and variable setting.
-
-*   **Command Invocation:**
-
-    ```bash
-    eval "$(getoptlong.sh <opts_array_name>) exit 1"
-    ```
-
-*   **Explanation:**
-
-    1.  **`<opts_array_name>`:** (Required) The name of your Bash associative array that holds
-        the option definitions (e.g., `OPTS`). This array must be declared and populated in
-        your script *before* this `eval` line.
-    2.  **`getoptlong.sh <opts_array_name>`:** When invoked this way (e.g., `getoptlong.sh OPTS`),
-        the `getoptlong.sh` script itself first prints its own source code, then it appends a line similar to:
-        `gol_init <opts_array_name> && gol_parse "$@" && eval "$(gol_set)" #`
-    3.  **`eval "$(...)"`:** The `eval` command executes the entire output. This means it effectively
-        sources `getoptlong.sh` and then runs the initialization, parsing, and variable setting commands.
-    4.  **`exit 1`:** This is appended directly after the `eval`'s command substitution.
-        *   If `getoptlong.sh` is found and executes correctly, the line output by `getoptlong.sh` ends
-            with a `#` (comment symbol). This `#` comments out the `exit 1`, so it is *not* executed.
-            The script then continues with the parsed option variables set.
-        *   If `getoptlong.sh` is *not* found (e.g., not in `PATH` or incorrect name), the command
-            substitution `$(getoptlong.sh <opts_array_name>)` will likely result in an empty string or an error
-            message. In this scenario, the `#` is not present to comment out `exit 1`, so `eval " exit 1"`
-            (or similar if there was an error message) is executed, causing the script to terminate
-            with status 1. This provides a built-in way to handle the case where `getoptlong.sh` is missing.
-
-*   **Example Script (`myscript.sh`):**
-
-    ```bash
-    #!/usr/bin/env bash
-
-    # 1. Define options
-    declare -A OPTS=(
-        [verbose|v+] # Flag, increments 'verbose' variable
-        [file|f:]    # Option with required argument, sets 'file' variable
-        [name?N]     # Option with optional argument, sets 'N' variable
-    )
-    # Set initial values if needed, e.g., OPTS[verbose|v+]=0
-
-    # 2. Invoke getoptlong.sh for parsing and variable/parameter setting
-    eval "$(getoptlong.sh OPTS) exit 1"
-
-    # 3. Use the variables and positional parameters
-    echo "Verbose: ${verbose:-0}" # Default to 0 if not set
-    echo "File: ${file:-}"       # Default to empty if not set
-    echo "Name (N): ${N:-}"      # Default to empty if not set
-
-    echo "Remaining arguments:"
-    for arg in "$@"; do
-      echo "  - $arg"
-    done
-    ```
-
-*   **Important Considerations:**
-    *   `getoptlong.sh` must be executable and in your `PATH`, or called via its full path.
-    *   This usage relies on `getoptlong.sh`'s specific output when called with only the `OPTS` array name.
-    *   All configurations (like `PERMUTE`, `PREFIX`, `EXIT_ON_ERROR`, `USAGE`, `HELP`) must be
-        defined within the `OPTS` array using `&KEY=VALUE` syntax (e.g., `[&PERMUTE]=REMAINING_ARGS`),
-        as they cannot be passed as command-line arguments to `getoptlong.sh` in this invocation.
-
-This standalone usage demonstrates a very direct way to integrate `getoptlong.sh`.
-
-## 7. Command Reference
+## 6. Command Reference
 
 This section describes the main commands (functions) provided by
 `getoptlong.sh`.
 
-### 7.1. `getoptlong init <opts_array_name> [CONFIGURATIONS...]`
+### 6.1. `getoptlong init <opts_array_name> [CONFIGURATIONS...]`
 
 Initializes the library, loading option definitions and settings. This
 command must be executed before calling `getoptlong parse`.
@@ -1262,7 +1253,7 @@ command must be executed before calling `getoptlong parse`.
         Whether to enable debug messages (`1` to enable, `0` to disable).
         Default is `0` (disable).
 
-### 7.2. `getoptlong parse "$@"`
+### 6.2. `getoptlong parse "$@"`
 
 Parses command-line arguments according to the defined options.
 
@@ -1281,7 +1272,7 @@ Parses command-line arguments according to the defined options.
     *   If `EXIT_ON_ERROR=0`, you must check the return value of this
         command to handle errors.
 
-### 7.3. `getoptlong set`
+### 6.3. `getoptlong set`
 
 Generates a series of `eval`-able shell command strings to standard
 output, which set corresponding shell variables based on parsed option
@@ -1291,7 +1282,7 @@ values.
     corresponding to options in the current shell environment.  (e.g.,
     `--file /tmp/f` → `file="/tmp/f"`)
 
-### 7.4. `getoptlong callback [-b|--before] <opt_name> [callback_function] ...`
+### 6.4. `getoptlong callback [-b|--before] <opt_name> [callback_function] ...`
 
 Registers a callback function for a specified option or modifies the
 settings of an already registered callback.
@@ -1320,7 +1311,7 @@ settings of an already registered callback.
     name and option value (for normal callbacks) when the callback
     function is invoked.
 
-### 7.5. `getoptlong configure <CONFIG_PARAM=VALUE> ...`
+### 6.5. `getoptlong configure <CONFIG_PARAM=VALUE> ...`
 
 Dynamically changes global configuration parameter values (set by
 `getoptlong init`) during parsing or at other points.
@@ -1335,7 +1326,7 @@ Dynamically changes global configuration parameter values (set by
     like `PREFIX` or those related to option definitions themselves
     might not work as expected if changed after `init`.
 
-### 7.6. `getoptlong dump [-a|--all]`
+### 6.6. `getoptlong dump [-a|--all]`
 
 Dumps (displays) the internal state of `getoptlong.sh` (option
 definitions, current values, settings, etc.) to standard error
@@ -1348,7 +1339,7 @@ output. Primarily used for debugging.
     shows parsed option names, corresponding shell variable names, and
     current values.
 
-### 7.7. `getoptlong help [SYNOPSIS]`
+### 6.7. `getoptlong help [SYNOPSIS]`
 
 Manually displays the generated help message based on the current option definitions and configurations.
 See Section "4.3.2. Manual Display with `getoptlong help`" for full details on its behavior,
@@ -1356,14 +1347,14 @@ including how the optional `SYNOPSIS` argument is handled.
 
 This command is also executed internally when the automatic help option (e.g., `--help`) is invoked.
 
-## 8. Practical Examples
+## 7. Practical Examples
 
 Previous sections have explained individual features of
 `getoptlong.sh`.  This section shows some practical examples and usage
 in more complex scenarios.  Also, refer to the `ex/` directory for
 more sample scripts.
 
-### 8.1. Combining Required Options and Optional Arguments
+### 7.1. Combining Required Options and Optional Arguments
 
 ```bash
 #!/usr/bin/env bash
@@ -1448,7 +1439,7 @@ echo "Processing complete."
 
 *   Customizing the help message using `&USAGE` and `&HELP`.
 
-### 8.2. Script with Subcommands (Simple Version)
+### 7.2. Script with Subcommands (Simple Version)
 
 `getoptlong.sh` can call `init` and `parse` multiple times. This can
 be used to define and process different option sets for subcommands.
@@ -1554,7 +1545,7 @@ esac
     processing needs to consider more edge cases and error handling. A
     more detailed example can be found in `ex/subcmd.sh`.
 
-### 8.3. Sample Scripts in `ex/` Directory
+### 7.3. Sample Scripts in `ex/` Directory
 
 The `getoptlong.sh` repository includes sample scripts in the `ex/`
 directory that demonstrate various features. These are very helpful
@@ -1580,7 +1571,7 @@ for learning more specific use cases and advanced techniques.
 
 It's recommended to try running these samples and reading their code.
 
-## 9. Configuration Keys
+## 8. Configuration Keys
 
 Within the option definition array (`OPTS`), you can use special keys
 in the format `&KEY=VALUE` to configure the behavior of
@@ -1613,7 +1604,7 @@ arguments to the `getoptlong init` command.
         documentation or source code corresponding to the version of
         `getoptlong.sh` you are using.
 
-## 10. See Also
+## 9. See Also
 
 Other tools with similar purposes to `getoptlong.sh`, and related resources:
 
