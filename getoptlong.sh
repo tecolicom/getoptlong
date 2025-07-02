@@ -7,10 +7,12 @@
 : ${GOL_VERSION:=0.01}
 ###############################################################################
 declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
+_gol_evalme() {
+    echo -n "gol_init ${@@Q} && "'{ gol_parse "$@" && eval "$(gol_set)" ; } || exit 1'
+}
 if [[ $0 =~ /getoptlong(\.sh)?$ ]] ; then
     cat $0
-    [[ ${1-} ]] && echo -n "gol_init ${1@Q} && "'gol_parse "$@" && eval "$(gol_set)" #'
-    exit 0
+    [[ ${1-} ]] && _gol_evalme "$@" && exit 0
 fi
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
@@ -33,7 +35,7 @@ _gol_dest()  {
 }
 _gol_type()  { [[ ${_opts["$1"]} =~ ^([^[:alnum:]]+) ]] && echo "${MATCH[1]}" || gol_die "$1: unexpected" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
-_gol_incr()  { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
+_gol_plusone() { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
 _gol_redirect() { local _name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
@@ -150,7 +152,7 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pas
 	-) _gol_getopts_long "$@" || return $? ;;
 	*) _gol_getopts_short || return $? ;;
     esac
-    [[ -v _val || $_pass ]] || _val="$(_gol_incr "$(_gol_value $_vname)")"
+    [[ -v _val || $_pass ]] || _val="$(_gol_plusone "$(_gol_value $_vname)")"
     _name=$(_gol_alias ${_optname:-$_opt}) || _name=${_optname:=$_opt}
     _trigger="$(_gol_trig $_name)" && _gol_call_hook "$_trigger" "$_name"
     [[ $_pass ]] && _gol_getopts_passthru || _gol_getopts_store
@@ -315,6 +317,6 @@ getoptlong () {
 	init|parse|set|configure|getopts|callback|dump|help) gol_$1 "${@:2}" ;;
 	run) gol_init $2 && gol_parse "${@:3}" ;;
 	version) echo ${GOL_VERSION} ;;
-	*) _gol_die "unknown subcommand -- $1" ;;
+	*) declare -p $1 2>&1 > /dev/null && _gol_evalme "$@" || _gol_die "unknown subcommand -- $1" ;;
     esac
 }
