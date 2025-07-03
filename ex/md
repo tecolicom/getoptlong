@@ -28,8 +28,13 @@ for tag in BOLD H LITERAL QUOTE ; do
     grepleopt+=( "${array[@]}" )
 done
 
+PAT='\h*([*-]|\d+\.)\h+' 
+
 while (( $# > 0 )) ; do
     greple -G --all --need=0 "${grepleopt[@]}" $1 \
+	| greple \
+	    -Mtee ansifold --separate='\r' --autoindent "^$PAT|" -sw80 -- \
+	    -E "^$PAT.*\n" --crmode --all --no-color \
 	| ansicolumn -DP -C 85/,DUP,1,GE,EXCH,1,IF "${ansicolumn[@]}" \
 	| less +Gg
     shift
