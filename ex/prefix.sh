@@ -9,7 +9,7 @@ declare -A OPTS=(
     [ paragraph | p ?   # print newline after cycle ]=
     [ trace     | x !   # trace execution           ]=
     [ debug     | d     # debug level               ]=0
-    [ message   | m %=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
+    [ message   | m %=(^(BEGIN|END)=) # print message at BEGIN|END ]=
 )
 trace() { [[ $2 ]] && set -x || set +x ; }
 
@@ -25,7 +25,6 @@ message() { [[ -v opt_message[$1] ]] && echo "${opt_message[$1]}" || : ; }
 
 message BEGIN
 for (( i = 0; $# > 0 && i < opt_count ; i++ )) ; do
-    message EACH
     (( opt_debug > 0 )) && echo "# [ ${@@Q} ]" >&2
     "$@"
     if (( opt_count > 0 )) ; then

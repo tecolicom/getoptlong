@@ -88,38 +88,26 @@ action"
 Finish"
 }
 
-@test "${script}: message EACH (-m EACH=Cycle)" {
-    RUN -c 2 -m EACH=Cycle echo ping
-    assert_success
-    assert_output "Cycle
-ping
-Cycle
-ping"
-}
-
-@test "${script}: multiple messages (BEGIN, EACH, END)" {
-    RUN -c 1 -m BEGIN=B -m EACH=E -m END=X echo task
+@test "${script}: multiple messages (BEGIN, END)" {
+    RUN -c 1 -m BEGIN=B -m END=X echo task
     assert_success
     assert_output "B
-E
 task
 X"
 }
 
-@test "${script}: multiple messages (BEGIN, EACH, END) -- bundling together" {
-    RUN -c 1 -m BEGIN=B,EACH=E,END=X echo task
+@test "${script}: multiple messages (BEGIN, END) -- bundling together" {
+    RUN -c 1 -m BEGIN=B,END=X echo task
     assert_success
     assert_output "B
-E
 task
 X"
 }
 
-@test "${script}: multiple messages (BEGIN, EACH, END) -- bundling together w/nl" {
-    RUN -c 1 -m $'BEGIN=--  B\nEACH=--  E\nEND=--  X\n' echo task
+@test "${script}: multiple messages (BEGIN, END) -- bundling together w/nl" {
+    RUN -c 1 -m $'BEGIN=--  B\nEND=--  X\n' echo task
     assert_success
     assert_output "--  B
---  E
 task
 --  X"
 }

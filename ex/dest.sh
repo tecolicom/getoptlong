@@ -8,7 +8,7 @@ declare -A OPTS=(
     [ paragraph | p ?PARA    # print newline after cycle ]=
     [ trace     | x !TRACE   # trace execution           ]=
     [ debug     | d +DEBUG   # debug level               ]=0
-    [ message   | m %MSG=(^(BEGIN|END|EACH)=) # print message at BEGIN|END|EACH ]=
+    [ message   | m %MSG=(^(BEGIN|END)=) # print message at BEGIN|END ]=
 )
 TRACE() { [[ $2 ]] && set -x || set +x ; }
 
@@ -24,7 +24,6 @@ message() { [[ -v MSG[$1] ]] && echo "${MSG[$1]}" || : ; }
 
 message BEGIN
 for (( i = 0; $# > 0 && i < COUNT ; i++ )) ; do
-    message EACH
     (( DEBUG > 0 )) && echo "# [ ${@@Q} ]" >&2
     "$@"
     if (( COUNT > 0 )) ; then
