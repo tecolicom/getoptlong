@@ -10,7 +10,87 @@ Bashスクリプトでコマンドラインオプションを解析する際、�
 - 配列やハッシュ型の引数が扱えない
 - ヘルプメッセージを手動で作成する必要がある
 
-そんな悩みを解決してくれるのが**getoptlong.sh**です。この記事では、Bashスクリプトのオプション解析を次のレベルに引き上げてくれるライブラリの使い方を詳しく解説します。
+そんな悩みを解決してくれるのが**getoptlong.sh**です。
+
+## 実例で見るgetoptlong.shの機能
+
+まず、実際のスクリプトを見てgetoptlong.shでどのようなことができるかを確認してください。以下は、コマンドを指定回数繰り返し実行する`repeat.sh`スクリプトです：
+
+```bash
+#!/usr/bin/env bash
+
+set -eu
+
+declare -A OPTS=(
+    [ count     | c :=i # repeat count              ]=1
+    [ sleep     | i @=f # interval time             ]=
+    [ paragraph | p ?   # print newline after cycle ]=
+    [ trace     | x !   # trace execution           ]=
+    [ debug     | d     # debug level               ]=0
+    [ message   | m %=(^(BEGIN|END)=) # print message at BEGIN|END ]=
+)
+
+# コールバック関数
+trace() { [[ $2 ]] && set -x || set +x ; }
+
+. getoptlong.sh OPTS "$@"
+
+# 最初の引数が数字の場合はカウントとして使用
+[[ ${1:-} =~ ^[0-9]+$ ]] && count=$1 && shift
+
+# メッセージ表示関数
+message() { [[ -v message[$1] ]] && echo "${message[$1]}" || : ; }
+
+# 実行開始
+message BEGIN
+for (( i = 0; $# > 0 && i < count ; i++ )) ; do
+    "$@"
+    if (( count > 0 )) ; then
+        [[ -v paragraph ]] && echo "$paragraph"
+        if (( ${#sleep[@]} > 0 )) ; then
+            time="${sleep[$(( i % ${#sleep[@]} ))]}"
+            sleep $time
+        fi
+    fi
+done
+message END
+```
+
+このスクリプトの使用例：
+
+```bash
+# 基本的な使用（dateコマンドを3回実行）
+$ ./repeat.sh --count 3 date
+
+# スリープ間隔を指定して実行
+$ ./repeat.sh -c 5 --sleep 1.5 echo "Hello"
+
+# 複数のスリープ間隔を指定（順番に使用される）
+$ ./repeat.sh -i .3,.3,.6 -c 9 echo "Test"
+
+# 各サイクル後に改行を追加
+$ ./repeat.sh -c 3 --paragraph echo "Line"
+
+# 開始・終了メッセージを指定
+$ ./repeat.sh -m BEGIN=Hello,END=Bye -c 2 date
+
+# トレース実行（set -xが有効になる）
+$ ./repeat.sh --trace -c 2 echo "Traced"
+
+# 数値を最初の引数として指定（countの代替）
+$ ./repeat.sh 5 echo "Five times"
+```
+
+このコードで実現されている機能：
+
+- **整数バリデーション** (`count`の`:=i`)
+- **浮動小数点配列** (`sleep`の`@=f`)
+- **省略可能な引数** (`paragraph`の`?`)
+- **コールバック関数** (`trace`の`!`)
+- **ハッシュオプション** (`message`の`%`)
+- **正規表現バリデーション** (`message`の`=(^(BEGIN|END)=)`)
+- **自動ヘルプ生成**
+- **カンマ区切り値サポート**
 
 ## getoptlong.shの特徴
 
@@ -263,94 +343,6 @@ Options:
 
 注意：ヘルプメッセージのオプションはアルファベット順にソートされて表示されます。
 
-## 実践例：repeat.shスクリプト
-
-実際のユースケースとして、コマンドを指定回数繰り返し実行するスクリプトを見てみましょう。これはex/repeat.shを基にしています：
-
-```bash
-#!/usr/bin/env bash
-
-set -eu
-
-declare -A OPTS=(
-    [ count     | c :=i # repeat count              ]=1
-    [ sleep     | i @=f # interval time             ]=
-    [ paragraph | p ?   # print newline after cycle ]=
-    [ trace     | x !   # trace execution           ]=
-    [ debug     | d     # debug level               ]=0
-    [ message   | m %=(^(BEGIN|END)=) # print message at BEGIN|END ]=
-)
-
-# コールバック関数
-trace() { [[ $2 ]] && set -x || set +x ; }
-
-. "$(dirname $0)"/../getoptlong.sh OPTS "$@"
-
-# デバッグ情報の表示
-column=$(command -v column) || column=cat
-(( debug >= 3 )) && dumpopt=(--all) filter=$column
-(( debug >= 2 )) && getoptlong dump ${dumpopt[@]} | ${filter:-cat} >&2
-
-# 最初の引数が数字の場合はカウントとして使用
-[[ ${1:-} =~ ^[0-9]+$ ]] && count=$1 && shift
-
-# メッセージ表示関数
-message() { [[ -v message[$1] ]] && echo "${message[$1]}" || : ; }
-
-# 実行開始
-message BEGIN
-for (( i = 0; $# > 0 && i < count ; i++ )) ; do
-    (( debug > 0 )) && echo "# [ ${@@Q} ]" >&2
-    "$@"
-    if (( count > 0 )) ; then
-        [[ -v paragraph ]] && echo "$paragraph"
-        if (( ${#sleep[@]} > 0 )) ; then
-            time="${sleep[$(( i % ${#sleep[@]} ))]}"
-            (( debug > 0 )) && echo "# sleep $time" >&2
-            sleep $time
-        fi
-    fi
-done
-message END
-```
-
-このスクリプトの使用例：
-
-```bash
-# 基本的な使用（dateコマンドを3回実行）
-$ ./repeat.sh --count 3 date
-
-# スリープ間隔を指定して実行
-$ ./repeat.sh -c 5 --sleep 1.5 echo "Hello"
-
-# 複数のスリープ間隔を指定（順番に使用される）
-$ ./repeat.sh -i .3,.3,.6 -c 9 echo "Test"
-
-# 各サイクル後に改行を追加
-$ ./repeat.sh -c 3 --paragraph echo "Line"
-
-# 開始・終了メッセージを指定
-$ ./repeat.sh -m BEGIN=Hello,END=Bye -c 2 date
-
-# トレース実行（set -xが有効になる）
-$ ./repeat.sh --trace -c 2 echo "Traced"
-
-# デバッグレベルを指定
-$ ./repeat.sh --debug 2 -c 3 echo "Debug mode"
-
-# 数値を最初の引数として指定（countの代替）
-$ ./repeat.sh 5 echo "Five times"
-```
-
-この例では、getoptlong.shの多くの機能が活用されています：
-
-- **整数バリデーション** (`count`の`=i`)
-- **浮動小数点バリデーション** (`sleep`の`@=f`)
-- **配列オプション** (`sleep`で複数値を受け取り)
-- **省略可能な引数** (`paragraph`の`?`)
-- **コールバック関数** (`trace`の`!`)
-- **ハッシュオプション** (`message`の`%`)
-- **正規表現バリデーション** (`message`の`=(^(BEGIN|END)=)`)
 
 ## 他のオプション解析ライブラリとの比較
 
