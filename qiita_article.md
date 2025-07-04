@@ -1,11 +1,12 @@
-# Bashスクリプトのオプション解析を劇的に改善する「getoptlong.sh」の使い方
+# もう bash で getopts は使わない
 
 ## はじめに
 
-Bashスクリプトでコマンドラインオプションを解析する際、標準の`getopts`では機能が限られていて困ったことはありませんか？
+Bashスクリプトでコマンドラインオプションを解析する際、標準の`getopts`や`getopt`では機能が限られていて困ったことはありませんか？
 
-- 長いオプション（`--verbose`）が使えない
-- オプションと引数の順序が固定されている
+- `getopts`では長いオプション（`--verbose`）が使えない
+- `getopts`ではオプションと引数の順序が固定されている
+- `getopt`を使えばオプションと引数の混在は可能だが、結局自分で解析が必要
 - 配列やハッシュ型の引数が扱えない
 - ヘルプメッセージを手動で作成する必要がある
 
@@ -17,7 +18,7 @@ getoptlong.shは以下の機能を提供します：
 
 - **GNU形式の長いオプション**サポート（`--help`, `--verbose`など）
 - **柔軟なオプション順序**（PERMUTEモード）
-- **豊富なデータ型**（フラグ、必須引数、オプション引数、配列、ハッシュ）
+- **豊富なデータ型**（フラグ、必須引数、省略可能な引数、配列、ハッシュ）
 - **バリデーション機能**（整数、浮動小数点、正規表現）
 - **コールバック関数**による柔軟な処理
 - **自動ヘルプメッセージ生成**
@@ -38,6 +39,7 @@ declare -A OPTS=(
     [count|c:]=5
 )
 
+# PATHにgetoptlong.shがあれば、パスを指定する必要はありません
 . getoptlong.sh OPTS "$@"
 
 echo "verbose: $verbose"
@@ -132,7 +134,7 @@ declare -A OPTS=(
 $ ./script.sh --file input.txt
 ```
 
-#### オプション引数（`?`）
+#### 省略可能な引数（`?`）
 
 ```bash
 declare -A OPTS=(
@@ -221,36 +223,6 @@ declare -A OPTS=(
 docker run "${docker_args[@]}" ubuntu
 ```
 
-### サブコマンド対応
-
-```bash
-#!/usr/bin/env bash
-
-case "${1:-}" in
-    "build")
-        shift
-        declare -A BUILD_OPTS=(
-            [target|t:]=
-            [parallel|j:=i]=1
-        )
-        . getoptlong.sh BUILD_OPTS "$@"
-        echo "Building target: $target with $parallel jobs"
-        ;;
-    "test")
-        shift
-        declare -A TEST_OPTS=(
-            [verbose|v]=
-            [coverage|c]=
-        )
-        . getoptlong.sh TEST_OPTS "$@"
-        echo "Running tests..."
-        ;;
-    *)
-        echo "Usage: $0 {build|test} [options]"
-        exit 1
-        ;;
-esac
-```
 
 ## ヘルプメッセージの自動生成
 
@@ -271,11 +243,13 @@ $ ./script.sh --help
 Usage: script.sh [options]
 
 Options:
-  -v, --verbose          詳細な出力を有効にする
-  -f, --file <arg>       入力ファイルのパス
   -c, --count <arg>      繰り返し回数 (default: 5)
+  -f, --file <arg>       入力ファイルのパス
   -h, --help             show help
+  -v, --verbose          詳細な出力を有効にする
 ```
+
+注意：ヘルプメッセージのオプションはアルファベット順にソートされて表示されます。
 
 ## 実践例：repeat.shスクリプト
 
@@ -361,7 +335,7 @@ $ ./repeat.sh 5 echo "Five times"
 - **整数バリデーション** (`count`の`=i`)
 - **浮動小数点バリデーション** (`sleep`の`@=f`)
 - **配列オプション** (`sleep`で複数値を受け取り)
-- **オプション引数** (`paragraph`の`?`)
+- **省略可能な引数** (`paragraph`の`?`)
 - **コールバック関数** (`trace`の`!`)
 - **ハッシュオプション** (`message`の`%`)
 - **正規表現バリデーション** (`message`の`=(^(BEGIN|END)=)`)
@@ -489,3 +463,9 @@ Bash専用という制約はありますが、その分Bashの機能を最大限
 - [getoptlong.sh GitHub リポジトリ](https://github.com/tecolicom/getoptlong)
 - [getoptions GitHub リポジトリ](https://github.com/ko1nksm/getoptions)
 - より詳細な例は`ex/`ディレクトリをご確認ください
+
+---
+
+## この記事について
+
+この記事は[Claude Code](https://claude.ai/code)によって生成されたものをそのまま掲載しています。AIによるコード生成と技術文書作成の一例として、編集を加えることなく公開しています。
