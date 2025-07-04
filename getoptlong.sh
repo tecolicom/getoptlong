@@ -6,6 +6,7 @@
 # MIT License: See <https://opensource.org/licenses/MIT>
 : ${GOL_VERSION:=0.01}
 ###############################################################################
+# Check for nameref support (bash 4.3+)
 declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
@@ -26,9 +27,10 @@ _gol_dest()  {
     [[ $1 =~ ^[[:alpha:]] ]] || _gol_die "$1: variable name must start with alphabet"
     _gol_opts "$_MK_DEST"  "$@"
 }
-_gol_type()  { [[ ${_opts["$1"]} =~ ^([^[:alnum:]]+) ]] && echo "${MATCH[1]}" || gol_die "$1: unexpected" ; }
+_gol_type()  { [[ ${_opts["$1"]} =~ ^([^[:alnum:]]+) ]] && echo "${MATCH[1]}" || _gol_die "$1: unexpected" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_plusone() { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
+# Main redirection function - sets up environment and delegates to implementation
 _gol_redirect() { local _name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n MATCH=BASH_REMATCH
@@ -224,7 +226,7 @@ _gol_validate() {
 	f)   [[ "$2" =~ ^[-+]?[0-9]*(\.[0-9]+)?$ ]] || _gol_die "$2: not a number" ;;
 	\(*) declare -a error=([1]="$2: invalid argument" [2]="$1: something wrong")
 	     eval "[[ \"$2\" =~ $1 ]]" || _gol_die "${error[$?]}" ;;
-	*)   _gol_die "$1: unkown validation pattern" ;;
+	*)   _gol_die "$1: unknown validation pattern" ;;
     esac
 }
 gol_callback () { _gol_redirect "$@" ; }
@@ -305,6 +307,7 @@ gol_set_() {
     [[ $_PERMUTE ]] && printf 'set -- "${%s[@]}"\n' "$_PERMUTE" \
 		    || echo 'shift $(( OPTIND-1 ))'
 }
+# Main entry point - dispatch to appropriate subcommand
 getoptlong () {
     case $1 in
 	init|parse|set|configure|getopts|callback|dump|help) gol_$1 "${@:2}" ;;
@@ -312,6 +315,7 @@ getoptlong () {
 	*) _gol_die "unknown subcommand -- $1" ;;
     esac
 }
+# Auto-initialization if first argument is an associative array
 if [[ $(declare -p "${1-}" 2> /dev/null) =~ ^declare\ -A ]] ; then
     gol_init "$1" && gol_parse "${@:2}" && eval "$(gol_set)"
 fi
