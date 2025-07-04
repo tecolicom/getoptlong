@@ -156,6 +156,10 @@ declare -A OPTS=(
 # 使用例
 $ ./script.sh -i "*.txt" --include "*.md"
 # include=("*.txt" "*.md")
+
+# カンマ区切りで複数の値を一度に指定することも可能
+$ ./script.sh -i "*.txt,*.md,*.sh"
+# include=("*.txt" "*.md" "*.sh")
 ```
 
 #### ハッシュオプション（`%`）
@@ -168,7 +172,15 @@ declare -A OPTS=(
 # 使用例
 $ ./script.sh --define key1=value1 -D key2=value2
 # define[key1]="value1", define[key2]="value2"
+
+# カンマ区切りで複数のkey=valueペアを一度に指定することも可能
+$ ./script.sh -D "key1=value1,key2=value2,key3=value3"
+# define[key1]="value1", define[key2]="value2", define[key3]="value3"
 ```
+
+### カンマ区切りでの複数値設定
+
+配列オプション（`@`）やハッシュオプション（`%`）では、カンマ区切りで複数の値を一度に設定できます。これは`DELIM`設定によるもので、デフォルトでスペース、タブ、カンマが区切り文字として認識されます。
 
 ## 高度な機能
 
@@ -312,13 +324,13 @@ $ ./repeat.sh --count 3 date
 $ ./repeat.sh -c 5 --sleep 1.5 echo "Hello"
 
 # 複数のスリープ間隔を指定（順番に使用される）
-$ ./repeat.sh -c 4 --sleep 1 --sleep 2 --sleep 0.5 echo "Test"
+$ ./repeat.sh -i .3,.3,.6 -c 9 echo "Test"
 
 # 各サイクル後に改行を追加
 $ ./repeat.sh -c 3 --paragraph echo "Line"
 
 # 開始・終了メッセージを指定
-$ ./repeat.sh --message BEGIN="Starting process" --message END="Process complete" -c 2 date
+$ ./repeat.sh -m BEGIN=Hello,END=Bye -c 2 date
 
 # トレース実行（set -xが有効になる）
 $ ./repeat.sh --trace -c 2 echo "Traced"
