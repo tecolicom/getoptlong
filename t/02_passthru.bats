@@ -9,7 +9,7 @@ load test_helper.bash
 @test "getoptlong: passthru - long option --passthru-opt val" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([passthru-opt|p:-my_passthru_array]=)
+        declare -A OPTS=([passthru-opt|p:>my_passthru_array]=)
         declare -a my_passthru_array=()
         getoptlong init OPTS
         getoptlong parse --passthru-opt value1
@@ -28,7 +28,7 @@ load test_helper.bash
 @test "getoptlong: passthru - short option -p val" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([passthru-opt|p:-my_passthru_array]=)
+        declare -A OPTS=([passthru-opt|p:>my_passthru_array]=)
         declare -a my_passthru_array=()
         getoptlong init OPTS
         getoptlong parse -p value2
@@ -47,7 +47,7 @@ load test_helper.bash
 @test "getoptlong: passthru - flag option --flag-opt" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([flag-opt+-my_flag_array]=)
+        declare -A OPTS=([flag-opt+>my_flag_array]=)
         declare -a my_flag_array=()
         getoptlong init OPTS
         getoptlong parse --flag-opt
@@ -65,7 +65,7 @@ load test_helper.bash
     run bash -c '
         . ../getoptlong.sh
         cb_func() { echo "Callback: $1 val=$2"; }
-        declare -A OPTS=([cb-opt:!-my_cb_array]=)
+        declare -A OPTS=([cb-opt:!>my_cb_array]=)
         declare -a my_cb_array=()
         getoptlong init OPTS
         getoptlong callback cb-opt cb_func
@@ -86,7 +86,7 @@ load test_helper.bash
 @test "getoptlong: passthru - combined with required value --req-opt val" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([req-opt|r:-my_req_array]=) # Note the type is effectively ':-'
+        declare -A OPTS=([req-opt|r:>my_req_array]=) # Note the type is effectively ":>"
         declare -a my_req_array=()
         getoptlong init OPTS
         getoptlong parse --req-opt req_val
@@ -106,8 +106,8 @@ load test_helper.bash
     run bash -c '
         . ../getoptlong.sh
         declare -A OPTS=(
-            [opt1|a:-common_array]=
-            [opt2|b:-common_array]=
+            [opt1|a:>common_array]=
+            [opt2|b:>common_array]=
         )
         declare -a common_array=()
         getoptlong init OPTS
@@ -135,7 +135,7 @@ load test_helper.bash
 @test "getoptlong: passthru - default array name" {
     run bash -c '
         . ../getoptlong.sh
-        declare -A OPTS=([default-array-opt+-]=) # Target array will be default_array_opt
+        declare -A OPTS=([default-array-opt+>]=) # Target array will be default_array_opt
         # Ensure default_array_opt is declared, or it might fail in strict mode or cause issues
         declare -a default_array_opt=()
         getoptlong init OPTS
@@ -154,8 +154,8 @@ load test_helper.bash
     run bash -c '
         . ../getoptlong.sh
         declare -A OPTS=(
-            [my-pass|p:-pass_arr]=
-            [another-pass:-another_arr]=
+            [my-pass|p:>pass_arr]=
+            [another-pass:>another_arr]=
         )
         getoptlong init OPTS
         getoptlong help "My Script Usage"

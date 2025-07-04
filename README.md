@@ -315,9 +315,9 @@ declare -A OPTS=(
 
     *   `!`: Callback. The specified function (or a default one based on the option name or `destination`) is called when this option is parsed. See Section 3.3 if specifying a destination variable.
 
-    *   `-`: Passthrough. The option and its argument (if any) are collected into a specified array. This must follow a `type`. See Section "5.3. Option Pass-through".
+    *   `>`: Passthrough. The option and its argument (if any) are collected into a specified array. This must follow a `type`. See Section "5.3. Option Pass-through".
 
-    These can be combined (e.g., `!-`).
+    These can be combined (e.g., `!>`).
 
 *   **`destination`:** (Optional) Specifies a custom variable name where the option's value will be stored. This name appears directly after the `type_char` and any `modifiers`.  See Section "3.3. Specifying Destination Variable Name" for full details and examples.
 
@@ -843,21 +843,21 @@ This method is suitable when you want to pass all arguments after a certain poin
 
     2.  **Usage as a Wrapper Script and Manual Splitting:** If your script is a wrapper for a specific command, process its own options, then pass the remaining or transformed arguments to that command. Using `--` for explicit separation is robust.  (Example code omitted for brevity, see previous version if needed)
 
-#### 5.3.2. Specific Option Collection (using `-` in Option Definition)
+#### 5.3.2. Specific Option Collection (using `>` in Option Definition)
 
 This method allows you to collect specific options, along with their potential values, into a designated array as they are parsed. This is useful when you want to gather certain options for later processing or to pass them selectively to another function or command.
 
-To use this feature, append a hyphen (`-`) to the option type specifier in your option definition.
+To use this feature, append a greater-than symbol (`>`) to the option type specifier in your option definition.
 
 *   **Basic Usage:**
 
-    When an option is defined with a trailing `-`, the option itself (e.g., `--option-name` or `-o`) and its value (if it takes one) are added as consecutive elements to a specified array.
+    When an option is defined with a trailing `>`, the option itself (e.g., `--option-name` or `-o`) and its value (if it takes one) are added as consecutive elements to a specified array.
 
     ```bash
     declare -A OPTS=(
-        [collect-this|c:-:my_collection_array # Collect this option and its value]=
-        [another-opt|a-:my_collection_array  # Collect this one too, into the same array]=
-        [flag-collect|f-:flag_array          # Collect this flag]=
+        [collect-this|c:>my_collection_array # Collect this option and its value]=
+        [ another-opt|a:>my_collection_array # Collect this one too, into the same array]=
+        [flag-collect|f:>flag_array          # Collect this flag]=
     )
     declare -a my_collection_array=()
     declare -a flag_array=()
@@ -871,26 +871,26 @@ To use this feature, append a hyphen (`-`) to the option type specifier in your 
 
 *   **Destination Array:**
 
-    *   The array where options are collected is determined by the string following the `-` (and other type specifiers like `!` or `:`).  For example, in `[myopt|m:-:destination_array]`, options will be collected into the `destination_array`.
-    *   If no array name is specified after the `-` (e.g., `[myopt|m:-]`), the options are collected into an array named after the option's long name, with hyphens converted to underscores (e.g., `myopt` would collect into `myopt` array, or if defined as `my-opt`, it would collect into `my_opt` array). Ensure this array is declared (e.g., `declare -a my_opt`).
+    *   The array where options are collected is determined by the string following the `>` (and other type specifiers like `!` or `:`).  For example, in `[myopt|m:>destination_array]`, options will be collected into the `destination_array`.
+    *   If no array name is specified after the `>` (e.g., `[myopt|m:>]`), the options are collected into an array named after the option's long name, with hyphens converted to underscores (e.g., `myopt` would collect into `myopt` array, or if defined as `my-opt`, it would collect into `my_opt` array).
 
-*   **Combining with Other Types:** The `-` specifier must appear *after* any primary type specifier (`+`, `:`, `?`, `@`, `%`).  It can be combined with the callback modifier `!`. The primary type specifier cannot be omitted when using `-`, as this would make it ambiguous with a hyphen in a long option name.
+*   **Combining with Other Types:** The `>` specifier must appear *after* any primary type specifier (`+`, `:`, `?`, `@`, `%`).  It can be combined with the callback modifier `!`. The primary type specifier cannot be omitted when using `>`, as this would make it ambiguous with a hyphen in a long option name.
 
-    *   Correct: `[myopt|m:+!-log_array # Log this option then collect it (flag type)]`
+    *   Correct: `[myopt|m:!>log_array # Log this option then collect it (flag type)]`
         The `+` (flag type) is explicitly stated. The callback `!` executes, then the option is passed to `log_array`.
-    *   Correct: `[myopt|m::my_params # Collect parameter and its required value]` becomes `[myopt|m:-my_params # Collect parameter and its required value]` if it's meant to be a passthrough for a required arg. If it was `[param|p::my_params]`, it implies a required argument for `p` stored in `my_params` (standard behavior, not passthrough). If passthrough is intended for a required argument, it should be `[param|p:-my_params]`.
-    *   Incorrect: `[myopt|m:-:destination_array]` (extra colon). Corrected: `[myopt|m:-destination_array]` (assuming a default type like `+` is implied, so `[myopt|m:+ -destination_array]`). Or, if it takes an argument: `[myopt|m::-destination_array]`.
-    *   Incorrect: `[myopt|m:-!:log_array]`. Corrected, assuming flag type: `[myopt|m:+!-log_array]`. If it takes a required argument: `[myopt|m:!-log_array]`. The `!` (callback) and `-` (passthrough) are modifiers to a primary type.
+    *   Correct: `[myopt|m::my_params # Collect parameter and its required value]` becomes `[myopt|m:>my_params # Collect parameter and its required value]` if it's meant to be a passthrough for a required arg. If it was `[param|p:my_params]`, it implies a required argument for `p` stored in `my_params` (standard behavior, not passthrough). If passthrough is intended for a required argument, it should be `[param|p:>my_params]`.
+    *   Incorrect: `[myopt|m:>:destination_array]` (extra colon). Corrected: `[myopt|m:>destination_array]` (assuming a default type like `+` is implied, so `[myopt|m:+ >destination_array]`). Or, if it takes an argument: `[myopt|m:>destination_array]`.
+    *   Incorrect: `[myopt|m:>!:log_array]`. Corrected, assuming flag type: `[myopt|m:+!>log_array]`. If it takes a required argument: `[myopt|m:!>log_array]`. The `!` (callback) and `>` (passthrough) are modifiers to a primary type.
 
     Let's clarify the combination with `!` and a primary type:
-    *   `[cbpassthrough|c:+!-COLLECT_ARRAY]`
+    *   `[cbpassthrough|c:+!>COLLECT_ARRAY]`
         - `+`: Flag type.
         - `!`: Callback is triggered.
         - `-COLLECT_ARRAY`: The option name (`--cbpassthrough` or `-c`) is passed to `COLLECT_ARRAY`.
-    *   `[argcbpass|a::!-COLLECT_ARRAY]`
+    *   `[argcbpass|a:!>COLLECT_ARRAY]`
         - `:`: Required argument.
         - `!`: Callback is triggered (receives option name and value).
-        - `-COLLECT_ARRAY`: The option name and its value are passed to `COLLECT_ARRAY`.
+        - `>COLLECT_ARRAY`: The option name and its value are passed to `COLLECT_ARRAY`.
 
 *   **Help Message:** Options defined with the `-` passthrough specifier will be described in the help message typically as "passthrough to ARRAY_NAME", where `ARRAY_NAME` is the name of the collection array in uppercase.
 
