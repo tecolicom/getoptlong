@@ -262,6 +262,61 @@ $ ./script.sh -D "key1=value1,key2=value2,key3=value3"
 
 配列オプション（`@`）やハッシュオプション（`%`）では、カンマ区切りで複数の値を一度に設定できます。これは`DELIM`設定によるもので、デフォルトでスペース、タブ、カンマが区切り文字として認識されます。
 
+### 変数名の指定
+
+デフォルトでは、オプション名から自動的に変数名が決まりますが、明示的に変数名を指定することもできます：
+
+```bash
+declare -A OPTS=(
+    [count|c:COUNT=i]=1        # countオプションの値をCOUNT変数に格納
+    [debug|d+DEBUG]=0          # debugオプションの値をDEBUG変数に格納
+    [files|f@FILES]=           # filesオプションの値をFILES配列に格納
+    [config|c%CONFIG]=         # configオプションの値をCONFIG連想配列に格納
+)
+
+. getoptlong.sh OPTS "$@"
+
+echo "Count: $COUNT"
+echo "Debug level: $DEBUG"
+echo "Files: ${FILES[@]}"
+echo "Config keys: ${!CONFIG[@]}"
+```
+
+### パススルーオプション
+
+パススルー機能（`>`）を使うと、オプションとその値をそのまま配列に収集できます：
+
+```bash
+declare -A OPTS=(
+    [docker-opt|d:>docker_args]=     # --docker-opt の値をdocker_args配列に収集
+    [verbose|v]=
+)
+
+declare -a docker_args=()
+
+. getoptlong.sh OPTS "$@"
+
+# 収集されたオプションを他のコマンドに渡す
+docker run "${docker_args[@]}" ubuntu
+```
+
+複数のオプションを同じ配列にまとめることも可能です：
+
+```bash
+declare -A OPTS=(
+    [input|i:>files]=
+    [output|o:>files]=
+    [config|c:>files]=
+)
+
+declare -a files=()
+
+. getoptlong.sh OPTS "$@"
+
+# すべてのファイル関連オプションがfiles配列に収集される
+echo "All file options: ${files[@]}"
+```
+
 ## 高度な機能
 
 ### バリデーション
@@ -299,21 +354,6 @@ declare -A OPTS=(
 echo "This will be traced if --trace was specified"
 ```
 
-### パススルー機能
-
-他のコマンドに引数を渡したい場合：
-
-```bash
-declare -A OPTS=(
-    [docker-opts|d:>docker_args]=
-    [verbose|v]=
-)
-
-. getoptlong.sh OPTS "$@"
-
-# docker_argsに収集されたオプションを使用
-docker run "${docker_args[@]}" ubuntu
-```
 
 
 ## ヘルプメッセージの自動生成
