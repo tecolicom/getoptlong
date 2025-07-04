@@ -192,28 +192,25 @@ fi
 
 `getoptlong parse` returns an exit code of `0` on successful parsing and non-zero otherwise. If `EXIT_ON_ERROR` is `1` (default), the script will automatically exit on a parse error.
 
-#### 2.2.5. Setting Parsed Results to Variables
+#### 2.2.5. Setting Positional Parameters
 
-After `getoptlong parse` successfully processes the command-line arguments, the `getoptlong set` command is used with `eval` to update the shell's state.  This performs two main actions:
-
-1.  **Sets Positional Parameters:** It re-sets the script's positional parameters (`$1`, `$2`, etc.) to the remaining non-option arguments as determined by the parsing process (respecting `PERMUTE` behavior if configured). For example, if `myscript --opt val arg1 arg2` was called, after `eval "$(getoptlong set)"`, `$1` would be `arg1` and `$2` would be `arg2`.
-
-2.  **Sets Shell Variables for Options:** It defines or modifies shell variables corresponding to the parsed options and their values. For example, if an option `[output|o:]` was parsed with `--output /tmp/out`, a shell variable like `$output` (or a custom destination variable) would be set to `/tmp/out`.
+After `getoptlong parse` successfully processes the command-line arguments, shell variables for options are automatically set during parsing. The `getoptlong set` command is used with `eval` to update only the positional parameters:
 
 ```bash
 eval "$(getoptlong set)"
 ```
 
-*   **Variable Assignment Details:**
-    *   Flag options (e.g., `[verbose|v]`) typically set the variable to `1`.
-    *   Counter options (e.g., `[debug|d+]` initialized numerically) will have their variable incremented.
-    *   Array options (e.g., `[library|L@]`) populate a Bash array (e.g., `"${library[@]}"`).
-    *   Hash options (e.g., `[define|D%]`) populate a Bash associative array.
-    *   Hyphens (`-`) in default option variable names are converted to underscores (`_`) (e.g., `--long-option` results in `$long_option`).
+This re-sets the script's positional parameters (`$1`, `$2`, etc.) to the remaining non-option arguments as determined by the parsing process (respecting `PERMUTE` behavior if configured). For example, if `myscript --opt val arg1 arg2` was called, after `eval "$(getoptlong set)"`, `$1` would be `arg1` and `$2` would be `arg2`.
 
 #### 2.2.6. Accessing and Using Variables
 
-Use the variables set in the previous step in your script to perform actions based on the options.
+Option variables are automatically set during `getoptlong parse`. Use these variables in your script to perform actions based on the options.
+
+*   **Variable Assignment Details:**
+    *   Flag options (e.g., `[verbose|v]`) set the variable to `1` on first use, increment on subsequent uses.
+    *   Array options (e.g., `[library|L@]`) populate a Bash array (e.g., `"${library[@]}"`).
+    *   Hash options (e.g., `[define|D%]`) populate a Bash associative array.
+    *   Hyphens (`-`) in default option variable names are converted to underscores (`_`) (e.g., `--long-option` results in `$long_option`).
 
 ```bash
 # If the help option was processed (automatically or manually),
@@ -284,7 +281,7 @@ Example:
 declare -A OPTS=(
     # NAME         ALIAS
     # |            | TYPE [:?@%]
-    # |            | |MODIFIER [!-]
+    # |            | |MODIFIER [!>]
     # |            | ||VALIDATION
     # |            | |||      DESCRIPTION                    INITIAL VALUE
     # |            | |||      |                              |
@@ -333,33 +330,21 @@ After parsing with `getoptlong parse` and setting variables with `eval "$(getopt
 
 #### 3.2.1. Flag Options (No Suffix or `+`)
 
-Act as switches that generally do not take arguments. The `+` type specifier is the default if no other type specifier is provided.
+Act as switches that do not take arguments and can be used as both simple flags and counters. The `+` type specifier is the default if no other type specifier is provided.
 
 *   **Definition Examples:**
-    *   `[verbose|v  # Verbose output          ]=` (Equivalent to `[verbose|v+]`)
-    *   `[  debug|d+ # Debug level (cumulative)]=`
-    *   `[feature|f  # Enable feature          ]=` (Initial value is an empty string)
-    *   `[  count|c+ # Count occurrences       ]=0` (Initial value is 0, making it a counter)
+    *   `[verbose|v  # Verbose output ]=` (Equivalent to `[verbose|v+]`)
+    *   `[debug|d+   # Debug level    ]=0` (Initial value for easier variable reference)
+    *   `[feature|f  # Enable feature ]=`
 
-*   **How to Specify:** `-v`, `--verbose`, `--feature`, `-c`, `--count`
+*   **How to Specify:** `-v`, `--verbose`, `--debug`, `-d`, `--feature`
 
-*   **Variable Storage and Behavior:**
+*   **Variable Behavior:**
+    *   First specification: Variable is set to `1`
+    *   Multiple specifications (e.g., `-vvv` or `--debug --debug`): Variable value increments
+    *   Specifying with `no-` prefix (e.g., `--no-debug`): Variable is reset to empty string
 
-    *   **If no initial value is specified, or if the initial value is not a number (e.g., `[flag]=` or `[flag]=true`):**
-        *   Initial value in the variable: Empty string `""`.
-        *   When option specified once (e.g., `--flag`): The variable is set to `1`.
-        *   Multiple specifications (e.g., `--flag --flag`): The variable remains `1`.
-        *   Specifying with `no-` prefix (e.g., `--no-flag`): The variable is reset to an empty string `""`.
-        *   This mode is primarily for boolean-like flags.
-
-    *   **If an initial numeric value is specified (e.g., `[counter+]=0` or `[verbose+VLEVEL]=0`):**
-        *   Initial value in the variable: The specified number (e.g., `0`).
-        *   When option specified (e.g., `--counter` or `-v`): The variable's numeric value increments by `1`.
-        *   Multiple specifications (e.g., `-vvv` or `--counter --counter`): The variable increments for each occurrence.
-        *   Specifying with `no-` prefix (e.g., `--no-counter` or `--no-verbose`): The variable is reset to an empty string `""` (not its initial numeric value).
-        *   This mode makes the option function as a counter.
-
-*   **Use Cases:** Toggling features ON/OFF (non-numeric initial value), or incrementally increasing verbosity/counters (numeric initial value). For example, `(( debug > 0 ))` can be used if `debug` is defined with an initial value of `0` (e.g., `[debug+DEBUG_LEVEL]=0`). An empty string in such a numeric test would likely cause an error.
+*   **Use Cases:** Boolean flags, verbosity levels, debug levels. Setting an initial numeric value (e.g., `]=0`) makes variable reference simpler in arithmetic contexts like `(( debug > 0 ))`.
 
 #### 3.2.2. Required Argument Options (`:`)
 
@@ -886,15 +871,15 @@ To use this feature, append a greater-than symbol (`>`) to the option type speci
     *   `[cbpassthrough|c:+!>COLLECT_ARRAY]`
         - `+`: Flag type.
         - `!`: Callback is triggered.
-        - `-COLLECT_ARRAY`: The option name (`--cbpassthrough` or `-c`) is passed to `COLLECT_ARRAY`.
+        - `>COLLECT_ARRAY`: The option name (`--cbpassthrough` or `-c`) is passed to `COLLECT_ARRAY`.
     *   `[argcbpass|a:!>COLLECT_ARRAY]`
         - `:`: Required argument.
         - `!`: Callback is triggered (receives option name and value).
         - `>COLLECT_ARRAY`: The option name and its value are passed to `COLLECT_ARRAY`.
 
-*   **Help Message:** Options defined with the `-` passthrough specifier will be described in the help message typically as "passthrough to ARRAY_NAME", where `ARRAY_NAME` is the name of the collection array in uppercase.
+*   **Help Message:** Options defined with the `>` passthrough specifier will be described in the help message typically as "passthrough to ARRAY_NAME", where `ARRAY_NAME` is the name of the collection array in uppercase.
 
-This specific option collection provides a flexible way to gather arguments that might not be directly used by the script's main logic but are important for other parts of the process or for passing to sub-commands. It's crucial to include a primary type specifier (`+`, `:`, `?`, `@`, `%`) before the `-` modifier.
+This specific option collection provides a flexible way to gather arguments that might not be directly used by the script's main logic but are important for other parts of the process or for passing to sub-commands.
 
 ### 5.4. Runtime Configuration Changes (`getoptlong configure`)
 
@@ -966,8 +951,6 @@ Initializes the library, loading option definitions and settings. This command m
     *   **`PERMUTE=<array_name>`**: Specifies the name of a Bash regular array to store arguments not interpreted as options (non-option arguments).  For example, with `PERMUTE=REMAINING_ARGS`, in `myscript --opt arg1 arg2`, `arg1` and `arg2` would be stored in the `REMAINING_ARGS` array.  If not specified or an empty string is provided, parsing stops at the first non-option argument (behavior similar to `POSIXLY_CORRECT`).  Default is `GOL_ARGV` (an internal library array name, usually not user-facing).
 
     *   **`PREFIX=<string>`**: Specifies a prefix to be added to variable names set by `getoptlong set`. For example, with `PREFIX=MYAPP_` and an option `--option`, the variable `$MYAPP_option` would be set.  Default is an empty string (no prefix).
-
-    *   **`DESTINATION=<array_name>` (Deprecated)**: This setting is deprecated. Use per-option destination variables as described in Section "3.1. Basic Syntax" and "5.2. Specifying Destination Variable" instead.  Previously, this stored parsed option values in the specified associative array `<array_name>`. Keys were the long names of options. For example, with `DESTINATION=OptValues` and option `--my-opt val`, `OptValues[my-opt]="val"` would have been stored. This array had to be declared beforehand with `declare -A <array_name>`.
 
     *   **`HELP=<SPEC>`**: Customizes the automatically added help option. See Section "4.1. Automatic Help Option" for details. Default: `help|h#show help`.
 

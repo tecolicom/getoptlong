@@ -6,7 +6,7 @@ declare -A OPTS=(
     [ debug | d ]=0
     [ border-style | bs :>ansicolumn ]=
     [ pane         | C  :>ansicolumn ]=
-    [ paragraph    | p  +>ansicolumn ]=
+    [ paragraph    | p   >ansicolumn ]=
 )
 
 . getoptlong.sh OPTS "$@"
