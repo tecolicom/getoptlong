@@ -1,4 +1,4 @@
-# もう bash で getopts は使わない
+# もう bash で getopts は使わなくていいと思う
 
 ## はじめに
 
@@ -292,8 +292,6 @@ declare -A OPTS=(
     [verbose|v]=
 )
 
-declare -a docker_args=()
-
 . getoptlong.sh OPTS "$@"
 
 # 収集されたオプションを他のコマンドに渡す
@@ -309,17 +307,13 @@ declare -A OPTS=(
     [config|c:>files]=
 )
 
-declare -a files=()
-
 . getoptlong.sh OPTS "$@"
 
 # すべてのファイル関連オプションがfiles配列に収集される
 echo "All file options: ${files[@]}"
 ```
 
-## 高度な機能
-
-### バリデーション
+## バリデーション
 
 ```bash
 declare -A OPTS=(
@@ -331,7 +325,7 @@ declare -A OPTS=(
 
 正規表現バリデーションでは、パターンを括弧で囲みます。
 
-### コールバック関数
+## コールバック関数
 
 getoptlong.shでは、オプション名に`!`を付けることで、そのオプション名と同じ名前の関数が自動的に呼び出されます：
 
@@ -446,13 +440,13 @@ declare -A OPTS=(
 
 **getoptions の例**
 ```bash
-parser() {
+parser_definition() {
   setup   REST help:usage -- "Example script"
   flag    FLAG    -f --flag
   param   FILE    -F --file
-  option  OPTION  -o --option on:"default"
+  option  OPTION  -o --option init:="default"
 }
-eval "$(getoptions parser parse "$0")"
+eval "$(getoptions parser_definition parse) exit 1"
 parse "$@"
 eval "set -- $REST"
 ```
