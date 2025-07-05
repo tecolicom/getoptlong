@@ -1,16 +1,24 @@
-# もう bash で getopts は使わなくていいと思う
+# もう bash で getopts は一生使わなくていいと思う
 
 ## はじめに
 
-Bashスクリプトでコマンドラインオプションを解析する際、標準の`getopts`や`getopt`では機能が限られていて困ったことはありませんか？
+Bashスクリプトでコマンドラインオプションを解析する際、`getopts`や`getopt`が定番の選択肢です。しかし、これらを使った場合でも結局は一つ一つのオプションを手動で処理する必要があり、さらに以下のような問題に直面することがあります：
 
 - `getopts`では長いオプション（`--verbose`）が使えない
 - `getopts`ではオプションと引数の順序が固定されている
 - `getopt`を使えばオプションと引数の混在は可能だが、結局自分で解析が必要
 - 配列やハッシュ型の引数が扱えない
-- ヘルプメッセージを手動で作成する必要がある
+- ヘルプメッセージを手動で作成し、内容を正しく保つのに手間がかかる
 
 そんな悩みを解決してくれるのが**getoptlong.sh**です。
+
+### AI音声解説
+
+README（julesに書いてもらいました）をNotebookLMに読み込ませて、getoptlong.shについて音声で紹介してもらいました。NotebookLMの音声生成は噂には聞いていましたが、実際に試してみると想像以上の出来栄えで驚きました。AIとは思えないほど自然な会話形式で、なかなか面白い仕上がりになっています。
+
+**⚠️ 注意**: AI生成コンテンツのため、内容に勘違いや間違った表現が含まれています。正確な情報については、この記事の内容をご参照ください。
+
+[🎧 getoptlong.sh AI音声解説 (YouTube)](https://youtu.be/lOFMD60P1DU?si=7lE07elpsEmGj6dt)
 
 ## 実例で見るgetoptlong.shの機能
 
@@ -34,9 +42,6 @@ declare -A OPTS=(
 trace() { [[ $2 ]] && set -x || set +x ; }
 
 . getoptlong.sh OPTS "$@"
-
-# 最初の引数が数字の場合はカウントとして使用
-[[ ${1:-} =~ ^[0-9]+$ ]] && count=$1 && shift
 
 # メッセージ表示関数
 message() { [[ -v message[$1] ]] && echo "${message[$1]}" || : ; }
@@ -76,9 +81,20 @@ $ ./repeat.sh -m BEGIN=Hello,END=Bye -c 2 date
 
 # トレース実行（set -xが有効になる）
 $ ./repeat.sh --trace -c 2 echo "Traced"
+```
 
-# 数値を最初の引数として指定（countの代替）
-$ ./repeat.sh 5 echo "Five times"
+このスクリプトに`-h`オプションを指定すると、次のようなヘルプが表示されます：
+
+```bash
+$ ./repeat.sh --help
+repeat.sh [ options ] args
+    --count=#        -c#      repeat count
+    --debug          -d       debug level
+    --help           -h       show HELP
+    --message=#=#    -m#=#    print message at BEGIN|END
+    --paragraph[=#]  -p       print newline after cycle
+    --sleep=#[,#]    -i#[,#]  interval time
+    --trace          -x       trace execution
 ```
 
 このコードで実現されている機能：
@@ -97,6 +113,8 @@ $ ./repeat.sh 5 echo "Five times"
 getoptlong.shは以下の機能を提供します：
 
 - **GNU形式の長いオプション**サポート（`--help`, `--verbose`など）
+- **ショートオプションの連結**（`-abc`を`-a -b -c`として解釈）
+- **否定形式**（`--no-verbose`でフラグオプションを無効化）
 - **柔軟なオプション順序**（PERMUTEモード）
 - **豊富なデータ型**（フラグ、必須引数、省略可能な引数、配列、ハッシュ）
 - **バリデーション機能**（整数、浮動小数点、正規表現）
@@ -108,7 +126,7 @@ getoptlong.shは以下の機能を提供します：
 
 ### 1. ワンライナー形式（推奨）
 
-最もシンプルな使い方から始めましょう：
+最もシンプルな使い方から始めましょう。このプログラムは、フラグ（`--verbose`）、ファイル指定（`--file`）、デフォルト値付きカウント（`--count`）の3つのオプションを持ちます：
 
 ```bash
 #!/usr/bin/env bash
@@ -136,6 +154,17 @@ verbose: 1
 file: input.txt
 count: 10
 remaining args: arg1 arg2
+```
+
+説明文を指定しなくても、実用的なヘルプメッセージが自動生成されます。オプション定義から自動的に使用方法、各オプションの説明、デフォルト値まで表示してくれます：
+
+```bash
+$ ./myscript.sh -h
+myscript.sh [ options ] args
+    --count=#  -c#  set COUNT (default:5)
+    --file=#   -f#  set FILE
+    --help     -h   show HELP
+    --verbose  -v   enable VERBOSE
 ```
 
 ### 2. 段階的な方法
@@ -317,9 +346,9 @@ echo "All file options: ${files[@]}"
 
 ```bash
 declare -A OPTS=(
-    [ port  | p :=i                     ]=8080     # 整数
-    [ rate  | r :=f                     ]=1.5      # 浮動小数点
-    [ email | e :=(^[^@]+@[^@]+\.[^@]+$) ]=         # 正規表現
+    [ port    | p :=i              ]=8080     # 整数
+    [ rate    | r :=f              ]=1.5      # 浮動小数点
+    [ zipcode | z :=(^[0-9]{3}-[0-9]{4}$) ]=  # 正規表現（郵便番号）
 )
 ```
 
@@ -366,13 +395,11 @@ declare -A OPTS=(
 
 ```bash
 $ ./script.sh --help
-Usage: script.sh [options]
-
-Options:
-  -c, --count <arg>      繰り返し回数 (default: 5)
-  -f, --file <arg>       入力ファイルのパス
-  -h, --help             show help
-  -v, --verbose          詳細な出力を有効にする
+script.sh [ options ] args
+    --count=#  -c#  繰り返し回数
+    --file=#   -f#  入力ファイルのパス
+    --help     -h   show HELP
+    --verbose  -v   詳細な出力を有効にする
 ```
 
 注意：ヘルプメッセージのオプションはアルファベット順にソートされて表示されます。
@@ -380,65 +407,35 @@ Options:
 
 ## 他のオプション解析ライブラリとの比較
 
-シェルスクリプト用のオプション解析ライブラリには複数の選択肢があります。主要なものと getoptlong.sh を比較してみましょう。
+シェルスクリプト用のオプション解析ライブラリには複数の選択肢があります。なかでも注目すべきは [getoptions](https://github.com/ko1nksm/getoptions) で、これは POSIX 互換で複数シェル対応の軽量ライブラリです。外部コマンドに依存しない純粋なシェルスクリプト実装により、dash、bash、ksh、zshなど幅広いシェルで動作します。
+
+主要なライブラリと getoptlong.sh を比較してみましょう。
 
 ### 機能比較表
 
-| 機能 | getopts | getoptions | argparse | getoptlong.sh |
-|------|---------|------------|-----------|---------------|
-| **対応シェル** | POSIX | POSIX | POSIX | Bash専用 |
-| **長いオプション** | ❌ | ✅ | ✅ | ✅ |
-| **サブコマンド** | ❌ | ✅ | ✅ | ✅ |
-| **オプション順序** | 固定 | 柔軟 | 柔軟 | 柔軟(PERMUTE) |
-| **データ型** | 文字列のみ | 文字列のみ | 基本型 | 豊富(配列,ハッシュ等) |
-| **バリデーション** | ❌ | 限定的 | ✅ | ✅(正規表現対応) |
-| **ヘルプ生成** | 手動 | 自動 | 自動 | 自動 |
-| **コールバック** | ❌ | ✅ | ❌ | ✅ |
-| **設定方法** | 手続き的 | 宣言的 | 宣言的 | 宣言的 |
-| **学習コスト** | 低 | 中 | 中 | 中 |
+| 機能 | getopts | getoptions | getoptlong.sh |
+|------|---------|------------|---------------|
+| **対応シェル** | POSIX | POSIX | Bash専用 |
+| **長いオプション** | ❌ | ✅ | ✅ |
+| **ショートオプション連結** | ✅ | ✅ | ✅ |
+| **否定形式** | ❌ | ✅ | ✅ |
+| **+で始まるオプション** | ❌ | ✅ | ❌ |
+| **オプション名省略** | ❌ | ✅ | ❌ |
+| **サブコマンド** | ❌ | ✅ | ✅ |
+| **オプション順序** | 固定 | 柔軟 | 柔軟(PERMUTE) |
+| **データ型** | 文字列のみ | 文字列のみ | 豊富(配列,ハッシュ等) |
+| **バリデーション** | ❌ | 限定的 | ✅(正規表現対応) |
+| **ヘルプ生成** | 手動 | 自動 | 自動 |
+| **コールバック** | ❌ | ✅ | ✅ |
+| **設定方法** | 手続き的 | 宣言的 | 宣言的 |
+| **外部依存** | なし | なし | なし |
+| **学習コスト** | 低 | 中 | 中 |
 
-### getoptlong.sh の特徴
+### オプション定義の比較
 
-#### :thumbsup: 利点
+同じ機能を実現する場合の定義例を比較してみましょう：
 
-**Bashの機能を最大限活用**
-- 連想配列を使った直感的なオプション定義
-- Bashの配列機能をネイティブサポート
-- Bashの変数展開や算術演算との自然な連携
-
-**豊富なデータ型と機能**
-```bash
-# 他のライブラリでは実現困難な高度な機能
-declare -A OPTS=(
-    [ config | c %=(^[A-Z_]+=.+$) ]=  # ハッシュ + 正規表現バリデーション
-    [ files  | f @=f              ]=  # 配列 + 浮動小数点バリデーション  
-    [ trace  | t !                ]=  # コールバック関数の自動実行
-    [ pass   | p :>external_args  ]=  # パススルー機能
-)
-```
-
-**ワンライナーでの簡単導入**
-```bash
-# 1行でフル機能のオプション解析
-. getoptlong.sh OPTS "$@"
-```
-
-#### :thumbsdown: 制限事項
-
-**ポータビリティの制約**
-- Bash 4.0+ 必須（連想配列が必要）
-- 他のシェル（sh, zsh, fish等）では動作しない
-- 組み込みシステムなどでBashが使えない環境では利用不可
-
-**学習コスト**
-- 独自の構文（`[name|alias:type=validation]`）
-- Bashの機能を理解している必要がある
-
-### getoptions との比較
-
-[getoptions](https://github.com/ko1nksm/getoptions) は POSIX 互換で軽量なライブラリです：
-
-**getoptions の例**
+**getoptions**
 ```bash
 parser_definition() {
   setup   REST help:usage -- "Example script"
@@ -446,10 +443,10 @@ parser_definition() {
   param   FILE    -F --file
   option  OPTION  -o --option init:="default"
 }
-eval "$(getoptions parser_definition parse) exit 1"
+eval "$(getoptions parser_definition) exit 1"
 ```
 
-**getoptlong.sh の例**
+**getoptlong.sh**
 ```bash
 declare -A OPTS=(
     [ flag   | f  ]=
@@ -459,7 +456,35 @@ declare -A OPTS=(
 . getoptlong.sh OPTS "$@"
 ```
 
-**比較ポイント**
+getoptlong.sh の方がより簡潔で、連想配列による直感的な定義が特徴です。
+
+### 各ライブラリの特徴と選択指針
+
+#### getoptlong.sh の強み
+
+- **Bashの機能をフル活用**: 連想配列、配列、ハッシュをネイティブサポート
+- **豊富なデータ型**: 文字列、配列、ハッシュ、正規表現バリデーション、コールバック関数
+- **簡潔な記述**: ワンライナーでフル機能のオプション解析が可能
+- **高度な機能**: パススルー、変数名指定、カンマ区切り値など
+
+```bash
+# getoptlong.sh の例 - 簡潔で高機能
+declare -A OPTS=(
+    [ config | c %=(^[A-Z_]+=.+$) ]=  # ハッシュ + 正規表現バリデーション
+    [ files  | f @=f              ]=  # 配列 + 浮動小数点バリデーション  
+    [ trace  | t !                ]=  # コールバック関数の自動実行
+)
+. getoptlong.sh OPTS "$@"
+```
+
+#### getoptions の強み
+
+- **POSIX互換**: 幅広いシェル環境で動作する高いポータビリティ
+- **純粋シェルスクリプト**: 外部コマンドに依存しない軽量実装
+- **高パフォーマンス**: 高速な解析処理
+- **豊富なオプション**: +オプション、オプション名省略機能
+
+#### 比較ポイント
 
 | 観点 | getoptions | getoptlong.sh |
 |------|------------|---------------|
@@ -468,6 +493,7 @@ declare -A OPTS=(
 | **高度な機能** | 基本的 | 豊富（配列、ハッシュ、正規表現） |
 | **Bash連携** | 限定的 | ネイティブ |
 | **パフォーマンス** | 高速 | 中程度 |
+| **実装方式** | 純粋シェルスクリプト | Bash特化 |
 
 ### 選択の指針
 
@@ -499,6 +525,12 @@ Bash専用という制約はありますが、その分Bashの機能を最大限
 - [getoptlong.sh GitHub リポジトリ](https://github.com/tecolicom/getoptlong)
 - [getoptions GitHub リポジトリ](https://github.com/ko1nksm/getoptions)
 - より詳細な例は`ex/`ディレクトリをご確認ください
+
+### getoptions 関連記事
+- [getoptions を使って面倒なシェルスクリプトのオプション解析コードを自動生成しよう！](https://qiita.com/ko1nksm/items/a007c73c549fbd493a17)
+- [シェルスクリプト(bash等)の引数解析が究極的に簡単になりました](https://qiita.com/ko1nksm/items/9ee16927b7f8899c4a9e)
+- [簡単に使えるエレガントなオプション解析ライブラリ（シェルスクリプト用）](https://qiita.com/ko1nksm/items/1bcc49bef56a5c245251)
+- [シェルスクリプト オプション解析 徹底解説 (getopt / getopts)](https://qiita.com/ko1nksm/items/cea7e7cfdc9e25432bab)
 
 ---
 
