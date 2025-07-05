@@ -114,9 +114,9 @@ getoptlong.shは以下の機能を提供します：
 #!/usr/bin/env bash
 
 declare -A OPTS=(
-    [verbose|v]=
-    [file|f:]=
-    [count|c:]=5
+    [ verbose | v  ]=
+    [ file    | f: ]=
+    [ count   | c: ]=5
 )
 
 # PATHにgetoptlong.shがあれば、パスを指定する必要はありません
@@ -146,9 +146,9 @@ remaining args: arg1 arg2
 #!/usr/bin/env bash
 
 declare -A OPTS=(
-    [output|o:]=output.txt
-    [format|f:]=json
-    [verbose|v]=
+    [ output  | o: ]=output.txt
+    [ format  | f: ]=json
+    [ verbose | v  ]=
 )
 
 # ライブラリの読み込み
@@ -193,8 +193,8 @@ echo "Verbose: $verbose"
 
 ```bash
 declare -A OPTS=(
-    [verbose|v]=          # フラグ
-    [debug|d]=0           # カウンター（初期値0）
+    [ verbose | v ]=          # フラグ
+    [ debug   | d ]=0         # カウンター（初期値0）
 )
 
 # 使用例
@@ -206,8 +206,8 @@ $ ./script.sh -v --debug --debug
 
 ```bash
 declare -A OPTS=(
-    [file|f:]=
-    [output|o:]=result.txt
+    [ file   | f: ]=
+    [ output | o: ]=result.txt
 )
 
 # 使用例
@@ -218,7 +218,7 @@ $ ./script.sh --file input.txt
 
 ```bash
 declare -A OPTS=(
-    [compress|c?]=      # 引数は省略可能
+    [ compress | c? ]=      # 引数は省略可能
 )
 
 # 使用例
@@ -230,7 +230,7 @@ $ ./script.sh --compress=9        # compress="9"
 
 ```bash
 declare -A OPTS=(
-    [include|i@]=
+    [ include | i@ ]=
 )
 
 # 使用例
@@ -246,7 +246,7 @@ $ ./script.sh -i "*.txt,*.md,*.sh"
 
 ```bash
 declare -A OPTS=(
-    [define|D%]=
+    [ define | D% ]=
 )
 
 # 使用例
@@ -268,10 +268,10 @@ $ ./script.sh -D "key1=value1,key2=value2,key3=value3"
 
 ```bash
 declare -A OPTS=(
-    [count|c:COUNT=i]=1        # countオプションの値をCOUNT変数に格納
-    [debug|d+DEBUG]=0          # debugオプションの値をDEBUG変数に格納
-    [files|f@FILES]=           # filesオプションの値をFILES配列に格納
-    [config|c%CONFIG]=         # configオプションの値をCONFIG連想配列に格納
+    [ count  | c :COUNT=i ]=1        # countオプションの値をCOUNT変数に格納
+    [ debug  | d +DEBUG   ]=0        # debugオプションの値をDEBUG変数に格納
+    [ files  | f @FILES   ]=         # filesオプションの値をFILES配列に格納
+    [ config | c %CONFIG  ]=         # configオプションの値をCONFIG連想配列に格納
 )
 
 . getoptlong.sh OPTS "$@"
@@ -288,8 +288,8 @@ echo "Config keys: ${!CONFIG[@]}"
 
 ```bash
 declare -A OPTS=(
-    [docker-opt|d:>docker_args]=     # --docker-opt の値をdocker_args配列に収集
-    [verbose|v]=
+    [ docker-opt | d :>docker_args ]=     # --docker-opt の値をdocker_args配列に収集
+    [ verbose    | v               ]=
 )
 
 . getoptlong.sh OPTS "$@"
@@ -302,9 +302,9 @@ docker run "${docker_args[@]}" ubuntu
 
 ```bash
 declare -A OPTS=(
-    [input|i:>files]=
-    [output|o:>files]=
-    [config|c:>files]=
+    [ input  | i :>files ]=
+    [ output | o :>files ]=
+    [ config | c :>files ]=
 )
 
 . getoptlong.sh OPTS "$@"
@@ -317,9 +317,9 @@ echo "All file options: ${files[@]}"
 
 ```bash
 declare -A OPTS=(
-    [port|p:=i]=8080                      # 整数
-    [rate|r:=f]=1.5                       # 浮動小数点
-    [email|e:=(^[^@]+@[^@]+\.[^@]+$)]=    # 正規表現
+    [ port  | p :=i                     ]=8080     # 整数
+    [ rate  | r :=f                     ]=1.5      # 浮動小数点
+    [ email | e :=(^[^@]+@[^@]+\.[^@]+$) ]=         # 正規表現
 )
 ```
 
@@ -338,8 +338,8 @@ trace() {
 }
 
 declare -A OPTS=(
-    [trace|x! # trace execution]=
-    [verbose|v]=
+    [ trace   | x ! # trace execution ]=
+    [ verbose | v                      ]=
 )
 
 . getoptlong.sh OPTS "$@"
@@ -356,9 +356,9 @@ getoptlong.shは自動的にヘルプオプション（`--help`, `-h`）を追�
 
 ```bash
 declare -A OPTS=(
-    [verbose|v # 詳細な出力を有効にする]=
-    [file|f: # 入力ファイルのパス]=
-    [count|c: # 繰り返し回数]=5
+    [ verbose | v  # 詳細な出力を有効にする ]=
+    [ file    | f: # 入力ファイルのパス     ]=
+    [ count   | c: # 繰り返し回数           ]=5
 )
 
 . getoptlong.sh OPTS "$@"
@@ -410,10 +410,10 @@ Options:
 ```bash
 # 他のライブラリでは実現困難な高度な機能
 declare -A OPTS=(
-    [config|c%=(^[A-Z_]+=.+$)]=  # ハッシュ + 正規表現バリデーション
-    [files|f@=f]=                # 配列 + 浮動小数点バリデーション  
-    [trace|t!]=                  # コールバック関数の自動実行
-    [pass|p:>external_args]=     # パススルー機能
+    [ config | c %=(^[A-Z_]+=.+$) ]=  # ハッシュ + 正規表現バリデーション
+    [ files  | f @=f              ]=  # 配列 + 浮動小数点バリデーション  
+    [ trace  | t !                ]=  # コールバック関数の自動実行
+    [ pass   | p :>external_args  ]=  # パススルー機能
 )
 ```
 
@@ -447,16 +447,14 @@ parser_definition() {
   option  OPTION  -o --option init:="default"
 }
 eval "$(getoptions parser_definition parse) exit 1"
-parse "$@"
-eval "set -- $REST"
 ```
 
 **getoptlong.sh の例**
 ```bash
 declare -A OPTS=(
-    [flag|f]=
-    [file|F:]=
-    [option|o?]=default
+    [ flag   | f  ]=
+    [ file   | F: ]=
+    [ option | o? ]=default
 )
 . getoptlong.sh OPTS "$@"
 ```
