@@ -156,7 +156,7 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pas
 }
 _gol_call_hook() {
     local _call=($1)
-    local exec=(${_call[0]} $2 ${_call[@]:1} ${@:3})
+    local exec=("${_call[0]}" "$2" "${_call[@]:1}" "${@:3}")
     declare -F "${_call[0]}" > /dev/null \
 	&& "${exec[@]}" || _gol_die "callback function ${_call[0]}() is not defined"
 }
