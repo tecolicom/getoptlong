@@ -1,14 +1,14 @@
 ---
 title: もう bash で getopts は一生使わなくていいと思う
 tags:
-  - bash
-  - getopts
+  - Bash
+  - UNIX
   - shell
-  - unix
+  - getopts
   - getoptlong
-private: true
-updated_at: ''
-id: null
+private: false
+updated_at: '2025-07-05T20:00:04+09:00'
+id: 75a7df9e1a1e92797376
 organization_url_name: null
 slide: false
 ignorePublish: false
