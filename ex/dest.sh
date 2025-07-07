@@ -26,13 +26,11 @@ message BEGIN
 for (( i = 0; $# > 0 && i < COUNT ; i++ )) ; do
     (( DEBUG > 0 )) && echo "# [ ${@@Q} ]" >&2
     "$@"
-    if (( COUNT > 0 )) ; then
-	[[ -v PARA ]] && echo "$PARA"
-	if (( ${#SLEEP[@]} > 0 )) ; then
-	    time="${SLEEP[$(( i % ${#SLEEP[@]} ))]}"
-	    (( DEBUG > 0 )) && echo "# sleep $time" >&2
-	    sleep $time
-	fi
+    [[ -v PARA ]] && echo "$PARA"
+    if (( ${#SLEEP[@]} > 0 )) ; then
+	time="${SLEEP[$(( i % ${#SLEEP[@]} ))]}"
+	(( DEBUG > 0 )) && echo "# sleep $time" >&2
+	sleep $time
     fi
 done
 message END

@@ -7,7 +7,7 @@ tags:
   - getopts
   - getoptlong
 private: false
-updated_at: '2025-07-07T12:59:35+09:00'
+updated_at: '2025-07-08T07:35:53+09:00'
 id: 75a7df9e1a1e92797376
 organization_url_name: null
 slide: false
@@ -69,12 +69,10 @@ message() { [[ -v message[$1] ]] && echo "${message[$1]}" || : ; }
 message BEGIN
 for (( i = 0; $# > 0 && i < count ; i++ )) ; do
     "$@"
-    if (( count > 0 )) ; then
-        [[ -v paragraph ]] && echo "$paragraph"
-        if (( ${#sleep[@]} > 0 )) ; then
-            time="${sleep[$(( i % ${#sleep[@]} ))]}"
-            sleep $time
-        fi
+    [[ -v paragraph ]] && echo "$paragraph"
+    if (( ${#sleep[@]} > 0 )) ; then
+        time="${sleep[$(( i % ${#sleep[@]} ))]}"
+        sleep $time
     fi
 done
 message END

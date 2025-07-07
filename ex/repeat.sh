@@ -26,13 +26,11 @@ message BEGIN
 for (( i = 0; $# > 0 && i < count ; i++ )) ; do
     (( debug > 0 )) && echo "# [ ${@@Q} ]" >&2
     "$@"
-    if (( count > 0 )) ; then
-	[[ -v paragraph ]] && echo "$paragraph"
-	if (( ${#sleep[@]} > 0 )) ; then
-	    time="${sleep[$(( i % ${#sleep[@]} ))]}"
-	    (( debug > 0 )) && echo "# sleep $time" >&2
-	    sleep $time
-	fi
+    [[ -v paragraph ]] && echo "$paragraph"
+    if (( ${#sleep[@]} > 0 )) ; then
+	time="${sleep[$(( i % ${#sleep[@]} ))]}"
+	(( debug > 0 )) && echo "# sleep $time" >&2
+	sleep $time
     fi
 done
 message END

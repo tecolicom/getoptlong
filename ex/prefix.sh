@@ -27,13 +27,11 @@ message BEGIN
 for (( i = 0; $# > 0 && i < opt_count ; i++ )) ; do
     (( opt_debug > 0 )) && echo "# [ ${@@Q} ]" >&2
     "$@"
-    if (( opt_count > 0 )) ; then
-	[[ -v opt_paragraph ]] && echo "$opt_paragraph"
-	if (( ${#opt_sleep[@]} > 0 )) ; then
-	    time="${opt_sleep[$(( i % ${#opt_sleep[@]} ))]}"
-	    (( opt_debug > 0 )) && echo "# sleep $time" >&2
-	    sleep $time
-	fi
+    [[ -v opt_paragraph ]] && echo "$opt_paragraph"
+    if (( ${#opt_sleep[@]} > 0 )) ; then
+	time="${opt_sleep[$(( i % ${#opt_sleep[@]} ))]}"
+	(( opt_debug > 0 )) && echo "# sleep $time" >&2
+	sleep $time
     fi
 done
 message END
