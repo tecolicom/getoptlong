@@ -1,0 +1,4 @@
+# Exclude from releases
+qiita_article.md export-ignore
+notebooklm.wav export-ignore
+.github/ export-ignore
