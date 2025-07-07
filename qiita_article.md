@@ -7,7 +7,7 @@ tags:
   - getopts
   - getoptlong
 private: false
-updated_at: '2025-07-05T20:00:04+09:00'
+updated_at: '2025-07-07T12:59:35+09:00'
 id: 75a7df9e1a1e92797376
 organization_url_name: null
 slide: false
@@ -17,15 +17,19 @@ ignorePublish: false
 
 Bashスクリプトでコマンドラインオプションを解析する際、`getopts`や`getopt`が定番の選択肢です。しかし、これらを使った場合でも結局は一つ一つのオプションを手動で処理する必要があり、さらに以下のような問題に直面することがあります：
 
-- `getopts`では長いオプション（`--verbose`）が使えない
+- `getopts`ではロングオプション（`--verbose`）が使えない
 - `getopts`ではオプションと引数の順序が固定されている
 - `getopt`を使えばオプションと引数の混在は可能だが、結局自分で解析が必要
 - 配列やハッシュ型の引数が扱えない
+- 同じようなcase文やif文を何度も繰り返し書く必要がある
+- オプションの追加・削除時に複数箇所を修正する必要がある
+- バリデーション処理を自分で実装しなければならない
 - ヘルプメッセージを手動で作成し、内容を正しく保つのに手間がかかる
+- オプション定義とヘルプメッセージが分離しているため、不整合が起きやすい
 
-そんな悩みを解決してくれるのが**getoptlong.sh**です。
+他の言語では高度なオプション解析ライブラリが充実しているのに、Bash専用の定番ソリューションが不足していました。この問題を解決するのが[**getoptlong.sh**](https://github.com/tecolicom/getoptlong)です。
 
-この名前からも分かるように、getoptlong.shはPerlの[Getopt::Long](https://perldoc.perl.org/Getopt::Long)からインスパイアされています。Getopt::Longは、GNU getoptの長いオプション記法をPerlで実装したライブラリで、宣言的なオプション定義や豊富なデータ型などの機能を提供しています。そのアイデアは他の言語にも広がり、PythonのargparseやRubyのOptionParserなど、現代的なオプション解析ライブラリの基礎となっています。getoptlong.shは、このアイデアをBashで実現しようとするものです。
+getoptlong.shはPerlの[Getopt::Long](https://perldoc.perl.org/Getopt::Long)からインスパイアされています。Getopt::Longは、GNU getoptのロングオプション記法をPerlで実装したライブラリで、宣言的なオプション定義や豊富なデータ型などの機能を提供しています。そのアイデアは他の言語にも広がり、PythonのargparseやRubyのOptionParserなど、現代的なオプション解析ライブラリの基礎となっています。getoptlong.shは、このアイデアをBashで実現しようとするものです。
 
 ### AI音声解説
 
@@ -127,13 +131,14 @@ repeat.sh [ options ] args
 
 getoptlong.shは以下の機能を提供します：
 
-- **GNU形式の長いオプション**サポート（`--help`, `--verbose`など）
+- **GNU形式のロングオプション**サポート（`--help`, `--verbose`など）
 - **ショートオプションの連結**（`-abc`を`-a -b -c`として解釈）
 - **否定形式**（`--no-verbose`でフラグオプションを無効化）
 - **柔軟なオプション順序**（PERMUTEモード）
 - **豊富なデータ型**（フラグ、必須引数、省略可能な引数、配列、ハッシュ）
 - **バリデーション機能**（整数、浮動小数点、正規表現）
 - **コールバック関数**による柔軟な処理
+- **パススルー機能**（オプションと値の配列収集）
 - **自動ヘルプメッセージ生成**
 - **複数回呼び出し**によるサブコマンド対応
 
@@ -147,28 +152,28 @@ getoptlong.shは以下の機能を提供します：
 #!/usr/bin/env bash
 
 declare -A OPTS=(
-    [ verbose | v  ]=
-    [ file    | f: ]=
-    [ count   | c: ]=5
+    [ jedi    | j  ]=
+    [ config  | c: ]=
+    [ droids  | d: ]=42
 )
 
 # PATHにgetoptlong.shがあれば、パスを指定する必要はありません
 . getoptlong.sh OPTS "$@"
 
-echo "verbose: $verbose"
-echo "file: $file" 
-echo "count: $count"
+echo "jedi: $jedi"
+echo "config: $config" 
+echo "droids: $droids"
 echo "remaining args: $@"
 ```
 
 これだけで以下のようなオプション解析が可能になります：
 
 ```bash
-$ ./myscript.sh --verbose -f input.txt --count 10 arg1 arg2
-verbose: 1
-file: input.txt
-count: 10
-remaining args: arg1 arg2
+$ ./myscript.sh --jedi -c death-star.conf --droids 2 luke leia
+jedi: 1
+config: death-star.conf
+droids: 2
+remaining args: luke leia
 ```
 
 説明文を指定しなくても、実用的なヘルプメッセージが自動生成されます。オプション定義から自動的に使用方法、各オプションの説明、デフォルト値まで表示してくれます：
@@ -176,10 +181,10 @@ remaining args: arg1 arg2
 ```bash
 $ ./myscript.sh -h
 myscript.sh [ options ] args
-    --count=#  -c#  set COUNT (default:5)
-    --file=#   -f#  set FILE
-    --help     -h   show HELP
-    --verbose  -v   enable VERBOSE
+    --config=#  -c#  set CONFIG
+    --droids=#  -d#  set DROIDS (default:42)
+    --help      -h   show HELP
+    --jedi      -j   enable JEDI
 ```
 
 ### 2. 段階的な方法
@@ -218,18 +223,19 @@ echo "Verbose: $verbose"
 ### オプション定義の構文
 
 ```
-[option_name|alias TYPE MODIFIER VALIDATION # description]=initial_value
+[OPTION_NAME|ALIAS TYPE MODIFIER DESTINATION VALIDATION # DESCRIPTION]=INITIAL_VALUE
 ```
 
 各部分の説明：
 
-- **option_name**: 長いオプション名（`--option-name`）
-- **alias**: 短いオプション名（`-o`）
+- **OPTION_NAME**: ロングオプション名（`--option-name`）
+- **ALIAS**: 短いオプション名（`-o`）
 - **TYPE**: データ型（`+`, `:`, `?`, `@`, `%`）
 - **MODIFIER**: 特殊な動作（`!`, `>`）
+- **DESTINATION**: 出力先変数名（省略時はOPTION_NAMEを使用）
 - **VALIDATION**: バリデーション（`=i`, `=f`, `=(正規表現)`）
-- **description**: ヘルプメッセージ用の説明
-- **initial_value**: 初期値
+- **DESCRIPTION**: ヘルプメッセージ用の説明
+- **INITIAL_VALUE**: 初期値
 
 ### データ型の種類
 
@@ -302,35 +308,40 @@ $ ./script.sh -D "key1=value1,key2=value2,key3=value3"
 # define[key1]="value1", define[key2]="value2", define[key3]="value3"
 ```
 
-### カンマ区切りでの複数値設定
+#### 値の自動分割
 
 配列オプション（`@`）やハッシュオプション（`%`）では、カンマ区切りで複数の値を一度に設定できます。これは`DELIM`設定によるもので、デフォルトでスペース、タブ、カンマが区切り文字として認識されます。
 
-### 変数名の指定
+### 修飾子（MODIFIER）
 
-デフォルトでは、オプション名から自動的に変数名が決まりますが、明示的に変数名を指定することもできます：
+#### コールバック修飾子（`!`）
+
+オプションが指定されたときに自動的に関数を呼び出します：
 
 ```bash
+#!/usr/bin/env bash
+
+# コールバック関数を定義
+trace() { 
+    [[ $2 ]] && set -x || set +x 
+}
+
 declare -A OPTS=(
-    [ count  | c :COUNT=i ]=1        # countオプションの値をCOUNT変数に格納
-    [ debug  | d +DEBUG   ]=0        # debugオプションの値をDEBUG変数に格納
-    [ files  | f @FILES   ]=         # filesオプションの値をFILES配列に格納
-    [ config | c %CONFIG  ]=         # configオプションの値をCONFIG連想配列に格納
+    [ trace   | x ! # trace execution ]=
+    [ verbose | v                      ]=
 )
 
 . getoptlong.sh OPTS "$@"
 
-echo "Count: $COUNT"
-echo "Debug level: $DEBUG"
-echo "Files: ${FILES[@]}"
-echo "Config keys: ${!CONFIG[@]}"
+# --trace が指定されると trace 関数が自動実行される
+echo "This will be traced if --trace was specified"
 ```
 
-また、`PREFIX=opt_`のようにコンフィグオプションを指定すれば、各オプション名の前に`opt_`をつけた変数が使われます。
+関数には第1引数（`$1`）にオプション名、第2引数（`$2`）に値が渡されます。
 
-### パススルーオプション
+#### パススルー修飾子（`>`）
 
-パススルー機能（`>`）を使うと、オプションとその値をそのまま配列に収集できます：
+オプションとその値をそのまま配列に収集します：
 
 ```bash
 declare -A OPTS=(
@@ -359,41 +370,84 @@ declare -A OPTS=(
 echo "All file options: ${files[@]}"
 ```
 
-## バリデーション
+### DESTINATION変数の指定
+
+#### デフォルトの変数名
+デフォルトでは、オプション名がそのまま変数名になります：
 
 ```bash
 declare -A OPTS=(
-    [ port    | p :=i              ]=8080     # 整数
-    [ rate    | r :=f              ]=1.5      # 浮動小数点
-    [ zipcode | z :=(^[0-9]{3}-[0-9]{4}$) ]=  # 正規表現（郵便番号）
+    [ verbose | v ]=
+    [ count   | c: ]=
 )
+
+# verbose=1, count=5 のような変数が作成される
 ```
 
-正規表現バリデーションでは、パターンを括弧で囲みます。
-
-## コールバック関数
-
-getoptlong.shでは、オプション名に`!`を付けることで、そのオプション名と同じ名前の関数が自動的に呼び出されます。この時、関数にはオプション名（`$1`）と値（`$2`）が引数として渡されます：
+#### 明示的な変数名指定
+DESTINATION部分で出力先変数名を明示的に指定できます：
 
 ```bash
-#!/usr/bin/env bash
-
-# コールバック関数を定義
-trace() { 
-    [[ $2 ]] && set -x || set +x 
-}
-
 declare -A OPTS=(
-    [ trace   | x ! # trace execution ]=
-    [ verbose | v                      ]=
+    [ count  | c :COUNT=i ]=1        # countオプションの値をCOUNT変数に格納
+    [ debug  | d +DEBUG   ]=0        # debugオプションの値をDEBUG変数に格納
+    [ files  | f @FILES   ]=         # filesオプションの値をFILES配列に格納
+    [ config | c %CONFIG  ]=         # configオプションの値をCONFIG連想配列に格納
 )
 
 . getoptlong.sh OPTS "$@"
 
-# --trace が指定されると trace 関数が自動実行される
-echo "This will be traced if --trace was specified"
+echo "Count: $COUNT"
+echo "Debug level: $DEBUG"
+echo "Files: ${FILES[@]}"
+echo "Config keys: ${!CONFIG[@]}"
 ```
 
+
+## バリデーション
+
+getoptlong.shでは、オプションの値に対して自動的なバリデーションを行うことができます。
+
+### バリデーション種類
+
+#### 整数バリデーション（`=i`）
+```bash
+declare -A OPTS=(
+    [ port | p :=i ]=8080
+)
+
+# 使用例
+$ ./script.sh --port 1337        # OK
+$ ./script.sh --port abc         # エラー: abc: not an integer
+```
+
+#### 浮動小数点バリデーション（`=f`）
+```bash
+declare -A OPTS=(
+    [ rate | r :=f ]=1.5
+)
+
+# 使用例
+$ ./script.sh --rate 2.718       # OK
+$ ./script.sh --rate .5          # OK
+$ ./script.sh --rate hello       # エラー: hello: not a float
+```
+
+#### 正規表現バリデーション（`=(pattern)`）
+```bash
+declare -A OPTS=(
+    [ zipcode | z :=(^[0-9]{3}-[0-9]{4}$)  ]=     # 郵便番号
+    [ color   | c :=(^(red|green|blue)$)   ]=     # 選択肢
+)
+
+# 使用例
+$ ./script.sh --zipcode 101-0054  # OK
+$ ./script.sh --zipcode 12345     # エラー: 12345: does not match pattern
+$ ./script.sh --color red         # OK
+$ ./script.sh --color yellow      # エラー: yellow: does not match pattern
+```
+
+正規表現バリデーションでは、パターンを括弧で囲みます。バリデーションに失敗した場合、スクリプトはエラーメッセージを出力して終了します。
 
 
 ## ヘルプメッセージの自動生成
@@ -433,7 +487,7 @@ script.sh [ options ] args
 | 機能 | getopts | getoptions | getoptlong.sh |
 |------|---------|------------|---------------|
 | **対応シェル** | POSIX | POSIX | Bash専用 |
-| **長いオプション** | ❌ | ✅ | ✅ |
+| **ロングオプション** | ❌ | ✅ | ✅ |
 | **ショートオプション連結** | ✅ | ✅ | ✅ |
 | **否定形式** | ❌ | ✅ | ✅ |
 | **+で始まるオプション** | ❌ | ✅ | ❌ |
@@ -444,6 +498,7 @@ script.sh [ options ] args
 | **バリデーション** | ❌ | 限定的 | ✅(正規表現対応) |
 | **ヘルプ生成** | 手動 | 自動 | 自動 |
 | **コールバック** | ❌ | ✅ | ✅ |
+| **パススルー機能** | ❌ | ❌ | ✅ |
 | **設定方法** | 手続き的 | 宣言的 | 宣言的 |
 | **外部依存** | なし | なし | なし |
 | **学習コスト** | 低 | 中 | 中 |
@@ -532,7 +587,7 @@ declare -A OPTS=(
 getoptlong.shを使うことで、Bashスクリプトでも本格的なコマンドラインツールと同等のオプション解析が可能になります。特に以下の点で従来の`getopts`から大幅に改善されます：
 
 1. **開発効率の向上**: ワンライナーで高機能なオプション解析
-2. **ユーザビリティの向上**: 長いオプション、自動ヘルプ、柔軟な引数順序
+2. **ユーザビリティの向上**: ロングオプション、自動ヘルプ、柔軟な引数順序
 3. **保守性の向上**: 型安全性、バリデーション、構造化されたオプション定義
 
 Bash専用という制約はありますが、その分Bashの機能を最大限活用できる設計になっています。複雑なBashスクリプトを書く際は、ぜひgetoptlong.shの導入を検討してみてください。スクリプトの品質とユーザー体験が大幅に向上するはずです。
@@ -543,6 +598,8 @@ Bash専用という制約はありますが、その分Bashの機能を最大限
 
 - [getoptlong.sh GitHub リポジトリ](https://github.com/tecolicom/getoptlong)
 - [getoptions GitHub リポジトリ](https://github.com/ko1nksm/getoptions)
+- [Getopt::Long (Perl)](https://perldoc.perl.org/Getopt::Long) - getoptlong.shのインスピレーション元
+- [Getopt::EX::Hashed GitHub リポジトリ](https://github.com/kaz-utashiro/Getopt-EX-Hashed)
 - より詳細な例は`ex/`ディレクトリをご確認ください
 
 ### getoptions 関連記事
@@ -555,4 +612,4 @@ Bash専用という制約はありますが、その分Bashの機能を最大限
 
 ## この記事について
 
-この記事は[Claude Code](https://claude.ai/code)によって生成されたものをそのまま掲載しています。AIによるコード生成と技術文書作成の一例として、編集を加えることなく公開しています。
+この記事は[Claude Code](https://claude.ai/code)によって生成したものを無編集で掲載しています。
