@@ -7,7 +7,7 @@ tags:
   - getopts
   - getoptlong
 private: false
-updated_at: '2025-07-08T07:35:53+09:00'
+updated_at: '2025-07-08T17:41:02+09:00'
 id: 75a7df9e1a1e92797376
 organization_url_name: null
 slide: false
@@ -15,7 +15,7 @@ ignorePublish: false
 ---
 ## はじめに
 
-Bashスクリプトでコマンドラインオプションを解析する際、`getopts`や`getopt`が定番の選択肢です。しかし、これらを使った場合でも結局は一つ一つのオプションを手動で処理する必要があり、さらに以下のような問題に直面することがあります：
+Bashスクリプトでコマンドラインオプションを解析する際、[`getopts`](https://www.gnu.org/software/bash/manual/html_node/Bourne-Shell-Builtins.html#index-getopts)や[`getopt`](https://man7.org/linux/man-pages/man1/getopt.1.html)が定番の選択肢です。しかし、これらを使った場合でも結局は一つ一つのオプションを手動で処理する必要があり、さらに以下のような問題に直面することがあります：
 
 - `getopts`ではロングオプション（`--verbose`）が使えない
 - `getopts`ではオプションと引数の順序が固定されている
@@ -29,11 +29,11 @@ Bashスクリプトでコマンドラインオプションを解析する際、`
 
 他の言語では高度なオプション解析ライブラリが充実しているのに、Bash専用の定番ソリューションが不足していました。この問題を解決するのが[**getoptlong.sh**](https://github.com/tecolicom/getoptlong)です。
 
-getoptlong.shはPerlの[Getopt::Long](https://perldoc.perl.org/Getopt::Long)からインスパイアされています。Getopt::Longは、GNU getoptのロングオプション記法をPerlで実装したライブラリで、宣言的なオプション定義や豊富なデータ型などの機能を提供しています。そのアイデアは他の言語にも広がり、PythonのargparseやRubyのOptionParserなど、現代的なオプション解析ライブラリの基礎となっています。getoptlong.shは、このアイデアをBashで実現しようとするものです。
+getoptlong.shはPerlの[Getopt::Long](https://perldoc.perl.org/Getopt::Long)からインスパイアされています。Getopt::Longは、[GNU getopt](https://www.gnu.org/software/libc/manual/html_node/Getopt.html)のロングオプション記法をPerlで実装したライブラリで、宣言的なオプション定義や豊富なデータ型などの機能を提供しています。そのアイデアは他の言語にも広がり、Pythonの[argparse](https://docs.python.org/3/library/argparse.html)やRubyの[OptionParser](https://docs.ruby-lang.org/en/3.0/OptionParser.html)など、現代的なオプション解析ライブラリの基礎となっています。getoptlong.shは、このアイデアを[Bash](https://www.gnu.org/software/bash/)で実現しようとするものです。
 
 ### AI音声解説
 
-README（julesに書いてもらいました）をNotebookLMに読み込ませて、getoptlong.shについて音声で紹介してもらいました。NotebookLMの音声生成は噂には聞いていましたが、実際に試してみると想像以上の出来栄えで驚きました。AIとは思えないほど自然な会話形式で、なかなか面白い仕上がりになっています。
+[README](https://github.com/tecolicom/getoptlong#readme)（[jules](https://jules.google/)に書いてもらいました）を[NotebookLM](https://notebooklm.google.com/)に読み込ませて、getoptlong.shについて音声で紹介してもらいました。NotebookLMの音声生成は噂には聞いていましたが、実際に試してみると想像以上の出来栄えで驚きました。AIとは思えないほど自然な会話形式で、なかなか面白い仕上がりになっています。
 
 **⚠️ 注意**: AI生成コンテンツのため、内容に勘違いや間違った表現が含まれています。正確な情報については、この記事の内容をご参照ください。
 
@@ -476,7 +476,7 @@ script.sh [ options ] args
 
 ## 他のオプション解析ライブラリとの比較
 
-シェルスクリプト用のオプション解析ライブラリには複数の選択肢があります。なかでも注目すべきは [getoptions](https://github.com/ko1nksm/getoptions) で、これは POSIX 互換で複数シェル対応の軽量ライブラリです。外部コマンドに依存しない純粋なシェルスクリプト実装により、dash、bash、ksh、zshなど幅広いシェルで動作します。
+シェルスクリプト用のオプション解析ライブラリには複数の選択肢があります。なかでも注目すべきは [getoptions](https://github.com/ko1nksm/getoptions) で、これは [POSIX](https://pubs.opengroup.org/onlinepubs/9699919799/) 互換で複数シェル対応の軽量ライブラリです。外部コマンドに依存しない純粋なシェルスクリプト実装により、[dash](http://gondor.apana.org.au/~herbert/dash/)、[bash](https://www.gnu.org/software/bash/)、[ksh](http://kornshell.org/)、[zsh](https://www.zsh.org/)など幅広いシェルで動作します。
 
 主要なライブラリと getoptlong.sh を比較してみましょう。
 
