@@ -97,6 +97,48 @@ load test_helper.bash
     assert_output "feature_val:"
 }
 
+# Test: Flag option, repeated long options
+@test "getoptlong: flag - repeated long --level --level --level" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([level|l]=0)
+        getoptlong init OPTS
+        getoptlong parse --level --level --level
+        eval "$(getoptlong set)"
+        echo "level_val:$level"
+    '
+    assert_success
+    assert_output "level_val:3"
+}
+
+# Test: Flag option, repeated short options
+@test "getoptlong: flag - repeated short -l -l -l" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([level|l]=0)
+        getoptlong init OPTS
+        getoptlong parse -l -l -l
+        eval "$(getoptlong set)"
+        echo "level_val:$level"
+    '
+    assert_success
+    assert_output "level_val:3"
+}
+
+# Test: Flag option, mixed long and short
+@test "getoptlong: flag - mixed --level -l --level" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([level|l]=0)
+        getoptlong init OPTS
+        getoptlong parse --level -l --level
+        eval "$(getoptlong set)"
+        echo "level_val:$level"
+    '
+    assert_success
+    assert_output "level_val:3"
+}
+
 # Test: Option with required argument (--file data.txt)
 @test "getoptlong: required arg - long --file data.txt" {
     run bash -c '

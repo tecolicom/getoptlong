@@ -162,7 +162,8 @@ _gol_call_hook() {
 }
 _gol_getopts_long() { local _non _param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
-    _non="${_MATCH[1]}" _optname="${_MATCH[2]}" _param="${_MATCH[3]}" _val="${_MATCH[4]}"
+    _non="${_MATCH[1]}" _optname="${_MATCH[2]}" _param="${_MATCH[3]}"
+    [[ $_param ]] && _val="${_MATCH[4]}"
     [[ $(_gol_opts $_optname) =~ ^([$_IS_ANY]+)([$_IS_MOD]?)([_[:alnum:]]+) ]] || {
 	[[ $_EXIT_ON_ERROR ]] && _gol_die "no such option -- --$_optname" || return 2
     }
@@ -171,11 +172,11 @@ _gol_getopts_long() { local _non _param ;
 	[[ $_vtype =~ [${_IS_REQ}${_IS_MAYB}] ]] || _gol_die "does not take an argument -- $_optname"
     else
 	case $_vtype in
-	    [$_IS_MAYB]) ;;
+	    [$_IS_MAYB]) _val= ;;
 	    [$_IS_REQ])
 		(( OPTIND > $# )) && _gol_die "option requires an argument -- $_optname"
 		_val="${@:$((OPTIND++)):1}" ;;
-	    *) [[ $_non ]] && _val= || unset _val ;;
+	    *) [[ $_non ]] && _val= ;;
 	esac
     fi
     return 0
