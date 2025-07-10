@@ -248,25 +248,25 @@ gol_help_() {
     (( $# < 2 )) && { _gol_show_help "$@" ; return 0 ; }
     while (($# > 1)) ; do _gol_help "$1" "$2" ; shift 2 ; done
 }
-_gol_show_help() { local _key _aliases _init= _default= _column ;
+_gol_show_help() { local _key _aliases _init= _default= _column _flag _msg ;
     echo "${1:-${_USAGE:-$(basename $0) [ options ] args}}"
     _column=($(command -v column)) && _column+=(-s $'\t' -t) || _column=(cat)
     for _key in "${!_opts[@]}" ; do
 	_aliases="$(_gol_saila "$_key")" || continue
-	msg="$(_gol_help $_key)" || {
+	_msg="$(_gol_help $_key)" || {
 	    _init="$(_gol_ival $_key)" && _default="${_init:+ (default:$_init)}"
 	    [[ $_init =~ ^[0-9]+$ ]] && _flag=bump || _flag=enable
 	    [[ "${_opts[$_key]}" =~ ([^[:alnum:]]+)(.*) ]] || _gol_die "${_opts[$_key]}: invalid entry"
 	    case "${_MATCH[1]}" in
-		*[$_IS_PASS]) msg="passthrough to ${_MATCH[2]^^}" ;;
-		*[$_IS_FLAG]) msg="$_flag ${_key^^}$_default" ;;
-		*[$_IS_NEED]) msg="set ${_key^^}$_default" ;;
-		*[$_IS_LIST]) msg="add item(s) to ${_key^^}" ;;
-		*[$_IS_HASH]) msg="set KEY=VALUE(s) in ${_key^^}" ;;
-		*[$_IS_MAYB]) msg="enable/set ${_key^^}" ;;
+		*[$_IS_PASS]) _msg="passthrough to ${_MATCH[2]^^}" ;;
+		*[$_IS_FLAG]) _msg="$_flag ${_key^^}$_default" ;;
+		*[$_IS_NEED]) _msg="set ${_key^^}$_default" ;;
+		*[$_IS_LIST]) _msg="add item(s) to ${_key^^}" ;;
+		*[$_IS_HASH]) _msg="set KEY=VALUE(s) in ${_key^^}" ;;
+		*[$_IS_MAYB]) _msg="enable/set ${_key^^}" ;;
 	    esac
 	}
-	printf '    %s\t%1s\t%s\n' "$(_gol_optize $_key)" "$(_gol_optize $_aliases)" "$msg"
+	printf '    %s\t%1s\t%s\n' "$(_gol_optize $_key)" "$(_gol_optize $_aliases)" "$_msg"
     done | sort | "${_column[@]}"
 }
 _gol_optize() { local _name _opt _optlist _eq ;
