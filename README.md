@@ -4,7 +4,7 @@ This site contains documentation and media files for the getoptlong project.
 
 ## Contents
 
-- [**Qiita Article**](./articles/qiita_article) - Comprehensive guide to getoptlong.sh usage and features
+- [**Qiita Article**](./qiita-article) - Comprehensive guide to getoptlong.sh usage and features
 - [Audio Explanation](./notebooklm.wav) - AI-generated explanation of the project
 
 ## About getoptlong.sh

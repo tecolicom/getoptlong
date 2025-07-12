@@ -11,6 +11,10 @@ highlighter: rouge
 # Disable automatic page navigation
 header_pages: []
 
+# Exclude specific files from navigation
+exclude:
+  - qiita-article.md
+
 defaults:
   - scope:
       path: ""
