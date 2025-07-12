@@ -8,6 +8,9 @@ plugins:
 markdown: kramdown
 highlighter: rouge
 
+# Disable automatic page navigation
+header_pages: []
+
 defaults:
   - scope:
       path: ""
