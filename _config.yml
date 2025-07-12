@@ -1,0 +1,16 @@
+title: "getoptlong.sh Documentation"
+description: "Documentation and resources for getoptlong.sh"
+theme: minima
+
+plugins:
+  - jekyll-feed
+
+markdown: kramdown
+highlighter: rouge
+
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
