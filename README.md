@@ -324,7 +324,7 @@ declare -A OPTS=(
 
 *   **INITIAL VALUE:** Specified as the value of the associative array element.  This becomes the default value if the option is not provided on the command line.  Behavior varies by type if not specified (e.g., flags default to empty string, arrays to empty array).
 
-After parsing with `getoptlong parse` and setting variables with `eval "$(getoptlong set)"`, shell variables corresponding to the options (either default names or custom `destination` names) are populated.  The `PREFIX` configuration can add a common prefix to these variable names.  Hyphens (`-`) in `name` are converted to underscores (`_`) for default variable names (e.g., `--very-verbose` becomes `$very_verbose` or `$PREFIX_very_verbose`).
+After parsing with `getoptlong parse` and setting variables with `eval "$(getoptlong set)"`, shell variables corresponding to the options (either default names or custom `destination` names) are populated.  The `PREFIX` configuration can add a common prefix to these variable names.  Hyphens (`-`) in `name` are converted to underscores (`_`) for default variable names (e.g., `--very-verbose` becomes `$very_verbose` or `${PREFIX}_very_verbose`).
 
 ### 3.2. Option Types and Type Specifiers
 
@@ -496,7 +496,7 @@ Validates if the argument is a floating-point number.
 
 *   **Definition Example:** `[ratio|r:RATIO=f # Ratio]` or `[ratio|r:=f # Ratio]`
 
-*   **Behavior:** If the argument is not a floating-point number (e.g., `123.45` is OK, `1.2e-3` may not be supported), an error message is displayed, and the script exits.
+*   **Behavior:** If the argument is not a floating-point number (e.g., `123.45` is OK, scientific notation like `1.2e-3` is not supported), an error message is displayed, and the script exits.
 
 *   Applicable to array options (`@...=f`) and the value part of hash options (`%...=f`).
 
