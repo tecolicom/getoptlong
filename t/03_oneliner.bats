@@ -301,3 +301,61 @@ load test_helper.bash
     assert_output --partial "Input file path"
     assert_output --partial "Number of iterations"
 }
+
+# Test: One-liner with PERMUTE= (stop at first non-option)
+@test "getoptlong: one-liner - PERMUTE= stops at first non-option" {
+    run bash -c '
+        declare -A OPTS=(
+            [&PERMUTE]=
+            [debug|d]=
+            [verbose|v]=
+        )
+        . ../getoptlong.sh OPTS --debug arg1 --verbose arg2
+        echo "debug:$debug"
+        echo "verbose:$verbose"
+        echo "args:$@"
+    '
+    assert_success
+    assert_line --index 0 "debug:1"
+    assert_line --index 1 "verbose:"
+    assert_line --index 2 "args:arg1 --verbose arg2"
+}
+
+# Test: One-liner with PERMUTE= - remaining args with options
+@test "getoptlong: one-liner - PERMUTE= remaining args preserved" {
+    run bash -c '
+        declare -A OPTS=(
+            [&PERMUTE]=
+            [image|I:]=
+        )
+        . ../getoptlong.sh OPTS -I myimage ls -la
+        echo "image:$image"
+        echo "args:$@"
+        echo "argc:$#"
+    '
+    assert_success
+    assert_line --index 0 "image:myimage"
+    assert_line --index 1 "args:ls -la"
+    assert_line --index 2 "argc:2"
+}
+
+# Test: One-liner with PERMUTE= - no remaining args
+@test "getoptlong: one-liner - PERMUTE= no remaining args" {
+    run bash -c '
+        declare -A OPTS=(
+            [&PERMUTE]=
+            [debug|d]=
+            [file|f:]=
+        )
+        . ../getoptlong.sh OPTS -d --file test.txt
+        echo "debug:$debug"
+        echo "file:$file"
+        echo "args:$@"
+        echo "argc:$#"
+    '
+    assert_success
+    assert_line --index 0 "debug:1"
+    assert_line --index 1 "file:test.txt"
+    assert_line --index 2 "args:"
+    assert_line --index 3 "argc:0"
+}

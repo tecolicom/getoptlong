@@ -4,7 +4,7 @@
 # GetOptLong: Getopt Library for Bash Script
 # Copyright 2025 Office TECOLI, LLC <https://github.com/tecolicom/getoptlong>
 # MIT License: See <https://opensource.org/licenses/MIT>
-: ${GOL_VERSION:=0.01}
+: ${GOL_VERSION:=0.02}
 ###############################################################################
 # Check for nameref support (bash 4.3+)
 declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
@@ -297,7 +297,7 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
 	_gol_debug "SAVE PARAM: ${!OPTIND}"
 	SAVEARG+=("${!OPTIND}")
     done
-    [[ $_PERMUTE ]] && set -- "${SAVEARG[@]}" "${@:$OPTIND}" || shift $(( OPTIND - 1 ))
+    set -- "${SAVEARG[@]}" "${@:$OPTIND}"
     OPTIND=${SAVEIND:-$OPTIND}
     _gol_debug "ARGV=(${@@Q})"
     [[ $_PERMUTE ]] && { declare -n _gol_argv=$_PERMUTE ; _gol_argv=("$@") ; }
@@ -306,7 +306,7 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
 gol_set () { _gol_redirect "$@" ; }
 gol_set_() {
     [[ $_PERMUTE ]] && printf 'set -- "${%s[@]}"\n' "$_PERMUTE" \
-		    || echo 'shift $(( OPTIND-1 ))'
+		    || echo 'set -- "${@:$OPTIND}"'
 }
 # Main entry point - dispatch to appropriate subcommand
 getoptlong () {
@@ -318,5 +318,5 @@ getoptlong () {
 }
 # Auto-initialization if first argument is an associative array
 if [[ $(declare -p "${1-}" 2> /dev/null) =~ ^declare\ -A ]] ; then
-    gol_init "$1" && gol_parse "${@:2}" && eval "$(gol_set)"
+    gol_init "$1" && shift && gol_parse "$@" && eval "$(gol_set)"
 fi
