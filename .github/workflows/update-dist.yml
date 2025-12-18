@@ -38,3 +38,33 @@ jobs:
             git commit -m "Update getoptlong.sh from ${{ github.ref_name }}"
             git push origin dist
           fi
+
+      - name: Update major version branch
+        run: |
+          TAG="${{ github.ref_name }}"
+          # Extract major version (v1.2.3 -> v1)
+          if [[ "$TAG" =~ ^v([0-9]+)\. ]]; then
+            MAJOR="v${BASH_REMATCH[1]}"
+            echo "Updating major version branch: $MAJOR"
+
+            # Check if branch exists on remote
+            if git ls-remote --exit-code --heads origin "$MAJOR" > /dev/null 2>&1; then
+              # Branch exists, update it
+              git checkout "$MAJOR"
+              cp /tmp/getoptlong.sh getoptlong.sh
+              if git diff --quiet; then
+                echo "No changes to commit on $MAJOR"
+              else
+                git add getoptlong.sh
+                git commit -m "Update getoptlong.sh from $TAG"
+                git push origin "$MAJOR"
+              fi
+            else
+              # Branch doesn't exist, create from dist
+              git checkout -b "$MAJOR" dist
+              git push origin "$MAJOR"
+              echo "Created new branch: $MAJOR"
+            fi
+          else
+            echo "Tag $TAG does not match vX.Y.Z pattern, skipping"
+          fi
