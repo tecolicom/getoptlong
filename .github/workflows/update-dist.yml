@@ -1,0 +1,40 @@
+name: Update dist branch
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-dist:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update dist branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Get getoptlong.sh from the release tag
+          git show HEAD:getoptlong.sh > /tmp/getoptlong.sh
+
+          # Switch to dist branch
+          git checkout dist
+
+          # Update the file
+          cp /tmp/getoptlong.sh getoptlong.sh
+
+          # Commit and push if there are changes
+          if git diff --quiet; then
+            echo "No changes to commit"
+          else
+            git add getoptlong.sh
+            git commit -m "Update getoptlong.sh from ${{ github.ref_name }}"
+            git push origin dist
+          fi
