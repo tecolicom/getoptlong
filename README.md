@@ -1281,6 +1281,16 @@ Within the option definition array (`OPTS`), you can use special keys in the for
 
     *   Default: Not specified (Synopsis is not displayed unless an argument is passed to `getoptlong help`).
 
+*   **`&REQUIRE=<version>`**
+
+    *   Description: Specifies the minimum required version of `getoptlong.sh`. If the current version is older than the specified version, the script will exit with an error message.
+
+    *   Example: `[&REQUIRE]="0.2"`
+
+    *   Default: Not specified (no version check).
+
+    *   Note: Version comparison correctly handles numeric ordering (e.g., `0.2 < 0.10 < 1.0`).
+
 *   **Other Configuration Keys:**
 
     *   The current documentation does not explicitly mention other `&KEY` format settings, but depending on the library version, other settings (e.g., `&DELIM`, `&PREFIX`) might be supported. For accurate information, please check the documentation or source code corresponding to the version of `getoptlong.sh` you are using.

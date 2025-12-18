@@ -30,6 +30,7 @@ _gol_dest()  {
 _gol_type()  { [[ ${_opts["$1"]} =~ ^([^[:alnum:]]+) ]] && echo "${_MATCH[1]}" || _gol_die "$1: unexpected" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_plusone() { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
+_gol_vstr() { set -- ${1//./ } 0 0; printf '%03d.%03d%03d' "$1" "$2" "$3" ; }
 # Main redirection function - sets up environment and delegates to implementation
 _gol_redirect() { local _name ;
     declare -n _opts=$GOL_OPTHASH
@@ -69,7 +70,7 @@ gol_init() { local _key ;
 }
 ################################################################################
 gol_init_() { local _key _aliases _alias _help ;
-    [[ $_REQUIRE && $GOL_VERSION < $_REQUIRE ]] && _gol_die "getoptlong version $GOL_VERSION < $_REQUIRE"
+    [[ $_REQUIRE && $(_gol_vstr $GOL_VERSION) < $(_gol_vstr $_REQUIRE) ]] && _gol_die "getoptlong version $GOL_VERSION < $_REQUIRE"
     for _key in "${!_opts[@]}" ; do
 	[[ $_key =~ ^[$_MARKS] ]] && continue
 	_gol_init_entry "$_key"
