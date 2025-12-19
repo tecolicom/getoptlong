@@ -391,6 +391,8 @@ Options that always require a value.
 
 *   **Initial Value:** Results in an error if not specified, but an initial value can be set during definition (e.g., `]=/dev/stdout`).
 
+*   **Negation with `no-` Prefix:** Specifying with `--no-output` sets the variable to an empty string without requiring an argument. This is useful for options like `--pager` where `--no-pager` can disable the pager.
+
 *   **Use Cases:** Specifying file paths, required parameters.
 
 #### 4.2.3. Optional Argument Options (`?`)

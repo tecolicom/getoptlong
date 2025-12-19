@@ -175,8 +175,10 @@ _gol_getopts_long() { local _non _param ;
 	case $_vtype in
 	    [$_IS_MAYB]) _val= ;;
 	    [$_IS_REQ])
-		(( OPTIND > $# )) && _gol_die "option requires an argument -- $_optname"
-		_val="${@:$((OPTIND++)):1}" ;;
+		if [[ $_non ]] ; then _val= ; else
+		    (( OPTIND > $# )) && _gol_die "option requires an argument -- $_optname"
+		    _val="${@:$((OPTIND++)):1}"
+		fi ;;
 	    *) [[ $_non ]] && _val= ;;
 	esac
     fi

@@ -590,3 +590,48 @@ END
   assert_output "option requires an argument -- myfile"
 }
 
+# Test: --no-X prefix for required argument option sets empty string
+@test "getoptlong: required arg - negated --no-pager sets empty string" {
+  run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([pager|p:]=default_pager)
+        getoptlong init OPTS
+        getoptlong parse --no-pager
+        eval "$(getoptlong set)"
+        echo "pager_val:[$pager]"
+  '
+  assert_success
+  assert_output "pager_val:[]"
+}
+
+# Test: --no-X with short option alias for required argument option
+@test "getoptlong: required arg - negated --no-file sets empty string" {
+  run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([file|f:]=original.txt)
+        getoptlong init OPTS
+        getoptlong parse --no-file
+        eval "$(getoptlong set)"
+        echo "file_val:[$file]"
+  '
+  assert_success
+  assert_output "file_val:[]"
+}
+
+# Test: --no-X does not consume next argument
+@test "getoptlong: required arg - negated --no-pager does not consume next arg" {
+  run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([pager|p:]=default)
+        getoptlong init OPTS PERMUTE=
+        set -- --no-pager arg1 arg2
+        getoptlong parse "$@"
+        eval "$(getoptlong set)"
+        echo "pager:[$pager]"
+        echo "args:$*"
+  '
+  assert_success
+  assert_line --index 0 "pager:[]"
+  assert_line --index 1 "args:arg1 arg2"
+}
+
