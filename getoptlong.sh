@@ -4,7 +4,7 @@
 # GetOptLong: Getopt Library for Bash Script
 # Copyright 2025 Office TECOLI, LLC <https://github.com/tecolicom/getoptlong>
 # MIT License: See <https://opensource.org/licenses/MIT>
-: ${GOL_VERSION:=0.3}
+: ${GOL_VERSION:=0.3.0}
 ###############################################################################
 # Check for nameref support (bash 4.3+)
 declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
@@ -30,7 +30,7 @@ _gol_dest()  {
 _gol_type()  { [[ ${_opts["$1"]} =~ ^([^[:alnum:]]+) ]] && echo "${_MATCH[1]}" || _gol_die "$1: unexpected" ; }
 _gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_plusone() { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
-_gol_vstr() { set -- ${1//./ } 0 0; printf '%03d.%03d%03d' "$1" "$2" "$3" ; }
+_gol_vstr() { printf "%03d." ${1//./ } ; }
 # Main redirection function - sets up environment and delegates to implementation
 _gol_redirect() { local _name ;
     declare -n _opts=$GOL_OPTHASH
