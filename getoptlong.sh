@@ -4,7 +4,7 @@
 # GetOptLong: Getopt Library for Bash Script
 # Copyright 2025 Office TECOLI, LLC <https://github.com/tecolicom/getoptlong>
 # MIT License: See <https://opensource.org/licenses/MIT>
-: ${GOL_VERSION:=0.3.0}
+: ${GOL_VERSION:=0.4.0}
 ###############################################################################
 # Check for nameref support (bash 4.3+)
 declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
@@ -175,8 +175,10 @@ _gol_getopts_long() { local _non _param ;
 	case $_vtype in
 	    [$_IS_MAYB]) _val= ;;
 	    [$_IS_REQ])
-		(( OPTIND > $# )) && _gol_die "option requires an argument -- $_optname"
-		_val="${@:$((OPTIND++)):1}" ;;
+		if [[ $_non ]] ; then _val= ; else
+		    (( OPTIND > $# )) && _gol_die "option requires an argument -- $_optname"
+		    _val="${@:$((OPTIND++)):1}"
+		fi ;;
 	    *) [[ $_non ]] && _val= ;;
 	esac
     fi
