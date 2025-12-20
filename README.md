@@ -113,7 +113,7 @@ curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlon
 
 `getoptlong.sh` offers two primary ways to integrate option parsing into your scripts: a simplified one-liner approach and a standard multi-step approach.
 
-### 3.1. Simple One-liner Usage
+### 3.1. Simplified Usage (One-liner)
 
 For many common use cases, `getoptlong.sh` can be invoked with a single line that sources the library, defines options, parses arguments, and sets variables. This is the quickest way to get started.
 
