@@ -868,7 +868,7 @@ To use this feature, append a greater-than symbol (`>`) to the option type speci
 
 *   **Basic Usage:**
 
-    When an option is defined with a trailing `>`, the option itself (e.g., `--option-name` or `-o`) and its value (if it takes one) are added as consecutive elements to a specified array.
+    When an option is defined with a trailing `>`, the option itself (e.g., `--option-name`, `--no-option-name`, or `-o`) and its value (if it takes one) are added as consecutive elements to a specified array.
 
     ```bash
     declare -A OPTS=(

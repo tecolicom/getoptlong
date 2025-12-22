@@ -347,3 +347,58 @@ load test_helper.bash
     assert_line --index 1 "arr_0:--number-opt"
     assert_line --index 2 "arr_1:not_a_number"
 }
+
+# Test: Passthru - negated flag option --no-debug
+@test "getoptlong: passthru - negated flag option --no-debug" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([debug+>debug_array]=)
+        declare -a debug_array=()
+        getoptlong init OPTS
+        getoptlong parse --no-debug
+        eval "$(getoptlong set)"
+        echo "arr_len:${#debug_array[@]}"
+        echo "arr_0:${debug_array[0]}"
+    '
+    assert_success
+    assert_line --index 0 "arr_len:1"
+    assert_line --index 1 "arr_0:--no-debug"
+}
+
+# Test: Passthru - negated option with required arg --no-pager
+@test "getoptlong: passthru - negated option with required arg --no-pager" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([pager:>pager_array]=)
+        declare -a pager_array=()
+        getoptlong init OPTS
+        getoptlong parse --no-pager
+        eval "$(getoptlong set)"
+        echo "arr_len:${#pager_array[@]}"
+        echo "arr_0:${pager_array[0]}"
+    '
+    assert_success
+    assert_line --index 0 "arr_len:1"
+    assert_line --index 1 "arr_0:--no-pager"
+}
+
+# Test: Passthru - mixed negated and normal options
+@test "getoptlong: passthru - mixed negated and normal options" {
+    run bash -c '
+        . ../getoptlong.sh
+        declare -A OPTS=([feature+>pass_array]=)
+        declare -a pass_array=()
+        getoptlong init OPTS
+        getoptlong parse --feature --no-feature --feature
+        eval "$(getoptlong set)"
+        echo "arr_len:${#pass_array[@]}"
+        echo "arr_0:${pass_array[0]}"
+        echo "arr_1:${pass_array[1]}"
+        echo "arr_2:${pass_array[2]}"
+    '
+    assert_success
+    assert_line --index 0 "arr_len:3"
+    assert_line --index 1 "arr_0:--feature"
+    assert_line --index 2 "arr_1:--no-feature"
+    assert_line --index 3 "arr_2:--feature"
+}
