@@ -4,7 +4,7 @@
 # GetOptLong: Getopt Library for Bash Script
 # Copyright 2025 Office TECOLI, LLC <https://github.com/tecolicom/getoptlong>
 # MIT License: See <https://opensource.org/licenses/MIT>
-: ${GOL_VERSION:=0.4.0}
+: ${GOL_VERSION:=0.4.1}
 ###############################################################################
 # Check for nameref support (bash 4.3+)
 declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
@@ -140,7 +140,7 @@ gol_optstring_() { local _key _string ;
     echo "${_SILENT:+:}${_string:- }-:"
 }
 gol_getopts () { _gol_redirect "$@" ; }
-gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pass= ;
+gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pass _non ;
     local _opt="$1"; shift;
     case $_opt in
 	[:?]) _callback=$(_gol_hook "$_opt") && [[ $_callback ]] && $_callback "$OPTARG"
@@ -148,10 +148,10 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pas
 	-) _gol_getopts_long "$@" || return $? ;;
 	*) _gol_getopts_short || return $? ;;
     esac
-    [[ -v _val || $_pass ]] || _val="$(_gol_plusone "$(_gol_value $_vname)")"
+    [[ -v _val || ${_pass-} ]] || _val="$(_gol_plusone "$(_gol_value $_vname)")"
     _name=$(_gol_alias ${_optname:-$_opt}) || _name=${_optname:=$_opt}
     _trigger="$(_gol_trig $_name)" && _gol_call_hook "$_trigger" "$_name"
-    [[ $_pass ]] && _gol_getopts_passthru || _gol_getopts_store
+    [[ ${_pass-} ]] && _gol_getopts_passthru || _gol_getopts_store
     _callback="$(_gol_hook $_name)" && _gol_call_hook "$_callback" "$_name" "$_val"
     return 0
 }
@@ -161,7 +161,7 @@ _gol_call_hook() {
     declare -F "${_call[0]}" > /dev/null \
 	&& "${exec[@]}" || _gol_die "callback function ${_call[0]}() is not defined"
 }
-_gol_getopts_long() { local _non _param ;
+_gol_getopts_long() { local _param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
     _non="${_MATCH[1]}" _optname="${_MATCH[2]}" _param="${_MATCH[3]}"
     [[ $_param ]] && _val="${_MATCH[4]}"
@@ -214,7 +214,7 @@ _gol_getopts_store() { local _vals _v ;
 }
 _gol_getopts_passthru() { local _options=() ;
     local _option=${_optname-$_opt}
-    (( ${#_option} > 1 )) && _options=(--$_option) || _options=(-$_option)
+    (( ${#_option} > 1 )) && _options=(--${_non-}$_option) || _options=(-$_option)
     [[ $_vtype =~ [$_IS_REQ] ]] && _options+=($_val)
     _gol_set_array $_vname "${_options[@]}"
 }
