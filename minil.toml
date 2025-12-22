@@ -1,0 +1,13 @@
+name           = "Getopt-Long-Bash"
+readme_from    = "script/getoptlong"
+badges         = [ "github-actions/test", "metacpan" ]
+module_maker   = "ModuleBuildTiny"
+static_install = "auto"
+
+script_files   = [ "script/getoptlong", "script/getoptlong.sh" ]
+
+[release]
+branch = "main"
+
+[unsupported]
+os = [ "MSWin32" ]

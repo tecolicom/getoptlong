@@ -22,7 +22,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Get getoptlong.sh from the release tag
-          git show HEAD:getoptlong.sh > /tmp/getoptlong.sh
+          git show HEAD:script/getoptlong.sh > /tmp/getoptlong.sh
 
           # Switch to dist branch
           git checkout dist

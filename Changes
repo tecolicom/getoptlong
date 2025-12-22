@@ -1,0 +1,5 @@
+Revision history for Getopt-Long-Bash
+
+{{$NEXT}}
+    - Initial CPAN release
+    - Bash library for Getopt::Long-like option parsing

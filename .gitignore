@@ -11,3 +11,18 @@
 node_modules/
 package.json
 package-lock.json
+
+# Perl/CPAN
+/Getopt-Long-Bash-*
+/.build/
+/Build
+/Build.bat
+/_build/
+/blib/
+/MANIFEST
+/MANIFEST.bak
+/META.json
+/META.yml
+/MYMETA.json
+/MYMETA.yml
+/.prove
