@@ -11,1075 +11,416 @@ source "$script_dir/getoptlong.sh" "$@"
 
 =head1 NAME
 
-getoptlong - Bash library for option parsing like Perl's Getopt::Long
+getoptlong - Option parsing that does what you mean, for Bash
 
 =head1 SYNOPSIS
 
-    #!/usr/bin/env bash
+B<One-liner:>
 
-    declare -A OPTS=(
-        [ debug     | d  ]=0
-        [ count     | c: ]=1
-    )
-
+    declare -A OPTS=( [verbose|v]= [output|o:]= )
     . getoptlong.sh OPTS "$@"
 
-    (( debug > 0 )) && echo "Debug mode is ON"
-    echo "$@"
+B<Multi-step:>
 
-=head1 DESCRIPTION
-
-B<getoptlong.sh> is a Bash library for parsing command-line options in
-shell scripts. It provides a flexible way to handle options including:
-
-=over 4
-
-=item * Clear and expressive option syntax
-
-=item * Both short options (C<-h>) and long options (C<--help>)
-
-=item * Options and non-option arguments freely mixed (PERMUTE)
-
-=item * Flag, required argument, optional argument, array, and hash options
-
-=item * Validation for integer, float, and custom regex patterns
-
-=item * Callback functions for each option
-
-=item * Multiple calls for subcommands
-
-=item * Automatic help option and help message generation
-
-=back
-
-=head1 INSTALLATION
-
-=head2 Via CPAN
-
-    cpanm Getopt::Long::Bash
-
-After installation, C<getoptlong.sh> will be available in your PATH.
-
-=head2 Direct from GitHub
-
-    # Latest stable version (recommended)
-    source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlong.sh)
-
-    # Specific version
-    source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/v0.2/getoptlong.sh)
-
-    # Latest major version (always gets the newest 0.x release)
-    source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/v0/getoptlong.sh)
-
-=head2 Local Installation
-
-    # Download to your project
-    curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlong.sh -o getoptlong.sh
-
-    # Source from your script
-    . ./getoptlong.sh
-
-=head1 BASIC USAGE
-
-=head2 Simplified Usage (One-liner)
-
-For many common use cases, C<getoptlong.sh> can be invoked with a single
-line that sources the library, defines options, parses arguments, and
-sets variables:
-
-    #!/usr/bin/env bash
-
-    # 1. Define the options array
-    declare -A OPTS=(
-        [ trace     | x  ]=    # Simple flag, sets 'trace' to 1 if present
-        [ debug     | d  ]=0   # Simple flag, with '0' as initial value
-        [ count     | c: ]=1   # Option with required argument
-    )
-
-    # 2. Source getoptlong.sh with OPTS array and script arguments
-    . getoptlong.sh OPTS "$@"
-
-    # 3. Use the parsed options
-    (( debug > 0 )) && echo "Debug mode is ON"
-
-    # 4. Process non-option parameters
-    echo "$@"
-
-When C<getoptlong.sh> is sourced with the options array name and
-arguments, it performs the following internally:
-
-=over 4
-
-=item * Sources itself, making its functions available
-
-=item * Initializes using the provided OPTS array
-
-=item * Parses the C<"$@"> arguments
-
-=item * Sets the corresponding shell variables and updates positional parameters
-
-=back
-
-=head2 Standard Multi-step Usage
-
-This method breaks down the process into distinct steps, offering more
-flexibility.
-
-=head3 Creating the Option Definition Array
-
-    declare -A OPTS=(
-        [verbose |v+ # Increase verbosity (cumulative)       ]=0
-        [output  |o: # Specify output file                   ]=/dev/stdout
-        [config  |c? # Specify configuration file (optional) ]=
-        [library |L@ # Add library path                      ]=()
-        [define  |D% # Define a variable (e.g., key=val)     ]=()
-    )
-
-A help option (C<--help>, C<-h>) is automatically available without
-explicit definition.
-
-=head3 Sourcing the Library
-
-    . $(dirname $0)/getoptlong.sh
-    # Or, if getoptlong.sh is in your PATH:
-    # . getoptlong.sh
-
-=head3 Initializing getoptlong
-
-    getoptlong init OPTS
-
-During initialization, you can specify configuration parameters:
-
-    declare -a ARGS
-    getoptlong init OPTS PERMUTE=ARGS EXIT_ON_ERROR=0
-
-=head3 Parsing Command-Line Arguments
-
-    if ! getoptlong parse "$@"; then
-        # Handle parse error (if EXIT_ON_ERROR=0)
-        echo "Failed to parse arguments." >&2
-        getoptlong help "Usage: $(basename "$0") [options] arguments..."
-        exit 1
-    fi
-
-C<getoptlong parse> returns 0 on success, non-zero on error.
-If C<EXIT_ON_ERROR=1> (default), the script exits on parse error.
-
-=head3 Setting Positional Parameters
-
-    eval "$(getoptlong set)"
-
-This re-sets the script's positional parameters (C<$1>, C<$2>, etc.) to
-the remaining non-option arguments. For example, if
-C<myscript --opt val arg1 arg2> was called, after C<eval>, C<$1> would
-be C<arg1> and C<$2> would be C<arg2>.
-
-=head3 Accessing and Using Variables
-
-Option variables are automatically set during C<getoptlong parse>.
-
-=over 4
-
-=item * Flag options set the variable to C<1> on first use, increment on subsequent uses
-
-=item * Array options populate a Bash array (C<"${library[@]}">)
-
-=item * Hash options populate a Bash associative array
-
-=item * Hyphens in option names are converted to underscores (C<--long-option> becomes C<$long_option>)
-
-=back
-
-Example usage:
-
-    echo "Verbose level: ${verbose:-0}"
-
-    if [[ "$output" != "/dev/stdout" ]]; then
-        echo "Output: $output"
-    fi
-
-    # Check optional argument
-    if [[ -n "${config:-}" ]]; then
-        echo "Config file: $config"
-    elif [[ -v config ]]; then
-        echo "Config option specified but no value"
-    else
-        echo "Using default config"
-    fi
-
-    # Array iteration
-    if (( ${#library[@]} > 0 )); then
-        echo "Library paths:"
-        for libpath in "${library[@]}"; do
-            echo "  - $libpath"
-        done
-    fi
-
-    # Hash iteration
-    if (( ${#define[@]} > 0 )); then
-        echo "Defined variables:"
-        for key in "${!define[@]}"; do
-            echo "  - $key = ${define[$key]}"
-        done
-    fi
-
-    # Remaining arguments
-    if (( $# > 0 )); then
-        echo "Remaining arguments ($#):"
-        for arg in "$@"; do
-            echo "  - $arg"
-        done
-    fi
-
-=head1 OPTION DEFINITION
-
-Options are defined as keys in an associative array with the format:
-
-    name[|aliases...][<type>[<modifier>]][destination][=<validation>] # description
-
-The value of the array element specifies the initial value.
-
-=head2 Syntax Components
-
-    declare -A OPTS=(
-        # NAME         ALIAS
-        # |            | TYPE [:?@%]
-        # |            | |MODIFIER [!>]
-        # |            | ||VALIDATION
-        # |            | |||      DESCRIPTION                    INITIAL VALUE
-        # |            | |||      |                              |
-        [ verbose    | v          # Output verbose information  ]=
-        [ output     | o :        # Specify output file         ]=/dev/stdout
-        [ mode       | m ?        # Operation mode (optional)   ]=
-        [ include    | i @        # Include path (multiple ok)  ]=()
-        [ define     | D %        # Definition (KEY=VALUE)      ]=()
-        [ execute    | x  !       # Execute command             ]=my_execute_function
-        [ count      | N : =i     # Number of iterations (int)  ]=1
-        [ ratio      | r : =f     # Ratio (float)               ]=0.5
-        [ id         | K : =(^[a-z0-9_]+$) # ID (alphanum & _)  ]=default_id
-    )
-
-=over 4
-
-=item B<name>
-
-(Required) The long option name following C<-->. Can contain hyphens
-(e.g., C<very-verbose>). This is also the default base for the variable
-name (hyphens replaced by underscores).
-
-=item B<aliases>
-
-(Optional) One or more option aliases separated by C<|>.
-Multiple aliases: C<long|s|t>. If only a short name is defined (C<[s:]>),
-it serves as the variable name base.
-
-=item B<type>
-
-(Optional) Single character specifying argument handling. Defaults to C<+>
-(flag/counter) if omitted:
-
-    +   Flag option (default)
-    :   Required argument
-    ?   Optional argument
-    @   Array (multiple values)
-    %   Hash (key=value pairs)
-
-=item B<modifier>
-
-(Optional) Special behavior modifiers following the type:
-
-    !   Callback function
-    >   Pass-through to array
-
-These can be combined (e.g., C<!E<gt>>).
-
-=item B<destination>
-
-(Optional) Custom variable name for storing the value, written directly
-after type and modifiers.
-
-=item B<=validation>
-
-(Optional) Value validation: C<=i> (integer), C<=f> (float), or
-C<=(<regex>)>.
-
-=item B<# description>
-
-Text after C<#> is used in the help message.
-
-=item B<INITIAL VALUE>
-
-The array element value becomes the default if the option is not provided.
-
-=back
-
-After parsing, variables are populated with the C<PREFIX> configuration
-adding a common prefix if specified. Hyphens in names become underscores
-(C<--very-verbose> becomes C<$very_verbose> or C<$PREFIX_very_verbose>).
-
-=head1 OPTION TYPES
-
-=head2 Flag Options (no suffix or C<+>)
-
-Act as switches that do not take arguments, usable as both simple flags
-and counters. The C<+> type specifier is the default.
-
-B<Definition Examples:>
-
-    [verbose|v  # Verbose output ]=       # Equivalent to [verbose|v+]
-    [debug|d+   # Debug level    ]=0      # Initial value for arithmetic
-    [feature|f  # Enable feature ]=
-
-B<How to Specify:>
-
-    -v, --verbose, --debug, -d, --feature
-    -vvv                                  # Increments to 3
-
-B<Variable Behavior:>
-
-=over 4
-
-=item * First specification: Variable set to C<1>
-
-=item * Multiple specifications (C<-vvv> or C<--debug --debug>): Variable increments
-
-=item * With C<no-> prefix (C<--no-debug>): Variable reset to empty string
-
-=back
-
-B<Use Cases:> Boolean flags, verbosity levels, debug levels. Setting an
-initial numeric value (C<]=0>) makes arithmetic contexts simpler:
-C<(( debug E<gt> 0 ))>.
-
-=head2 Required Argument Options (C<:>)
-
-Options that always require a value.
-
-B<Definition Example:>
-
-    [output|o: # Output file]=/dev/stdout
-
-B<How to Specify Value:>
-
-    --output=value    --output value
-    -ovalue           -o value
-
-Note: The C<-o=value> form is not supported for short options.
-
-B<Variable Storage:> The value is stored as a string (C<$output>).
-
-B<Negation:> C<--no-output> sets the variable to empty string without
-requiring an argument. Useful for options like C<--pager> where
-C<--no-pager> disables it.
-
-B<Use Cases:> File paths, required parameters.
-
-=head2 Optional Argument Options (C<?>)
-
-Options that can take a value or be specified without one.
-
-B<Definition Example:>
-
-    [mode|m? # Operation mode]=
-
-B<How to Specify:>
-
-    --mode=value      # $mode set to "value"
-    --mode            # $mode set to empty string ""
-    -m                # $mode set to empty string ""
-
-Note: C<-mvalue> is not supported for short options.
-
-B<Variable Storage:>
-
-=over 4
-
-=item * With value: That value is stored
-
-=item * Without value: Empty string C<""> is stored
-
-=item * Not specified: Variable remains unset (check with C<[[ -v variable ]]>)
-
-=back
-
-B<Use Cases:> Optional configuration values, parameters valid only in
-certain cases.
-
-=head2 Array Options (C<@>)
-
-Accept multiple values as an array.
-
-B<Definition Example:>
-
-    [include|I@ # Include path]=()
-
-B<How to Specify:>
-
-    --include /path/a --include /path/b
-    -I /path/a -I /path/b
-    --include /path/a,/path/b              # Delimiter-separated
-    --include "/path/a /path/b"            # Space-separated in quotes
-
-Delimiter controlled by C<DELIM> setting (default: comma, space, tab).
-
-B<Variable Storage:> Values stored in a Bash array: C<"${include[@]}">.
-
-B<Initial Value:> Usually empty array. Can set initial:
-C<]=(/default/path1 /default/path2)>.
-
-B<Use Cases:> Multiple input files, multiple configuration items.
-
-=head2 Hash Options (C<%>)
-
-Accept C<key=value> pairs as an associative array.
-
-B<Definition Example:>
-
-    [define|D% # Macro definition (KEY=VALUE)]=()
-
-B<How to Specify:>
-
-    --define OS=Linux --define VER=1.0
-    -D OS=Linux -D VER=1.0
-    --define OS=Linux,VER=1.0              # Comma-separated
-    --define DEBUG                         # Interpreted as DEBUG=1
-
-B<Variable Storage:> Keys and values stored in associative array:
-C<${define[OS]}>.
-
-B<Initial Value:> Usually empty. Can set initial:
-C<]=([USER]=$(whoami))>.
-
-B<Use Cases:> Environment-like settings, key-value configurations.
-
-=head2 Callback Options (C<!>)
-
-Execute a callback function when parsed. Can be appended to any type
-(C<+>, C<:>, C<?>," C<@>, C<%>).
-
-B<Definition Examples:>
-
-    [execute|x! # Execute command]=        # flag type callback
-    [config|c:! # Load config]=            # required argument callback
-
-B<Behavior:>
-
-=over 4
-
-=item * When specified, the callback function is executed
-
-=item * Default function name: option's long name (hyphens to underscores)
-
-=item * Custom function via C<getoptlong callback> command
-
-=back
-
-B<Use Cases:> Custom actions during parsing, complex value processing,
-immediate configuration changes.
-
-=head1 DESTINATION VARIABLE
-
-By default, values are stored in variables derived from the option name
-(hyphens to underscores). Custom variable names can be specified directly
-in the definition after type and modifiers.
-
-B<Syntax:>
-
-    long_name[|short_name...][<type>[<modifiers>]][DEST_VAR][=<validation>] # desc
-
-B<Examples:>
-
-    declare -A OPTS=(
-        [ count     | c :COUNT=i # repeat count              ]=1
-        [ sleep     | i @SLEEP=f # interval time             ]=
-        [ paragraph | p ?PARA    # print newline after cycle ]=
-        [ trace     | x !TRACE   # trace execution           ]=
-        [ debug     | d +DEBUG   # debug level               ]=0
-        [ message   | m %MSG=(^(BEGIN|END|EACH)=) # message  ]=
-    )
-
-=over 4
-
-=item * C<[count|c:COUNT=i]>: Store in C<COUNT>, validated as integer
-
-=item * C<[sleep|i@SLEEP=f]>: Store in array C<SLEEP>, validated as floats
-
-=item * C<[paragraph|p?PARA]>: Store optional arg in C<PARA>
-
-=item * C<[debug|d+DEBUG]>: Store incrementing value in C<DEBUG>
-
-=item * C<[message|m%MSG=(...)]>: Store key-value pairs in C<MSG>
-
-=back
-
-The C<PREFIX> configuration also applies to custom names.
-
-=head1 VALUE VALIDATION
-
-=head2 Integer Validation (C<=i>)
-
-    [count|c:COUNT=i # Number of iterations]=1
-
-Error if argument is not an integer.
-
-=head2 Float Validation (C<=f>)
-
-    [ratio|r:RATIO=f # Ratio]=0.5
-
-Error if argument is not a floating-point number.
-
-=head2 Custom Regex Validation (C<=(<regex>)>)
-
-    [mode|m:=(^(fast|slow|debug)$)]        # One of fast, slow, debug
-    [name|N@=(^[A-Za-z_]+$)]               # Letters and underscores only
-    [param|P%=(^[a-z_]+=[0-9]+$)]          # key=number format
-
-Error if argument does not match the regex. For arrays, each element is
-validated. For hashes, each C<key=value> pair is validated.
-
-=head1 HELP MESSAGE
-
-=head2 Automatic Help Option
-
-By default, C<--help> and C<-h> are recognized and display help then exit.
-If not defined in OPTS, C<getoptlong.sh> implicitly adds C<help|h#show help>.
-
-B<Customization via &HELP in OPTS:>
-
-    declare -A OPTS=(
-        [&HELP]="show-usage|u#Displays usage information and exits."
-        # ... other options ...
-    )
-
-Now C<--show-usage> or C<-u> triggers help.
-
-B<Customization via getoptlong init:>
-
-    getoptlong init OPTS HELP="manual|m#Show the full manual."
-
-B<Disabling:>
-
-    getoptlong init OPTS HELP=""
-
-=head2 Option Descriptions
-
-Text following C<#> in the definition is used as the description:
-
-    [output|o: # Specify the output file path]=/dev/stdout
-
-If no description provided, auto-generated based on type information.
-
-=head2 Displaying Initial Values
-
-Initial values are shown in help as C<(default: E<lt>valueE<gt>)>:
-
-    [mode|m? # Operation mode (fast, normal, slow)]=normal
-    [retries|r:=i # Maximum retries]=3
-
-Help output:
-
-    -m, --mode [<value>]     Operation mode (default: normal)
-    -r, --retries <value>    Maximum retries (default: 3)
-
-=head2 Synopsis (USAGE)
-
-B<Via &USAGE in OPTS:>
-
-    declare -A OPTS=(
-        [&USAGE]="Usage: $(basename "$0") [OPTIONS] SOURCE_FILE DEST_FILE"
-        # ...
-    )
-
-B<Via getoptlong init:>
-
-    getoptlong init OPTS USAGE="Usage: myscript -i <input> -o <output>"
-
-B<Via getoptlong help:>
-
-    getoptlong help "Usage: $(basename "$0") [options] <file>"
-
-=head2 Help Message Structure
-
-    (Synopsis line)
-
-    Options:
-      -h, --help                 Show this help message and exit.
-      -f, --file <path>          Specify input file. (default: input.txt)
-          --force                Force operation without confirmation.
-      -n, --count <number>       Number of times. (integer, default: 1)
-      -v, --verbose              Enable verbose output. (counter, default: 0)
-
-Options sorted alphabetically by long name (or short name if no long name).
-
-=head1 CALLBACK FUNCTIONS
-
-=head2 Normal Callbacks (Post-processing)
-
-Called B<after> the option's value is set.
-
-B<Call Format:>
-
-    callback_function "option_name" "option_value" [registered_args...]
-
-=over 4
-
-=item * C<$1>: Long name of the option (e.g., C<my-option>)
-
-=item * C<$2>: Parsed value (C<1> for flags, argument value otherwise)
-
-=item * C<$3...>: Additional arguments from registration
-
-=back
-
-B<Example:>
-
-    declare -A OPTS=(
-        [process-item|p:! # Process an item]=
-    )
-
-    process_item() {
-        local opt_name="$1"
-        local item_id="$2"
-        echo "Processing item: $item_id"
-        if [[ ! -f "$item_id" ]]; then
-            echo "Error: File '$item_id' not found." >&2
-            exit 1
-        fi
-    }
-
+    . getoptlong.sh
     getoptlong init OPTS
     getoptlong parse "$@" && eval "$(getoptlong set)"
 
-=head2 Pre-processing Callbacks (C<--before> / C<-b>)
+=head1 DESCRIPTION
 
-Called B<before> the option's value is set. Value is not passed.
+B<getoptlong.sh> is a Bash library providing Perl's L<Getopt::Long>-style
+option parsing.
 
-B<Call Format:>
+Options are defined in a Bash associative array: the key specifies the
+option name, aliases, type, and other attributes; the value sets the
+default. The library parses command-line arguments, sets variables, and
+leaves non-option arguments in C<$@>.
 
-    callback_function "option_name" [registered_args...]
+Two usage modes are available: B<one-liner> for simple scripts (source
+with array name and arguments), and B<multi-step> for advanced control
+(separate init, parse, and set calls).
 
-B<Use Cases:>
+Supports short (C<-v>) and long (C<--verbose>) options with bundling
+(C<-vvv>). B<Option types>: I<flag>, I<required argument>, I<optional
+argument>, I<array>, I<hash>, I<callback>. B<Validation>: I<integer>,
+I<float>, I<regex>. B<Help message> generation. B<Pass-through> for
+wrapper scripts. B<Multiple invocations> for subcommand support.
+
+For a gentle introduction, see L<Getopt::Long::Bash::Tutorial>.
+
+=head1 INSTALLATION
+
+    cpanm -n Getopt::Long::Bash
+
+=head1 OPTION DEFINITION SYNTAX
+
+The key format is:
+
+    [NAME[|ALIAS...][TYPE[MOD]][DEST][=VALIDATE] # DESC]=DEFAULT
+
+=head2 COMPONENTS
 
 =over 4
 
-=item * Clearing array option values before processing
+=item B<NAME>
 
-=item * Dynamically changing defaults when option is specified
+Long option name (C<--name>). Hyphens become underscores in variables
+(C<--dry-run> E<rarr> C<$dry_run>).
 
-=item * State initialization
+=item B<ALIAS>
+
+Additional names separated by C<|> (e.g., C<verbose|v|V>).
+
+=item B<TYPE>
+
+Argument type specifier:
+
+    (none) or +  Flag (counter)
+    :            Required argument
+    ?            Optional argument
+    @            Array (multiple values)
+    %            Hash (key=value pairs)
+
+=item B<MOD (MODIFIER)>
+
+Special behavior flags (can be combined):
+
+    !   Callback - calls function when option is parsed
+    >   Pass-through - collects option and value into array
+
+=item B<DEST>
+
+Custom variable name (e.g., C<[opt|o:MYVAR]> stores in C<$MYVAR>).
+
+=item B<VALIDATE>
+
+Value validation: C<=i> (integer), C<=f> (float), C<=E<lt>regexE<gt>>.
+
+=item B<DESC (DESCRIPTION)>
+
+Help message text (everything after C<#>).
 
 =back
 
-B<Example - Clearing Array:>
+=head2 EXAMPLE
 
     declare -A OPTS=(
-        [append-list|a@ # Append to list]=()
+        [verbose|v+     # Verbosity level         ]=0
+        [output|o:      # Output file             ]=/dev/stdout
+        [config|c?      # Config file (optional)  ]=
+        [include|I@     # Include paths           ]=
+        [define|D%      # Definitions             ]=
+        [count|n:=i     # Count (integer)         ]=1
+        [mode|m:=(^(fast|slow)$) # Mode           ]=fast
     )
 
-    clear_append_list() {
-        echo "Clearing append_list"
-        append_list=()
-    }
+=head1 OPTION TYPES
 
-    getoptlong callback --before append-list clear_append_list
-    getoptlong init OPTS
-    # ./myscript.sh --append-list x --append-list y
-    # Result: append_list contains only "y"
+Each option type determines how arguments are handled and stored.
 
-=head2 Error Handling in Callbacks
+=head2 FLAG (C<+> or none)
 
-Callback functions handle their own errors. To halt the script, explicitly
-call C<exit>. C<getoptlong.sh>'s C<EXIT_ON_ERROR> only applies to parsing
-errors, not callback errors.
+A flag takes no argument. First use sets to C<1>, subsequent uses
+increment (useful for verbosity levels). Use C<--no-X> to reset to
+empty string. Bundling supported: C<-vvv> equals C<-v -v -v>.
 
-=head2 Custom Validation via Callbacks
+    [verbose|v]=        # $verbose: 1 when specified
+    [debug|d+]=0        # $debug: increments (-d -d -d or -ddd)
 
-Complex validation beyond C<=i>, C<=f>, C<=(<regex>)> can be implemented
-in callbacks:
+Numeric initial value (like C<0>) enables counter display in help.
+
+=head2 REQUIRED ARGUMENT (C<:>)
+
+The option requires an argument; error if missing. Use C<--no-X> to
+reset to empty string (useful for disabling defaults).
+
+    [output|o:]=        # --output=file, --output file, -ofile, -o file
+
+Short form C<-o=value> is B<not> supported (use C<-ovalue> or C<-o value>).
+
+=head2 OPTIONAL ARGUMENT (C<?>)
+
+The argument is optional. The variable has three possible states: a value
+(C<--config=file>), empty string (C<--config> without value), or unset
+(option not specified). Use C<[[ -v config ]]> to check if the option
+was specified.
+
+    [config|c?]=        # --config=file or --config (sets to "")
+
+B<Syntax:>
+
+=over 2
+
+=item * C<--config=value>: variable set to C<value>
+
+=item * C<--config>: variable set to empty string C<"">
+
+=item * C<-c>: sets to empty string; C<-cvalue> form is B<not> supported
+
+=back
+
+=head2 ARRAY (C<@>)
+
+Collects multiple values into an array. Multiple specifications accumulate.
+A single option can contain delimited values (default: space, tab, comma;
+configurable via C<DELIM>). Access with C<"${include[@]}">.
+
+    [include|I@]=       # --include a --include b or --include a,b
+
+=head2 HASH (C<%>)
+
+Collects C<key=value> pairs into an associative array. Key without value
+is treated as C<key=1>. Multiple pairs can be specified: C<--define A=1,B=2>.
+Access with C<${define[KEY]}>, keys with C<${!define[@]}>.
+
+    [define|D%]=        # --define KEY=VAL or --define KEY (KEY=1)
+
+=head2 CALLBACK (C<!>)
+
+Calls a function when the option is parsed. Default function name is the
+option name with hyphens converted to underscores; use C<getoptlong callback>
+to specify a custom function. Can combine with any type (C<+!>, C<:!>,
+C<?!>, C<@!>, C<%!>). See L</CALLBACKS> for registration and timing details.
+
+    [action|a!]=        # Calls action() when specified
+    [file|f:!]=         # Calls file() with argument
+
+=head1 VALIDATION
+
+Option values can be validated using type specifiers or regex patterns:
+C<=i> for integers, C<=f> for floats, C<=(> ... C<)> for regex.
+
+    [count:=i]=1                    # Integer (positive/negative)
+    [ratio:=f]=0.5                  # Float (e.g., 123.45)
+    [mode:=(^(a|b|c)$)]=a           # Regex: exactly a, b, or c
+
+Validation occurs before the value is stored or callbacks are invoked.
+For array options, each element is validated; for hash options, each
+C<key=value> pair is matched as a whole. Error on validation failure
+(exits if C<EXIT_ON_ERROR=1>).
+
+=head1 DESTINATION VARIABLE
+
+By default, values are stored in variables named after the option.
+A custom destination can be specified by adding the variable name after
+TYPE/MODIFIER and before VALIDATE: C<[NAME|ALIAS:!DEST=(REGEX)]>.
+C<PREFIX> setting applies to custom names too (see L</getoptlong init>).
+
+    [count|c:COUNT]=1       # Store in $COUNT instead of $count
+    [debug|d+DBG]=0         # Store in $DBG
+
+=head1 HELP MESSAGE
+
+Help message is automatically generated from option definitions.
+
+=head2 AUTOMATIC HELP OPTION
+
+By default, C<--help> / C<-h> displays help and exits. To customize
+or disable, use one of these methods (in order of precedence):
+
+    [&HELP]="usage|u#Show usage"            # 1. &HELP key in OPTS
+    getoptlong init OPTS HELP="manual|m"    # 2. HELP parameter in init
+    [help|h # Custom help text]=            # 3. Explicit option definition
+    getoptlong init OPTS HELP=""            # Disable help option
+
+=head2 SYNOPSIS (USAGE)
+
+Set the usage line displayed at the top of help output:
+
+    [&USAGE]="Usage: cmd [options] <file>"  # In OPTS array
+    getoptlong init OPTS USAGE="..."        # Or via init parameter
+
+=head2 OPTION DESCRIPTIONS
+
+Text after C<#> in the option definition becomes the help description.
+If omitted, a description is auto-generated. Default values are shown
+as C<(default: value)>.
+
+    [output|o: # Output file path]=/dev/stdout
+
+=head1 CALLBACKS
+
+Callback functions are called when an option is parsed. The value is
+stored in the variable as usual, and the callback is invoked for
+additional processing such as validation or side effects. Callbacks
+work the same way with pass-through options.
+
+=head2 REGISTRATION
+
+Register callbacks with C<getoptlong callback>. If function name is
+omitted or C<->, uses option name (hyphens to underscores).
+
+    getoptlong callback <option> [function] [args...]
+    getoptlong callback --before <option> [function] [args...]
+
+=head2 CALLBACK TIMING
+
+Normal callbacks are called B<after> value is set, receiving the option
+name and value. Pre-processing callbacks (C<--before>/C<-b>) are called
+B<before> value is set, without the value argument.
+
+    callback_func "option_name" "value" [args...]   # normal
+    callback_func "option_name" [args...]           # --before
+
+=head2 ERROR HANDLING
+
+Callbacks must handle their own errors. C<EXIT_ON_ERROR> only applies
+to parsing errors, not callback failures. Use explicit C<exit> if needed.
 
     validate_file() {
-        local opt_name="$1"
-        local filepath="$2"
-        if [[ ! -r "$filepath" ]]; then
-            echo "Error: Cannot read file '$filepath'" >&2
-            exit 1
-        fi
+        [[ -r "$2" ]] || { echo "Cannot read: $2" >&2; exit 1; }
     }
-
     getoptlong callback input-file validate_file
 
-=head1 OPTION PASS-THROUGH
+=head1 PASS-THROUGH (E<gt> Modifier)
 
-=head2 Using PERMUTE and C<-->
+Collects options and values into an array instead of storing in a
+variable. Useful for passing options to other commands. The actual
+option form used (C<--pass>, C<-p>, C<--no-pass>) is collected, and
+for options with values, both option and value are added. Multiple
+options can collect to the same array. If no array name is specified
+after C<E<gt>>, uses the option name. Can combine with callback:
+C<[opt|o:!E<gt>array]>.
 
-C<PERMUTE> stores non-option arguments in an array:
+    [pass|p:>collected]=    # Option and value added to collected array
 
-    declare -a PassThroughArgs
-    getoptlong init OPTS PERMUTE=PassThroughArgs
-
-Arguments after C<--> are not parsed as options:
-
-    ./myscript.sh --my-opt val -- --downstream-opt --another val
-
-C<PassThroughArgs> will contain: C<--downstream-opt --another val>
-
-=head2 Using C<E<gt>> Modifier
-
-Collect specific options into an array as they are parsed:
-
-    declare -A OPTS=(
-        [collect-this|c:>my_collection_array]=
-        [another-opt|a:>my_collection_array]=
-        [flag-collect|f+>flag_array]=
-    )
-    declare -a my_collection_array=()
-    declare -a flag_array=()
-
-    getoptlong init OPTS
-    # ./myscript.sh --collect-this foo -a bar --flag-collect
-
-After parsing:
-
-    my_collection_array=("--collect-this" "foo" "-a" "bar")
-    flag_array=("--flag-collect")
-
-B<Destination Array:>
-
-=over 4
-
-=item * Specified after C<E<gt>>: C<[myopt|m:E<gt>destination_array]>
-
-=item * If omitted: Uses option's long name (hyphens to underscores)
-
-=back
-
-B<Combining with Other Modifiers:>
-
-    [myopt|m+!>log_array]=    # Flag with callback, then collect
-
-The C<E<gt>> must appear after primary type specifier.
+After C<--pass foo>: C<collected=("--pass" "foo")>
 
 =head1 COMMANDS
 
+The C<getoptlong> function provides the following subcommands.
+
 =head2 getoptlong init
 
-    getoptlong init <opts_array_name> [CONFIGURATIONS...]
+Initialize with option definitions. Must be called before C<parse>.
 
-Initialize the library with option definitions.
+    getoptlong init <array_name> [CONFIG...]
 
-B<Parameters:>
+B<Configuration parameters:>
 
-=over 4
-
-=item B<PERMUTE>=I<array_name>
-
-Store non-option arguments. Default: C<GOL_ARGV>.
-With C<PERMUTE=ARGS>, non-options go into C<ARGS> array.
-Empty string: stop at first non-option (POSIX behavior).
-
-=item B<PREFIX>=I<string>
-
-Prefix for variable names. With C<PREFIX=MYAPP_> and option C<--option>,
-variable becomes C<$MYAPP_option>.
-
-=item B<HELP>=I<spec>
-
-Help option definition. Default: C<help|h#show help>.
-
-=item B<USAGE>=I<string>
-
-Synopsis for help message.
-
-=item B<EXIT_ON_ERROR>=I<0|1>
-
-Exit on parse error. Default: 1.
-
-=item B<SILENT>=I<0|1>
-
-Suppress error messages. Default: 0.
-
-=item B<DEBUG>=I<0|1>
-
-Enable debug output. Default: 0.
-
-=item B<DELIM>=I<string>
-
-Delimiter for array/hash values. Default: space, tab, comma.
-
-=back
+    PERMUTE=<array>     Non-option storage (default: GOL_ARGV)
+    PREFIX=<string>     Variable name prefix (default: none)
+    HELP=<spec>         Help option (default: help|h#show help)
+    USAGE=<string>      Synopsis line
+    EXIT_ON_ERROR=0|1   Exit on parse error (default: 1)
+    SILENT=0|1          Suppress error messages (default: 0)
+    DEBUG=0|1           Debug output (default: 0)
+    DELIM=<string>      Array/hash delimiter (default: space,tab,comma)
 
 =head2 getoptlong parse
 
+Parse arguments. Returns 0 on success, non-zero on error. Always
+quote C<"$@">. With C<EXIT_ON_ERROR=1> (default), script exits on
+error. With C<EXIT_ON_ERROR=0>, check return value:
+
     getoptlong parse "$@"
 
-Parse command-line arguments. Returns 0 on success, non-zero on error.
-Always quote C<"$@">.
+    if ! getoptlong parse "$@"; then
+        echo "Parse error" >&2
+        exit 1
+    fi
 
 =head2 getoptlong set
 
     eval "$(getoptlong set)"
 
-Generate shell commands to set variables and update positional parameters.
-Must use with C<eval>.
+Outputs shell commands to set variables and update positional parameters.
+Variables are actually set during C<parse>; this updates C<$@>.
 
 =head2 getoptlong callback
 
-    getoptlong callback [-b|--before] <opt_name> [callback_function] [args...]
+Register callback function for option. Use C<-b>/C<--before> to call
+before value is set. If C<func> is omitted, uses option name (hyphens
+to underscores). Additional C<args> are passed to the callback.
 
-Register a callback for an option.
-
-=over 4
-
-=item B<-b>, B<--before>
-
-Call before value is set (pre-processing). Value not passed to callback.
-
-=item I<opt_name>
-
-Long name of the option (e.g., C<my-option>).
-
-=item I<callback_function>
-
-Function name. If omitted or C<->, defaults to option name with hyphens
-as underscores (C<my_option>).
-
-=item I<args...>
-
-Additional fixed arguments passed after option name and value.
-
-=back
+    getoptlong callback [-b|--before] <opt> [func] [args...]
 
 =head2 getoptlong configure
 
-    getoptlong configure <CONFIG_PARAM=VALUE> ...
+Change configuration at runtime. Safe to change: C<EXIT_ON_ERROR>,
+C<SILENT>, C<DEBUG>, C<DELIM>. Changing C<PREFIX> after init may cause issues.
 
-Change configuration at runtime.
-
-    getoptlong configure EXIT_ON_ERROR=0
-    # ... parse with error handling ...
-    getoptlong configure EXIT_ON_ERROR=1
-
-Safe to change: C<EXIT_ON_ERROR>, C<SILENT>, C<DEBUG>, C<DELIM>.
-C<PREFIX> and option definitions may not work as expected after C<init>.
+    getoptlong configure KEY=VALUE ...
 
 =head2 getoptlong dump
 
+Debug output to stderr showing option names, variables, and values.
+Use C<-a>/C<--all> to show all internal state.
+
     getoptlong dump [-a|--all]
-
-Display internal state for debugging.
-
-=over 4
-
-=item * Without C<-a>: Shows parsed option names, variable names, current values
-
-=item * With C<-a>: Shows all internal parameters and detailed option info
-
-=back
 
 =head2 getoptlong help
 
+Display help message. Optional C<SYNOPSIS> overrides C<&USAGE>/C<USAGE>.
+
     getoptlong help [SYNOPSIS]
 
-Display help message.
+=head1 CONFIGURATION KEYS IN OPTS
 
-=over 4
+Special keys in options array (take precedence over init parameters):
 
-=item * With C<SYNOPSIS>: Uses provided string as synopsis line
+    [&HELP]=<spec>          Help option (e.g., "usage|u#Show usage")
+    [&USAGE]=<string>       Synopsis string
+    [&REQUIRE]=<version>    Minimum version (e.g., "0.2")
 
-=item * Without: Uses C<&USAGE> or C<USAGE> setting, or no synopsis
+Version check exits with error if current version is older.
 
-=back
+=head1 MULTIPLE INVOCATIONS
 
-=head1 CONFIGURATION KEYS
+C<getoptlong init> and C<parse> can be called multiple times for
+subcommand support:
 
-Special keys in the OPTS array (format C<&KEY>):
+    # Parse global options
+    getoptlong init GlobalOPTS PERMUTE=REST
+    getoptlong parse "$@" && eval "$(getoptlong set)"
 
-=over 4
-
-=item B<&HELP>=I<spec>
-
-Help option definition. Overrides C<HELP> parameter of C<init>.
-
-    [&HELP]="show-usage|u#Usage guide"
-
-=item B<&USAGE>=I<string>
-
-Synopsis string. Overrides C<USAGE> parameter of C<init>.
-
-    [&USAGE]="Usage: $(basename "$0") [OPTIONS] SOURCE DEST"
-
-=item B<&REQUIRE>=I<version>
-
-Minimum required version of getoptlong.sh.
-
-    [&REQUIRE]="0.2"
-
-Script exits with error if current version is older.
-
-=back
-
-=head1 EXAMPLES
-
-=head2 Complete Script with Required Options
-
-    #!/usr/bin/env bash
-
-    . getoptlong.sh
-
-    declare -A OPTS=(
-        [input|i:    # Specify input file (required)]=
-        [output|o:   # Specify output file (required)]=
-        [format|f?   # Output format (optional)]=
-        [compress|c  # Compress output (flag)]=
-        [level|l:=i  # Compression level (integer)]=1
-        [verbose|v+  # Verbosity level]=0
-        [&USAGE]="Usage: $(basename "$0") -i <input> -o <output> [options]"
-    )
-
-    # Callback to uppercase format
-    format_callback() {
-        local opt_name="$1"
-        local val="$2"
-        if [[ -n "$val" ]]; then
-            format="${val^^}"
-            (( verbose > 0 )) && echo "Format: $format" >&2
-        fi
-    }
-    getoptlong callback format format_callback
-
-    getoptlong init OPTS
-    if ! getoptlong parse "$@"; then
-        exit 1
-    fi
-    eval "$(getoptlong set)"
-
-    # Validate required options
-    if [[ -z "$input" ]] || [[ -z "$output" ]]; then
-        echo "Error: -i and -o are required." >&2
-        getoptlong help
-        exit 1
-    fi
-
-    echo "Input: $input"
-    echo "Output: $output"
-    [[ -v format ]] && echo "Format: ${format:-not specified}"
-    [[ -n "$compress" ]] && echo "Compress: level $level"
-    echo "Verbosity: $verbose"
-
-=head2 Script with Subcommands
-
-    #!/bin/bash
-    . getoptlong.sh
-
-    # Global options
-    declare -A GlobalOPTS=(
-        [verbose|v+ # Verbose output]=0
-        [help|h     # Display help]=
-    )
-    getoptlong init GlobalOPTS
-    declare -a RemainingArgs
-    getoptlong configure EXIT_ON_ERROR=0 PERMUTE=RemainingArgs
-    getoptlong parse "$@"
-    eval "$(getoptlong set)"
-
-    # Show help if requested or no subcommand
-    if [[ -n "$help" ]] || (( ${#RemainingArgs[@]} == 0 )); then
-        echo "Usage: $(basename "$0") [global_options] <subcommand> [options]"
-        echo ""
-        echo "Global Options:"
-        getoptlong help
-        echo ""
-        echo "Subcommands:"
-        echo "  commit    Record changes to the repository"
-        echo "  push      Update remote refs"
-        exit 0
-    fi
-
-    subcommand="${RemainingArgs[0]}"
-    SubcommandArgs=("${RemainingArgs[@]:1}")
-
-    case "$subcommand" in
+    # Parse subcommand options
+    case "${REST[0]}" in
         commit)
-            declare -A CommitOPTS=(
-                [message|m: # Commit message]=
-                [all|a      # Stage all changes]=
-                [help|h     # Help for commit]=
-            )
             getoptlong init CommitOPTS
-            if ! getoptlong parse "${SubcommandArgs[@]}"; then exit 1; fi
-            eval "$(getoptlong set)"
-
-            if [[ -n "$help" ]]; then
-                getoptlong help "Usage: $(basename "$0") commit [options]"
-                exit 0
-            fi
-
-            echo "Commit: message='$message' all='$all'"
-            (( verbose > 0 )) && echo "Verbose (global): $verbose"
-            ;;
-
-        push)
-            declare -A PushOPTS=(
-                [remote|r: # Remote repository]=origin
-                [force|f   # Force push]=
-                [help|h    # Help for push]=
-            )
-            getoptlong init PushOPTS
-            if ! getoptlong parse "${SubcommandArgs[@]}"; then exit 1; fi
-            eval "$(getoptlong set)"
-
-            if [[ -n "$help" ]]; then
-                getoptlong help "Usage: $(basename "$0") push [options]"
-                exit 0
-            fi
-
-            echo "Push: remote='$remote' force='$force'"
-            (( verbose > 0 )) && echo "Verbose (global): $verbose"
-            ;;
-
-        *)
-            echo "Error: Unknown subcommand '$subcommand'" >&2
-            getoptlong init GlobalOPTS
-            getoptlong help "Usage: $(basename "$0") [options] <subcommand>"
-            exit 1
+            getoptlong parse "${REST[@]:1}" && eval "$(getoptlong set)"
             ;;
     esac
 
-=head2 Sample Scripts
+=head1 EXAMPLES
 
-The C<ex/> directory contains sample scripts demonstrating various features:
+See C<ex/> directory for sample scripts:
 
-=over 4
+=over 2
 
-=item * C<ex/repeat.sh> - Various option types (array, hash, incremental)
+=item * C<repeat.sh> - basic option types
 
-=item * C<ex/prefix.sh> - PREFIX setting usage
+=item * C<prefix.sh> - PREFIX setting
 
-=item * C<ex/cmap> - Colorizing mapper with complex option parsing
+=item * C<dest.sh> - custom destination variables
 
-=item * C<ex/cmap-prefix> - cmap with PREFIX applied
+=item * C<subcmd.sh> - subcommand handling
 
-=item * C<ex/md> - Markdown parser sample
-
-=item * C<ex/silent.sh> - SILENT setting usage
-
-=item * C<ex/subcmd.sh> - Sophisticated subcommand handling
-
-=item * C<ex/dest.sh> - Custom destination variables
+=item * C<cmap> - complex real-world example
 
 =back
 
 =head1 SEE ALSO
 
-L<Getopt::Long::Bash>
+=over 2
 
-L<https://github.com/tecolicom/getoptlong>
+=item * L<Getopt::Long::Bash::Tutorial> - getting started guide
 
-L<Getopt::Long>
+=item * L<Getopt::Long::Bash> - module information
+
+=item * L<Getopt::Long> - Perl module inspiration
+
+=item * L<https://github.com/tecolicom/getoptlong> - repository
+
+=back
 
 =head1 AUTHOR
 
 Kazumasa Utashiro
+
+=head1 COPYRIGHT
+
+Copyright 2025 Kazumasa Utashiro
 
 =head1 LICENSE
 
