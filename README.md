@@ -32,6 +32,10 @@ getoptlong - Option parsing that does what you mean, for Bash
 
     eval "$(getoptlong OPTS)"
 
+# VERSION
+
+0.5.0
+
 # DESCRIPTION
 
 **getoptlong.sh** is a Bash library providing Perl's [Getopt::Long](https://metacpan.org/pod/Getopt%3A%3ALong)-style
