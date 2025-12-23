@@ -5,14 +5,26 @@ getoptlong - Option parsing that does what you mean, for Bash
 
 # SYNOPSIS
 
+**Option definition:**
+
+    declare -A OPTS=(
+        [&USAGE]="command [options] file..."
+        [verbose |v+                 # Verbosity     ]=0
+        [output  |o:                 # Output file   ]=/dev/stdout
+        [config  |c?                 # Config file   ]=
+        [include |I@                 # Include paths ]=
+        [define  |D%                 # Definitions   ]=
+        [count   |n:=i               # Count integer ]=1
+        [mode    |m:=(^(fast|slow)$) # Mode          ]=fast
+    )
+
 **One-liner:**
 
-    declare -A OPTS=( [verbose|v]= [output|o:]= )
     . getoptlong.sh OPTS "$@"
 
 **Multi-step:**
 
-    . getoptlong.sh
+    . getoptlong.sh -
     getoptlong init OPTS
     getoptlong parse "$@" && eval "$(getoptlong set)"
 
@@ -42,8 +54,41 @@ For a gentle introduction, see [Getopt::Long::Bash::Tutorial](https://metacpan.o
 
     cpanm -n Getopt::Long::Bash
 
-# OPTION DEFINITION SYNTAX
+# USAGE
 
+## One-liner
+
+Source with array name and arguments to parse in one step:
+
+    . getoptlong.sh OPTS "$@"
+
+Configuration parameters must be included in the options array
+(e.g., `[&PREFIX]=OPT_`). Callback registration is not available
+in this mode; use `!` modifier for automatic callback instead.
+
+## Multi-step
+
+Source the library first, then call init, parse, and set separately:
+
+    . getoptlong.sh -
+    getoptlong init OPTS
+    getoptlong parse "$@" && eval "$(getoptlong set)"
+
+This mode allows callback registration between init and parse.
+
+**Note:** When sourcing without arguments (`. getoptlong.sh`),
+the current shell's positional parameters are passed to the library.
+If the first argument happens to match an existing associative array
+name, it may cause unexpected behavior. Use `. getoptlong.sh -`
+to safely source without side effects.
+
+# OPTION DEFINITION
+
+Options are defined as elements of an associative array. Each key
+specifies the option's name, type, and modifiers, while the value
+provides the default. Whitespace is allowed anywhere in the definition
+for readability. Configuration parameters can also be included
+with `&` prefix (e.g., `[&PREFIX]=OPT_`); see ["CONFIGURATION"](#configuration).
 The key format is:
 
     [NAME[|ALIAS...][TYPE[MOD]][DEST][=VALIDATE] # DESC]=DEFAULT
@@ -83,22 +128,11 @@ The key format is:
 - **VALIDATE**
 
     Value validation: `=i` (integer), `=f` (float), `=<regex>`.
+    See ["VALIDATION"](#validation).
 
 - **DESC (DESCRIPTION)**
 
     Help message text (everything after `#`).
-
-## EXAMPLE
-
-    declare -A OPTS=(
-        [verbose|v+     # Verbosity level         ]=0
-        [output|o:      # Output file             ]=/dev/stdout
-        [config|c?      # Config file (optional)  ]=
-        [include|I@     # Include paths           ]=
-        [define|D%      # Definitions             ]=
-        [count|n:=i     # Count (integer)         ]=1
-        [mode|m:=(^(fast|slow)$) # Mode           ]=fast
-    )
 
 # OPTION TYPES
 
@@ -143,15 +177,18 @@ was specified.
 
 Collects multiple values into an array. Multiple specifications accumulate.
 A single option can contain delimited values (default: space, tab, comma;
-configurable via `DELIM`). Access with `"${include[@]}"`.
+see [DELIM](#configuration)). Access with `"${include[@]}"`. To clear the
+array before adding values, use `getoptlong callback --before`.
 
     [include|I@]=       # --include a --include b or --include a,b
 
 ## HASH (`%`)
 
 Collects `key=value` pairs into an associative array. Key without value
-is treated as `key=1`. Multiple pairs can be specified: `--define A=1,B=2`.
-Access with `${define[KEY]}`, keys with `${!define[@]}`.
+is treated as `key=1`. Multiple pairs can be specified: `--define A=1,B=2`
+(see [DELIM](#configuration)). Access with `${define[KEY]}`, keys with
+`${!define[@]}`. To clear the hash before adding values, use
+`getoptlong callback --before`.
 
     [define|D%]=        # --define KEY=VAL or --define KEY (KEY=1)
 
@@ -170,14 +207,18 @@ to specify a custom function. Can combine with any type (`+!`, `:!`,
 Option values can be validated using type specifiers or regex patterns:
 `=i` for integers, `=f` for floats, `=(` ... `)` for regex.
 
-    [count:=i]=1                    # Integer (positive/negative)
-    [ratio:=f]=0.5                  # Float (e.g., 123.45)
-    [mode:=(^(a|b|c)$)]=a           # Regex: exactly a, b, or c
+    [count:=i]=1            # Integer (positive/negative)
+    [ratio:=f]=0.5          # Float (e.g., 123.45)
+    [mode:=(^(a|b|c)$)]=a   # Regex: exactly a, b, or c
+
+**Note:** For regex, the pattern extends to the last `)` in the
+definition, including any `)` in the description. Avoid using `)`
+in comments when using regex validation.
 
 Validation occurs before the value is stored or callbacks are invoked.
 For array options, each element is validated; for hash options, each
 `key=value` pair is matched as a whole. Error on validation failure
-(exits if `EXIT_ON_ERROR=1`).
+(see [EXIT\_ON\_ERROR](#configuration)).
 
 # DESTINATION VARIABLE
 
@@ -191,12 +232,11 @@ TYPE/MODIFIER and before VALIDATE: `[NAME|ALIAS:!DEST=(REGEX)]`.
 
 # HELP MESSAGE
 
-Help message is automatically generated from option definitions.
+By default, `--help` and `-h` options are automatically available.
+They display a help message generated from option definitions and exit.
+No configuration is required.
 
-## AUTOMATIC HELP OPTION
-
-By default, `--help` / `-h` displays help and exits. To customize
-or disable, use one of these methods (in order of precedence):
+To customize or disable, use one of these methods (in order of precedence):
 
     [&HELP]="usage|u#Show usage"            # 1. &HELP key in OPTS
     getoptlong init OPTS HELP="manual|m"    # 2. HELP parameter in init
@@ -273,28 +313,21 @@ The `getoptlong` function provides the following subcommands.
 ## getoptlong init
 
 Initialize with option definitions. Must be called before `parse`.
+See ["CONFIGURATION"](#configuration) for available parameters.
 
     getoptlong init <array_name> [CONFIG...]
-
-**Configuration parameters:**
-
-    PERMUTE=<array>     Non-option storage (default: GOL_ARGV)
-    PREFIX=<string>     Variable name prefix (default: none)
-    HELP=<spec>         Help option (default: help|h#show help)
-    USAGE=<string>      Synopsis line
-    EXIT_ON_ERROR=0|1   Exit on parse error (default: 1)
-    SILENT=0|1          Suppress error messages (default: 0)
-    DEBUG=0|1           Debug output (default: 0)
-    DELIM=<string>      Array/hash delimiter (default: space,tab,comma)
 
 ## getoptlong parse
 
 Parse arguments. Returns 0 on success, non-zero on error. Always
-quote `"$@"`. With `EXIT_ON_ERROR=1` (default), script exits on
-error. With `EXIT_ON_ERROR=0`, check return value:
+quote `"$@"`. By default, script exits on error.
 
     getoptlong parse "$@"
 
+To handle errors manually, disable `EXIT_ON_ERROR`
+(see ["CONFIGURATION"](#configuration)) and check return value:
+
+    getoptlong configure EXIT_ON_ERROR=
     if ! getoptlong parse "$@"; then
         echo "Parse error" >&2
         exit 1
@@ -335,15 +368,63 @@ Display help message. Optional `SYNOPSIS` overrides `&USAGE`/`USAGE`.
 
     getoptlong help [SYNOPSIS]
 
-# CONFIGURATION KEYS IN OPTS
+# CONFIGURATION
 
-Special keys in options array (take precedence over init parameters):
+Configuration parameters can be specified either as arguments to
+`getoptlong init` or as keys in the options array with `&` prefix
+(e.g., `[&PREFIX]=OPT_`). Keys in the options array take precedence.
 
-    [&HELP]=<spec>          Help option (e.g., "usage|u#Show usage")
-    [&USAGE]=<string>       Synopsis string
-    [&REQUIRE]=<version>    Minimum version (e.g., "0.2")
+- **PERMUTE**=_array_
 
-Version check exits with error if current version is older.
+    Array name to store non-option arguments. Default: `GOL_ARGV`.
+    After parsing, non-option arguments are collected here instead of
+    remaining in `$@`. Set to empty string to disable permutation;
+    non-option arguments must then come after all options.
+
+- **PREFIX**=_string_
+
+    Prefix added to all variable names. Default: none.
+    For example, with `PREFIX=OPT_`, option `--verbose` sets `$OPT_verbose`.
+
+- **HELP**=_spec_
+
+    Help option specification. Default: `help|h#show help`.
+    Set to empty string to disable automatic help option.
+
+- **USAGE**=_string_
+
+    Synopsis line shown in help message.
+    Default: `scriptname [ options ] args`.
+
+        [&USAGE]="command [options] file..."
+
+- **EXIT\_ON\_ERROR**
+
+    Exit immediately on parse error. Default: enabled.
+    Set to empty string to disable and handle errors manually by checking
+    return value.
+
+- **SILENT**
+
+    Suppress error messages. Default: disabled.
+    Set to non-empty value to enable.
+
+- **DEBUG**
+
+    Enable debug output. Default: disabled.
+    Set to non-empty value to enable.
+
+- **DELIM**=_string_
+
+    Delimiter characters for array/hash values. Default: space, tab, comma.
+    For example, `DELIM=,:` would split on comma and colon.
+
+- **REQUIRE**=_version_
+
+    Minimum required version. Script exits with error if current
+    version is older than specified.
+
+        [&REQUIRE]="0.2"
 
 # MULTIPLE INVOCATIONS
 
@@ -378,6 +459,7 @@ See `ex/` directory for sample scripts:
 - [Getopt::Long::Bash](https://metacpan.org/pod/Getopt%3A%3ALong%3A%3ABash) - module information
 - [Getopt::Long](https://metacpan.org/pod/Getopt%3A%3ALong) - Perl module inspiration
 - [https://github.com/tecolicom/getoptlong](https://github.com/tecolicom/getoptlong) - repository
+- [https://qiita.com/kaz-utashiro/items/75a7df9e1a1e92797376](https://qiita.com/kaz-utashiro/items/75a7df9e1a1e92797376) - introduction article (Japanese)
 
 # AUTHOR
 
