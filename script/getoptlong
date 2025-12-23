@@ -65,6 +65,10 @@ B<Or:>
 
     eval "$(getoptlong OPTS)"
 
+=head1 VERSION
+
+0.4.1
+
 =head1 DESCRIPTION
 
 B<getoptlong.sh> is a Bash library providing Perl's L<Getopt::Long>-style

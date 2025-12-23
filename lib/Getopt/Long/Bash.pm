@@ -10,209 +10,202 @@ __END__
 
 =head1 NAME
 
-Getopt::Long::Bash - Bash library for option parsing like Perl's Getopt::Long
+Getopt::Long::Bash - Bash option parsing that does what you mean
 
 =head1 SYNOPSIS
 
-Install via CPAN:
-
-    cpanm Getopt::Long::Bash
-
-Then use in your bash script:
-
-    #!/usr/bin/env bash
-
     declare -A OPTS=(
-        [ debug     | d  ]=0
-        [ count     | c: ]=1
+        [verbose|v]=
+        [count  |c:=i]=1
     )
-
     . getoptlong.sh OPTS "$@"
-
-    (( debug > 0 )) && echo "Debug mode is ON"
-    echo "$@"
 
 =head1 DESCRIPTION
 
-B<getoptlong.sh> is a Bash library for parsing command-line options in
-shell scripts. It provides a flexible way to handle options including:
+=head2 Why Another Option Parser?
+
+If you've written Bash scripts, you know the pain. You start with a
+simple script, add a few options with C<getopts>, and then...
+
+I<"Can we add a --verbose flag?">
+
+Sorry, C<getopts> doesn't do long options.
+
+I<"The script fails when I put the filename before the options.">
+
+Right, C<getopts> requires options to come first.
+
+I<"I need to pass multiple include paths.">
+
+You'll have to handle that yourself.
+
+I<"Can it validate that --count is a number?">
+
+Write your own validation.
+
+I<"Users keep asking how to use it.">
+
+Write a help message. And keep it in sync with your code. Manually.
+
+Sound familiar?
+
+=head2 There Has to Be a Better Way
+
+Perl developers have enjoyed L<Getopt::Long> for decades - a
+battle-tested option parser that just works. What if Bash had
+something similar?
+
+That's exactly what B<getoptlong.sh> provides.
+
+=head2 Define Once, Get Everything
+
+Instead of scattered C<getopts> calls and manual validation, define
+your options in one place:
+
+    declare -A OPTS=(
+        [verbose |v             ]=      # flag (increments with -vvv)
+        [output  |o:            ]=      # required argument
+        [config  |c?            ]=      # optional argument
+        [include |I@            ]=      # array (multiple values)
+        [define  |D%            ]=      # hash (key=value pairs)
+        [count   |n:=i          ]=1     # integer validation
+        [mode    |m:=(fast|slow)]=fast  # regex validation
+    )
+    . getoptlong.sh OPTS "$@"
+
+That's it. One line to parse. You get:
 
 =over 4
 
-=item * Clear and expressive option syntax
+=item B<Long and short options>
 
-=item * Supports both short options (e.g., C<-h>) and long options (e.g., C<--help>)
+C<--verbose> and C<-v> work the same way.
 
-=item * Allows options and non-option arguments to be freely mixed (PERMUTE)
+=item B<Option bundling>
 
-=item * Supports flag type incremental option as well as required arguments,
-optional arguments, array-type, and hash-type options
+C<-vvv> increments verbose three times.
 
-=item * Provides validation for integer, floating-point, and custom regex patterns
+=item B<GNU-style flexibility>
 
-=item * Enables registration of callback functions for each option
+C<script.sh file.txt --verbose> works. Options and arguments mix freely.
 
-=item * Supports multiple calls for subcommands or function-level option analysis
+=item B<Rich data types>
 
-=item * Automatic generation of help option and help messages
+Arrays collect multiple C<--include> paths. Hashes store C<--define KEY=VALUE> pairs.
 
-=back
+=item B<Built-in validation>
 
-=head1 OPTION TYPES
+C<=i> ensures integers, C<=f> for floats, C<=(regex)> for patterns.
+Bad input? Clear error message. No corrupted state.
 
-=over 4
+=item B<Automatic help>
 
-=item B<Flag Options> (no suffix or C<+>)
+C<--help> generates usage from your definitions. Always accurate,
+zero maintenance.
 
-Act as switches. First use sets to 1, multiple uses increment.
-C<--no-option> resets to empty.
+=item B<Callbacks>
 
-    [verbose|v]   # flag option
-    [debug|d+]=0  # with initial value
-
-=item B<Required Argument> (C<:>)
-
-Options that always require a value.
-
-    [output|o:]=/dev/stdout
-
-=item B<Optional Argument> (C<?>)
-
-Options that can take a value or be specified without one.
-
-    [mode|m?]
-
-=item B<Array Options> (C<@>)
-
-Accept multiple values as an array.
-
-    [include|I@]
-
-=item B<Hash Options> (C<%>)
-
-Accept C<key=value> pairs as an associative array.
-
-    [define|D%]
-
-=item B<Callback Options> (C<!>)
-
-Execute a callback function when the option is parsed.
-
-    [execute|x!]
+Execute functions when options are parsed. Perfect for C<--trace>
+enabling C<set -x>.
 
 =back
 
-=head1 VALUE VALIDATION
+=head2 Real-World Example
 
-=over 4
+Here's a complete script:
 
-=item C<=i> - Integer validation
+    #!/usr/bin/env bash
+    set -eu
 
-=item C<=f> - Float validation
+    declare -A OPTS=(
+        [&USAGE]="$0 [options] command..."
+        [count  |c:=i # repeat count  ]=1
+        [sleep  |i@=f # interval time ]=
+        [trace  |x!   # trace mode    ]=
+        [debug  |d    # debug level   ]=0
+    )
+    trace() { [[ $2 ]] && set -x || set +x; }
 
-=item C<=(<regex>)> - Custom regex validation
+    . getoptlong.sh OPTS "$@"
 
-=back
+    for (( i = 0; i < count; i++ )); do
+        "$@"
+        [[ ${sleep[0]:-} ]] && sleep "${sleep[0]}"
+    done
 
-Example:
+Run it:
 
-    [count|c:=i]           # integer
-    [ratio|r:=f]           # float
-    [mode|m:=(^(fast|slow)$)]  # custom regex
+    $ repeat.sh --count=3 --sleep=0.5 echo hello
+    hello
+    hello
+    hello
 
-=head1 COMMANDS
+    $ repeat.sh --help
+    Usage: repeat.sh [options] command...
+    Options:
+        --count, -c       repeat count (default: 1)
+        --sleep, -i       interval time
+        --trace, -x       trace mode
+        --debug, -d       debug level (default: 0)
 
-=over 4
+=head2 Designed for Wrapper Scripts
 
-=item B<getoptlong init> I<opts_array> [I<CONFIG>...]
+Building a wrapper around another command? Pass-through mode forwards
+options untouched:
 
-Initialize the library with option definitions.
+    [jobs|j:>make_opts]=    # Collect into array
 
-=item B<getoptlong parse> "$@"
+After C<--jobs=4>, the C<make_opts> array contains C<("--jobs" "4")>,
+ready to pass to the underlying command.
 
-Parse command-line arguments.
+=head2 Subcommand Support
 
-=item B<getoptlong set>
+Call C<getoptlong> multiple times for git-style subcommands:
 
-Generate shell commands to set variables (use with C<eval>).
+    # Parse global options
+    getoptlong init GlobalOPTS
+    getoptlong parse "$@" && eval "$(getoptlong set)"
 
-=item B<getoptlong callback> [-b|--before] I<opt_name> [I<function>]
-
-Register a callback function for an option.
-
-=item B<getoptlong configure> I<KEY>=I<VALUE> ...
-
-Change configuration at runtime.
-
-=item B<getoptlong dump> [-a|--all]
-
-Dump internal state for debugging.
-
-=item B<getoptlong help> [I<SYNOPSIS>]
-
-Display generated help message.
-
-=back
-
-=head1 CONFIGURATION
-
-=over 4
-
-=item B<PERMUTE>=I<array_name>
-
-Store non-option arguments in specified array.
-
-=item B<PREFIX>=I<string>
-
-Add prefix to variable names.
-
-=item B<EXIT_ON_ERROR>=I<0|1>
-
-Exit on parse error (default: 1).
-
-=item B<SILENT>=I<0|1>
-
-Suppress error messages (default: 0).
-
-=item B<DEBUG>=I<0|1>
-
-Enable debug messages (default: 0).
-
-=item B<DELIM>=I<string>
-
-Delimiter for array/hash values (default: space, tab, comma).
-
-=item B<HELP>=I<spec>
-
-Customize help option (default: C<help|h#show help>).
-
-=item B<USAGE>=I<string>
-
-Synopsis string for help message.
-
-=back
+    # Parse subcommand options
+    case "$1" in
+        commit) getoptlong init CommitOPTS; ... ;;
+    esac
 
 =head1 INSTALLATION
 
-=head2 Via CPAN
+=head2 Via CPAN (Recommended)
 
     cpanm Getopt::Long::Bash
 
-After installation, C<getoptlong.sh> will be available in your PATH.
+After installation, C<getoptlong.sh> is in your PATH.
 
-=head2 Direct from GitHub
+=head2 Direct Download
 
-    # Latest stable version
-    source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlong.sh)
+    curl -o getoptlong.sh \
+      https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlong.sh
 
-    # Local download
-    curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlong.sh -o getoptlong.sh
+=head2 Source Directly (For Quick Tests)
+
+    source <(curl -fsSL \
+      https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlong.sh)
+
+=head1 REQUIREMENTS
+
+Bash 4.2 or later (for associative arrays and C<declare -n>).
 
 =head1 SEE ALSO
 
-L<https://github.com/tecolicom/getoptlong>
+=over 4
 
-L<Getopt::Long>
+=item L<getoptlong> - Complete reference manual
+
+=item L<Getopt::Long::Bash::Tutorial> - Step-by-step getting started guide
+
+=item L<https://github.com/tecolicom/getoptlong> - Source repository
+
+=item L<https://qiita.com/kaz-utashiro/items/75a7df9e1a1e92797376> - Introduction article (Japanese)
+
+=back
 
 =head1 AUTHOR
 
