@@ -1,9 +1,32 @@
 #!/usr/bin/env bash
-# This file provides documentation for getoptlong.sh
-# To use the library, source getoptlong.sh directly
+# Output getoptlong.sh initialization script
+# Usage: eval "$(getoptlong OPTS)"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$script_dir/getoptlong.sh" "$@"
+
+if [[ $# -eq 0 ]]; then
+    echo "Usage: eval \"\$(getoptlong OPTS)\"" >&2
+    set -- OPTS
+    exit_code=1
+fi
+
+cat <<EOF
+# declare -A $1=(
+#     [ count     | c :=i # repeat count              ]=1
+#     [ sleep     | i @=f # interval time             ]=
+#     [ paragraph | p ?   # print newline after cycle ]=
+#     [ trace     | x !   # trace execution           ]=
+#     [ debug     | d     # debug level               ]=0
+#     [ message   | m %=(^(BEGIN|END)=) # print message at BEGIN|END ]=
+# )
+# trace() { [[ \$2 ]] && set -x || set +x ; }
+
+. getoptlong.sh $1 "\$@"
+
+# getoptlong dump
+EOF
+
+exit ${exit_code:-0}
 
 : <<'=cut'
 
@@ -37,6 +60,10 @@ B<Multi-step:>
     . getoptlong.sh -
     getoptlong init OPTS
     getoptlong parse "$@" && eval "$(getoptlong set)"
+
+B<Or:>
+
+    eval "$(getoptlong OPTS)"
 
 =head1 DESCRIPTION
 

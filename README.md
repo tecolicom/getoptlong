@@ -28,6 +28,10 @@ getoptlong - Option parsing that does what you mean, for Bash
     getoptlong init OPTS
     getoptlong parse "$@" && eval "$(getoptlong set)"
 
+**Or:**
+
+    eval "$(getoptlong OPTS)"
+
 # DESCRIPTION
 
 **getoptlong.sh** is a Bash library providing Perl's [Getopt::Long](https://metacpan.org/pod/Getopt%3A%3ALong)-style
