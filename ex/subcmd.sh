@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-. $(dirname $0)/../getoptlong.sh
+. $(dirname $0)/getoptlong.sh
 
 help_main() {
     cat <<-END
