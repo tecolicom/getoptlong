@@ -140,7 +140,7 @@ gol_optstring_() { local _key _string ;
     echo "${_SILENT:+:}${_string:- }-:"
 }
 gol_getopts () { _gol_redirect "$@" ; }
-gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pass _non ;
+gol_getopts_() { local _non _optname _val _vtype _vname _name _callback _trigger _pass ;
     local _opt="$1"; shift;
     case $_opt in
 	[:?]) _callback=$(_gol_hook "$_opt") && [[ $_callback ]] && $_callback "$OPTARG"
@@ -148,10 +148,10 @@ gol_getopts_() { local _optname _val _vtype _vname _name _callback _trigger _pas
 	-) _gol_getopts_long "$@" || return $? ;;
 	*) _gol_getopts_short || return $? ;;
     esac
-    [[ -v _val || ${_pass-} ]] || _val="$(_gol_plusone "$(_gol_value $_vname)")"
+    [[ -v _val || $_pass ]] || _val="$(_gol_plusone "$(_gol_value $_vname)")"
     _name=$(_gol_alias ${_optname:-$_opt}) || _name=${_optname:=$_opt}
     _trigger="$(_gol_trig $_name)" && _gol_call_hook "$_trigger" "$_name"
-    [[ ${_pass-} ]] && _gol_getopts_passthru || _gol_getopts_store
+    [[ $_pass ]] && _gol_getopts_passthru || _gol_getopts_store
     _callback="$(_gol_hook $_name)" && _gol_call_hook "$_callback" "$_name" "$_val"
     return 0
 }
