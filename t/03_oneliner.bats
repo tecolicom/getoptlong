@@ -3,13 +3,13 @@
 # Load the helper (which loads bats-support and bats-assert)
 load test_helper.bash
 # Source getoptlong.sh to make its functions available for testing
-. ../getoptlong.sh
+. ../script/getoptlong.sh
 
 # Test: One-liner - basic auto-initialization
 @test "getoptlong: one-liner - auto initialization" {
     run bash -c '
         declare -A OPTS=([verbose|v]=)
-        . ../getoptlong.sh OPTS --verbose
+        . ../script/getoptlong.sh OPTS --verbose
         echo "verbose:$verbose"
     '
     assert_success
@@ -20,7 +20,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - flag option short and long" {
     run bash -c '
         declare -A OPTS=([debug|d]=)
-        . ../getoptlong.sh OPTS -d
+        . ../script/getoptlong.sh OPTS -d
         echo "debug:$debug"
     '
     assert_success
@@ -31,7 +31,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - required argument" {
     run bash -c '
         declare -A OPTS=([file|f:]=)
-        . ../getoptlong.sh OPTS --file input.txt
+        . ../script/getoptlong.sh OPTS --file input.txt
         echo "file:$file"
     '
     assert_success
@@ -46,7 +46,7 @@ load test_helper.bash
             [file|f:]=
             [count|c:]=
         )
-        . ../getoptlong.sh OPTS --verbose -f data.txt --count 5
+        . ../script/getoptlong.sh OPTS --verbose -f data.txt --count 5
         echo "verbose:$verbose"
         echo "file:$file"
         echo "count:$count"
@@ -61,7 +61,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - array option" {
     run bash -c '
         declare -A OPTS=([item|i@]=)
-        . ../getoptlong.sh OPTS --item val1 -i val2 --item val3
+        . ../script/getoptlong.sh OPTS --item val1 -i val2 --item val3
         echo "item_count:${#item[@]}"
         echo "item_0:${item[0]}"
         echo "item_1:${item[1]}"
@@ -78,7 +78,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - hash option" {
     run bash -c '
         declare -A OPTS=([data|d%]=)
-        . ../getoptlong.sh OPTS --data key1=value1 -d key2=value2
+        . ../script/getoptlong.sh OPTS --data key1=value1 -d key2=value2
         echo "data_key1:${data[key1]}"
         echo "data_key2:${data[key2]}"
     '
@@ -91,7 +91,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - optional argument with value" {
     run bash -c '
         declare -A OPTS=([opt|o?]=)
-        . ../getoptlong.sh OPTS --opt=test_value
+        . ../script/getoptlong.sh OPTS --opt=test_value
         echo "opt:$opt"
     '
     assert_success
@@ -102,7 +102,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - optional argument without value" {
     run bash -c '
         declare -A OPTS=([opt|o?]=)
-        . ../getoptlong.sh OPTS --opt
+        . ../script/getoptlong.sh OPTS --opt
         echo "opt:${opt:-unset}"
     '
     assert_success
@@ -114,7 +114,7 @@ load test_helper.bash
     run bash -c '
         declare -A OPTS=([pass|p:>pass_array]=)
         declare -a pass_array=()
-        . ../getoptlong.sh OPTS --pass value1 -p value2
+        . ../script/getoptlong.sh OPTS --pass value1 -p value2
         echo "pass_len:${#pass_array[@]}"
         echo "pass_0:${pass_array[0]}"
         echo "pass_1:${pass_array[1]}"
@@ -133,7 +133,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - integer validation" {
     run bash -c '
         declare -A OPTS=([number|n:=i]=)
-        . ../getoptlong.sh OPTS --number 42
+        . ../script/getoptlong.sh OPTS --number 42
         echo "number:$number"
     '
     assert_success
@@ -144,7 +144,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - validation failure" {
     run bash -c '
         declare -A OPTS=([number|n:=i]=)
-        . ../getoptlong.sh OPTS --number abc
+        . ../script/getoptlong.sh OPTS --number abc
     '
     assert_failure
     assert_output "abc: not an integer"
@@ -158,7 +158,7 @@ load test_helper.bash
             [debug|d]=
             [file|f:]=
         )
-        . ../getoptlong.sh OPTS -vdf input.txt
+        . ../script/getoptlong.sh OPTS -vdf input.txt
         echo "verbose:$verbose"
         echo "debug:$debug"
         echo "file:$file"
@@ -173,7 +173,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - remaining arguments" {
     run bash -c '
         declare -A OPTS=([verbose|v]=)
-        . ../getoptlong.sh OPTS --verbose arg1 arg2 arg3
+        . ../script/getoptlong.sh OPTS --verbose arg1 arg2 arg3
         echo "verbose:$verbose"
         echo "args:$@"
         echo "arg_count:$#"
@@ -188,7 +188,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - double dash separator" {
     run bash -c '
         declare -A OPTS=([verbose|v]=)
-        . ../getoptlong.sh OPTS --verbose -- --not-an-option
+        . ../script/getoptlong.sh OPTS --verbose -- --not-an-option
         echo "verbose:$verbose"
         echo "args:$@"
     '
@@ -201,7 +201,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - negated option" {
     run bash -c '
         declare -A OPTS=([feature|f]=1)
-        . ../getoptlong.sh OPTS --no-feature
+        . ../script/getoptlong.sh OPTS --no-feature
         echo "feature:$feature"
     '
     assert_success
@@ -215,7 +215,7 @@ load test_helper.bash
             [count|c:]=5
             [mode|m:]=default
         )
-        . ../getoptlong.sh OPTS --count 10
+        . ../script/getoptlong.sh OPTS --count 10
         echo "count:$count"
         echo "mode:$mode"
     '
@@ -237,7 +237,7 @@ load test_helper.bash
             [config|c%]=
             [dry-run|n]=
         )
-        . ../getoptlong.sh OPTS \
+        . ../script/getoptlong.sh OPTS \
             --verbose \
             --output result.txt \
             --include "*.txt" \
@@ -280,7 +280,7 @@ load test_helper.bash
 @test "getoptlong: one-liner - unknown option error" {
     run bash -c '
         declare -A OPTS=([verbose|v]=)
-        . ../getoptlong.sh OPTS --unknown-option
+        . ../script/getoptlong.sh OPTS --unknown-option
     '
     assert_failure
     assert_output "no such option -- --unknown-option"
@@ -294,7 +294,7 @@ load test_helper.bash
             [file|f: # Input file path]=
             [count|c: # Number of iterations]=5
         )
-        . ../getoptlong.sh OPTS --help 2>/dev/null || true
+        . ../script/getoptlong.sh OPTS --help 2>/dev/null || true
     '
     assert_success
     assert_output --partial "Enable verbose output"
@@ -310,7 +310,7 @@ load test_helper.bash
             [debug|d]=
             [verbose|v]=
         )
-        . ../getoptlong.sh OPTS --debug arg1 --verbose arg2
+        . ../script/getoptlong.sh OPTS --debug arg1 --verbose arg2
         echo "debug:$debug"
         echo "verbose:$verbose"
         echo "args:$@"
@@ -328,7 +328,7 @@ load test_helper.bash
             [&PERMUTE]=
             [image|I:]=
         )
-        . ../getoptlong.sh OPTS -I myimage ls -la
+        . ../script/getoptlong.sh OPTS -I myimage ls -la
         echo "image:$image"
         echo "args:$@"
         echo "argc:$#"
@@ -347,7 +347,7 @@ load test_helper.bash
             [debug|d]=
             [file|f:]=
         )
-        . ../getoptlong.sh OPTS -d --file test.txt
+        . ../script/getoptlong.sh OPTS -d --file test.txt
         echo "debug:$debug"
         echo "file:$file"
         echo "args:$@"

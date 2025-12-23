@@ -3,12 +3,12 @@
 # Load the helper (which loads bats-support and bats-assert)
 load test_helper.bash
 # Source getoptlong.sh to make its functions available for testing
-. ../getoptlong.sh
+. ../script/getoptlong.sh
 
 # Test: Passthru - basic long option with value
 @test "getoptlong: passthru - long option --passthru-opt val" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([passthru-opt|p:>my_passthru_array]=)
         declare -a my_passthru_array=()
         getoptlong init OPTS
@@ -27,7 +27,7 @@ load test_helper.bash
 # Test: Passthru - basic short option with value
 @test "getoptlong: passthru - short option -p val" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([passthru-opt|p:>my_passthru_array]=)
         declare -a my_passthru_array=()
         getoptlong init OPTS
@@ -46,7 +46,7 @@ load test_helper.bash
 # Test: Passthru - flag option (no value)
 @test "getoptlong: passthru - flag option --flag-opt" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([flag-opt+>my_flag_array]=)
         declare -a my_flag_array=()
         getoptlong init OPTS
@@ -63,7 +63,7 @@ load test_helper.bash
 # Test: Passthru - combined with callback (!)
 @test "getoptlong: passthru - combined with callback --cb-opt val" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         cb_func() { echo "Callback: $1 val=$2"; }
         declare -A OPTS=([cb-opt:!>my_cb_array]=)
         declare -a my_cb_array=()
@@ -85,7 +85,7 @@ load test_helper.bash
 # Test: Passthru - combined with required value (:)
 @test "getoptlong: passthru - combined with required value --req-opt val" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([req-opt|r:>my_req_array]=) # Note the type is effectively ":>"
         declare -a my_req_array=()
         getoptlong init OPTS
@@ -104,7 +104,7 @@ load test_helper.bash
 # Test: Passthru - multiple options to the same array
 @test "getoptlong: passthru - multiple options to same array" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=(
             [opt1|a:>common_array]=
             [opt2|b:>common_array]=
@@ -134,7 +134,7 @@ load test_helper.bash
 # Test: Passthru - default array name (based on option name)
 @test "getoptlong: passthru - default array name" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([default-array-opt+>]=) # Target array will be default_array_opt
         # Ensure default_array_opt is declared, or it might fail in strict mode or cause issues
         declare -a default_array_opt=()
@@ -152,7 +152,7 @@ load test_helper.bash
 # Test: Passthru - help message
 @test "getoptlong: passthru - help message" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=(
             [my-pass|p:>pass_arr]=
             [another-pass:>another_arr]=
@@ -168,7 +168,7 @@ load test_helper.bash
 # Test: Passthru - optional argument without value
 @test "getoptlong: passthru - optional argument without value --opt" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([optional-opt|o?>opt_array]=)
         declare -a opt_array=()
         getoptlong init OPTS
@@ -185,7 +185,7 @@ load test_helper.bash
 # Test: Passthru - short option attached value
 @test "getoptlong: passthru - short option attached value -ovalue" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([option|o:>opt_array]=)
         declare -a opt_array=()
         getoptlong init OPTS
@@ -204,7 +204,7 @@ load test_helper.bash
 # Test: Passthru - combined with regular options
 @test "getoptlong: passthru - mixed with regular options" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=(
             [regular-opt|r:]=
             [passthru-opt|p:>pass_array]=
@@ -232,7 +232,7 @@ load test_helper.bash
 # Test: Passthru - with double dash separator
 @test "getoptlong: passthru - with double dash separator" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([pass-opt|p:>pass_array]=)
         declare -a pass_array=()
         getoptlong init OPTS
@@ -253,7 +253,7 @@ load test_helper.bash
 # Test: Passthru - simple flag option
 @test "getoptlong: passthru - simple flag option --feature" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([feature+>feature_array]=)
         declare -a feature_array=()
         getoptlong init OPTS
@@ -271,7 +271,7 @@ load test_helper.bash
 # Test: Passthru - bundled short options
 @test "getoptlong: passthru - bundled short options -abc" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=(
             [opt-a|a+>opt_a_array]=
             [opt-b|b+>opt_b_array]=
@@ -302,7 +302,7 @@ load test_helper.bash
 # Test: Passthru - performance with many options
 @test "getoptlong: passthru - many options performance test" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([multi-opt|m:>multi_array]=)
         declare -a multi_array=()
         getoptlong init OPTS
@@ -332,7 +332,7 @@ load test_helper.bash
 # Test: Passthru - with validation rules (should not validate passthru values)
 @test "getoptlong: passthru - with validation rules (bypassed)" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([number-opt:>num_array=i]=)  # Integer validation
         declare -a num_array=()
         getoptlong init OPTS
@@ -351,7 +351,7 @@ load test_helper.bash
 # Test: Passthru - negated flag option --no-debug
 @test "getoptlong: passthru - negated flag option --no-debug" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([debug+>debug_array]=)
         declare -a debug_array=()
         getoptlong init OPTS
@@ -368,7 +368,7 @@ load test_helper.bash
 # Test: Passthru - negated option with required arg --no-pager
 @test "getoptlong: passthru - negated option with required arg --no-pager" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([pager:>pager_array]=)
         declare -a pager_array=()
         getoptlong init OPTS
@@ -385,7 +385,7 @@ load test_helper.bash
 # Test: Passthru - mixed negated and normal options
 @test "getoptlong: passthru - mixed negated and normal options" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([feature+>pass_array]=)
         declare -a pass_array=()
         getoptlong init OPTS

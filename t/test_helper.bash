@@ -19,5 +19,5 @@ load 'bats-assert/load.bash'
 
 # Note: If getoptlong.sh needs to be sourced for specific test files (like 00_getoptlong.bats),
 # it's now recommended to do that directly in those files, e.g.:
-# . ../getoptlong.sh
+# . ../script/getoptlong.sh
 # This keeps test_helper.bash focused on loading common libraries.

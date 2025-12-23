@@ -3,7 +3,7 @@
 # Load the helper (which loads bats-support and bats-assert)
 load test_helper.bash
 # Source getoptlong.sh to make its functions available for testing
-. ../getoptlong.sh
+. ../script/getoptlong.sh
 
 # Test: getoptlong init and version
 @test "getoptlong: init and version" {
@@ -15,7 +15,7 @@ load test_helper.bash
 # Test: Basic flag option (--verbose)
 @test "getoptlong: flag - long option --verbose" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         # getoptlong.sh is sourced above by the test file itself
         declare -A OPTS=([verbose|v]=)
         getoptlong init OPTS
@@ -30,7 +30,7 @@ load test_helper.bash
 # Test: Basic flag option (--verbose)
 @test "getoptlong: flag - long option --verbose (PERMUTE=)" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         # getoptlong.sh is sourced above by the test file itself
         declare -A OPTS=([verbose|v]=)
         getoptlong init OPTS PERMUTE=
@@ -45,7 +45,7 @@ load test_helper.bash
 # Test: Basic flag option (-v)
 @test "getoptlong: flag - short option -v" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([verbose|v]=)
         getoptlong init OPTS
         getoptlong parse -v
@@ -58,7 +58,7 @@ load test_helper.bash
 
 @test "getoptlong: - in the option name --help-me" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([help-me|h]=)
         getoptlong init OPTS
         getoptlong parse foo --help-me
@@ -72,7 +72,7 @@ load test_helper.bash
 # Test: Flag option, incrementing (-d -d)
 @test "getoptlong: flag - incrementing -d -d -dd --debug" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([debug|d]=0)
         getoptlong init OPTS
         getoptlong parse -d -d -dd --debug
@@ -86,7 +86,7 @@ load test_helper.bash
 # Test: Flag option, negated (--no-feature)
 @test "getoptlong: flag - negated --no-feature" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([feature|f]=1)
         getoptlong init OPTS
         getoptlong parse --no-feature
@@ -100,7 +100,7 @@ load test_helper.bash
 # Test: Flag option, repeated long options
 @test "getoptlong: flag - repeated long --level --level --level" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([level|l]=0)
         getoptlong init OPTS
         getoptlong parse --level --level --level
@@ -114,7 +114,7 @@ load test_helper.bash
 # Test: Flag option, repeated short options
 @test "getoptlong: flag - repeated short -l -l -l" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([level|l]=0)
         getoptlong init OPTS
         getoptlong parse -l -l -l
@@ -128,7 +128,7 @@ load test_helper.bash
 # Test: Flag option, mixed long and short
 @test "getoptlong: flag - mixed --level -l --level" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([level|l]=0)
         getoptlong init OPTS
         getoptlong parse --level -l --level
@@ -142,7 +142,7 @@ load test_helper.bash
 # Test: Option with required argument (--file data.txt)
 @test "getoptlong: required arg - long --file data.txt" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=)
         getoptlong init OPTS
         getoptlong parse --file data.txt
@@ -156,7 +156,7 @@ load test_helper.bash
 # Test: Option with required argument (-f data.txt)
 @test "getoptlong: required arg - short -f data.txt" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=)
         getoptlong init OPTS
         getoptlong parse -f data.txt
@@ -170,7 +170,7 @@ load test_helper.bash
 # Test: Option with required argument (-fdata.txt, attached)
 @test "getoptlong: required arg - short -fdata.txt (attached)" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=)
         getoptlong init OPTS
         getoptlong parse -fdata.txt
@@ -184,7 +184,7 @@ load test_helper.bash
 # Test: Option with required argument (not given, should retain default from OPTS array)
 @test "getoptlong: required arg - not given (retain default)" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=default)
         getoptlong init OPTS
         getoptlong parse # No args
@@ -198,7 +198,7 @@ load test_helper.bash
 # Test: Option with optional argument (--optarg=value)
 @test "getoptlong: optional arg - long --optarg=value" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([optarg|o?]=)
         getoptlong init OPTS
         getoptlong parse --optarg=value
@@ -212,7 +212,7 @@ load test_helper.bash
 # Test: Option with optional argument (--optarg, no value provided)
 @test "getoptlong: optional arg - long --optarg (no value)" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([optarg|o?]=)
         getoptlong init OPTS
         getoptlong parse --optarg
@@ -226,7 +226,7 @@ load test_helper.bash
 # Test: Array option (--item val1 --item val2)
 @test "getoptlong: array option - long --item val1 --item val2" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
         getoptlong parse --item val1 --item val2
@@ -240,7 +240,7 @@ load test_helper.bash
 # Test: Array option (-i val1 -i val2)
 @test "getoptlong: array option - short -i val1 -i val2" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
         getoptlong parse -i val1 -i val2
@@ -255,7 +255,7 @@ load test_helper.bash
 # This test was identified as problematic due to EOF error, ensure quotes are correct.
 @test "getoptlong: array option - long --item=v1,v2,v3 (comma separated)" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
         getoptlong parse --item=v1,v2,v3
@@ -268,7 +268,7 @@ load test_helper.bash
 
 @test "getoptlong: array option - long --item=v1,v2,v3 (DELIM=\$' \t')" {
     run bash <<'    END'
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS DELIM=$' \t'
         getoptlong parse --item=v1,v2,v3
@@ -281,7 +281,7 @@ load test_helper.bash
 
 @test "getoptlong: array option - long --item=v  1\nv  2\nv  3\n (newline separated)" {
     run bash <<'    END'
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
         getoptlong parse --item=$'v  1\nv  2\nv  3\n'
@@ -295,7 +295,7 @@ load test_helper.bash
 # Test: Hash option (--data key1=val1 --data key2=val2)
 @test "getoptlong: hash option - long --data k1=v1 --data k2=v2" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
         getoptlong parse --data k1=v1 --data k2=v2
@@ -311,7 +311,7 @@ load test_helper.bash
 # Test: Hash option (-D k1=v1 -D k2=v2)
 @test "getoptlong: hash option - short -D k1=v1 -D k2=v2" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
         getoptlong parse -D k1=v1 -D k2=v2
@@ -326,7 +326,7 @@ load test_helper.bash
 
 @test "getoptlong: hash option - short -D k1=v1,k2=v2" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
         getoptlong parse -D k1=v1,k2=v2
@@ -341,7 +341,7 @@ load test_helper.bash
 
 @test "getoptlong: hash option - short -D F'k1=v  1,k2=v  2\n' (newline separated)" {
     run bash << 'END'
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
         getoptlong parse -D $'k1=v  1\nk2=v  2\n'
@@ -357,7 +357,7 @@ END
 # Test: Integer validation (=i) - valid
 @test "getoptlong: validation - integer (=i) - valid" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([count|c:=i]=0)
         getoptlong init OPTS
         getoptlong parse --count 123
@@ -371,7 +371,7 @@ END
 # Test: Integer validation (=i) - invalid (check stderr)
 @test "getoptlong: validation - integer (=i) - invalid (stderr)" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([count|c:=i]=0)
         getoptlong init OPTS EXIT_ON_ERROR=1
         getoptlong parse --count abc
@@ -400,7 +400,7 @@ END
 # Test: Float validation (=f) - valid
 @test "getoptlong: validation - float (=f) - valid" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([value|v:=f]=0)
         getoptlong init OPTS
         getoptlong parse --value 3.14
@@ -414,7 +414,7 @@ END
 # Test: Regex validation (=(regex)) - valid
 @test "getoptlong: validation - regex (=(regex)) - valid" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([mode|m:=(^(fast|slow)$)]=)
         getoptlong init OPTS
         getoptlong parse --mode fast
@@ -428,7 +428,7 @@ END
 # Test: Callback execution
 @test "getoptlong: callback - basic execution" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         my_callback() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a:]=)
         getoptlong init OPTS
@@ -443,7 +443,7 @@ END
 
 @test "getoptlong: callback --before" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         my_callback() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a:]=)
         getoptlong init OPTS
@@ -458,7 +458,7 @@ END
 
 @test "getoptlong: callback type option" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         action() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a!]=)
         getoptlong init OPTS
@@ -471,7 +471,7 @@ END
 
 @test "getoptlong: callback type option with arg" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         action() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a:!]=)
         getoptlong init OPTS
@@ -485,7 +485,7 @@ END
 # Test: PREFIX option
 @test "getoptlong: configuration - PREFIX=test_" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([long|l]=)
         getoptlong init OPTS PREFIX=test_
         getoptlong parse --long
@@ -499,7 +499,7 @@ END
 # Test: PERMUTE option for non-option arguments
 @test "getoptlong: configuration - PERMUTE" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([verbose|v]=)
         declare -a GOL_MYARGS=()
         getoptlong init OPTS PERMUTE=GOL_MYARGS
@@ -515,7 +515,7 @@ END
 
 @test "getoptlong: configuration - PERMUTE=" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([debug|d]= [verbose|v]=)
         getoptlong init OPTS PERMUTE=
         set -- --debug arg1 --verbose arg2 arg3
@@ -533,7 +533,7 @@ END
 
 @test "getoptlong: stop by --" {
     run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([debug|d]= [verbose|v]=)
         getoptlong init OPTS
         set -- --debug arg1 -- --verbose arg2 arg3
@@ -552,7 +552,7 @@ END
 # Test: Combined short options (-xvf value)
 @test "getoptlong: combined short options -xvf value" {
   run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([xflag|x]= [vflag|v]= [file|f:]=)
         getoptlong init OPTS
         getoptlong parse -xvf somefile
@@ -566,7 +566,7 @@ END
 # Test: Unknown long option (should produce error on stderr)
 @test "getoptlong: error - unknown long option" {
   run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([known]=)
         getoptlong init OPTS EXIT_ON_ERROR=1
         getoptlong parse --unknown-option
@@ -580,7 +580,7 @@ END
 # Test: Option requires argument, but not given (stderr)
 @test "getoptlong: error - required arg missing" {
   run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([myfile|f:]=)
         getoptlong init OPTS EXIT_ON_ERROR=1
         getoptlong parse --myfile
@@ -593,7 +593,7 @@ END
 # Test: --no-X prefix for required argument option sets empty string
 @test "getoptlong: required arg - negated --no-pager sets empty string" {
   run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([pager|p:]=default_pager)
         getoptlong init OPTS
         getoptlong parse --no-pager
@@ -607,7 +607,7 @@ END
 # Test: --no-X with short option alias for required argument option
 @test "getoptlong: required arg - negated --no-file sets empty string" {
   run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=original.txt)
         getoptlong init OPTS
         getoptlong parse --no-file
@@ -621,7 +621,7 @@ END
 # Test: --no-X does not consume next argument
 @test "getoptlong: required arg - negated --no-pager does not consume next arg" {
   run bash -c '
-        . ../getoptlong.sh
+        . ../script/getoptlong.sh
         declare -A OPTS=([pager|p:]=default)
         getoptlong init OPTS PERMUTE=
         set -- --no-pager arg1 arg2
