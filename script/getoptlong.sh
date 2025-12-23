@@ -104,7 +104,7 @@ _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
 	    if [[ $_initial =~ ^\(.*\)$ ]] ; then
 		eval "$_vname=$_initial"
 	    else
-		[[ $_vtype == $_IS_LIST ]] && _gol_set_array $_vname ${_initial:+"$_initial"}
+		[[ $_vtype == $_IS_LIST ]] && _gol_add_array $_vname ${_initial:+"$_initial"}
 		[[ $_vtype == $_IS_HASH ]] && [[ $_initial ]] && _gol_die "$_initial: invalid hash data"
 	    fi
 	    ;;
@@ -196,12 +196,13 @@ _gol_getopts_store() { local _vals _v ;
     local _check=$(_gol_rule $_name)
     case $_vtype in
 	[$_IS_LIST]|[$_IS_HASH])
+	    [[ ${_non-} ]] && { declare -n __target__=$_vname ; __target__=() ; return ; }
 	    [[ $_val =~ $'\n' ]] && readarray -t _vals <<< ${_val%$'\n'} \
 				 || IFS="${_DELIM}" read -a _vals <<< ${_val}
 	    for _v in "${_vals[@]}" ; do
 		[[ $_check ]] && _gol_validate "$_check" "$_v"
 		case $_vtype in
-		[$_IS_LIST]) _gol_set_array $_vname "$_v" ;;
+		[$_IS_LIST]) _gol_add_array $_vname "$_v" ;;
 		[$_IS_HASH])
 		    [[ $_v =~ = ]] && _gol_set_hash $_vname "${_v%%=*}" "${_v#*=}" \
 				   || _gol_set_hash $_vname "$_v" 1 ;;
@@ -216,13 +217,13 @@ _gol_getopts_passthru() { local _options=() ;
     local _option=${_optname-$_opt}
     (( ${#_option} > 1 )) && _options=(--${_non-}$_option) || _options=(-$_option)
     [[ $_vtype =~ [$_IS_REQ] ]] && _options+=($_val)
-    _gol_set_array $_vname "${_options[@]}"
+    _gol_add_array $_vname "${_options[@]}"
 }
 _gol_value() {
     declare -n __target__="$1"
     (( $# > 1 )) && __target__="$2" || echo "$__target__"
 }
-_gol_set_array() { declare -n __target__="$1" ; __target__+=("${@:2}") ; }
+_gol_add_array() { declare -n __target__="$1" ; __target__+=("${@:2}") ; }
 _gol_set_hash()  { declare -n __target__="$1" ; __target__["$2"]="$3" ; }
 _gol_validate() {
     case $1 in

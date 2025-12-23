@@ -228,8 +228,9 @@ B<Syntax:>
 
 Collects multiple values into an array. Multiple specifications accumulate.
 A single option can contain delimited values (default: space, tab, comma;
-see L<DELIM|/CONFIGURATION>). Access with C<"${include[@]}">. To clear the
-array before adding values, use C<getoptlong callback --before>.
+see L<DELIM|/CONFIGURATION>). Access with C<"${include[@]}">. Use
+C<--no-include> to reset the array to empty; this is useful for overriding
+default values (e.g., C<--no-include --include /new/path>).
 
     [include|I@]=       # --include a --include b or --include a,b
 
@@ -238,8 +239,8 @@ array before adding values, use C<getoptlong callback --before>.
 Collects C<key=value> pairs into an associative array. Key without value
 is treated as C<key=1>. Multiple pairs can be specified: C<--define A=1,B=2>
 (see L<DELIM|/CONFIGURATION>). Access with C<${define[KEY]}>, keys with
-C<${!define[@]}>. To clear the hash before adding values, use
-C<getoptlong callback --before>.
+C<${!define[@]}>. Use C<--no-define> to reset the hash to empty; this is
+useful for overriding default values (e.g., C<--no-define --define KEY=val>).
 
     [define|D%]=        # --define KEY=VAL or --define KEY (KEY=1)
 

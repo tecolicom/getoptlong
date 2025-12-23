@@ -292,6 +292,34 @@ load test_helper.bash
     assert_output "item_vals: v  1 v  2 v  3"
 }
 
+# Test: Array option reset with --no-item
+@test "getoptlong: array option - --no-item resets array" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([item|i@]="(a b c)")
+        getoptlong init OPTS
+        getoptlong parse --no-item
+        eval "$(getoptlong set)"
+        echo "item_count:${#item[@]}"
+    '
+    assert_success
+    assert_output "item_count:0"
+}
+
+# Test: Array option reset then add with --no-item --item=x
+@test "getoptlong: array option - --no-item --item=x resets then adds" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([item|i@]="(a b c)")
+        getoptlong init OPTS
+        getoptlong parse --no-item --item=x
+        eval "$(getoptlong set)"
+        echo "item_vals:${item[*]}"
+    '
+    assert_success
+    assert_output "item_vals:x"
+}
+
 # Test: Hash option (--data key1=val1 --data key2=val2)
 @test "getoptlong: hash option - long --data k1=v1 --data k2=v2" {
     run $BASH -c '
@@ -352,6 +380,38 @@ END
     assert_success
     assert_line --index 0 "data_k1:v  1"
     assert_line --index 1 "data_k2:v  2"
+}
+
+# Test: Hash option reset with --no-data
+@test "getoptlong: hash option - --no-data resets hash" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([data|D%]=)
+        declare -A data=([k1]=v1 [k2]=v2)
+        getoptlong init OPTS
+        getoptlong parse --no-data
+        eval "$(getoptlong set)"
+        echo "data_count:${#data[@]}"
+    '
+    assert_success
+    assert_output "data_count:0"
+}
+
+# Test: Hash option reset then add with --no-data --data=x=y
+@test "getoptlong: hash option - --no-data --data=x=y resets then adds" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([data|D%]=)
+        declare -A data=([k1]=v1 [k2]=v2)
+        getoptlong init OPTS
+        getoptlong parse --no-data --data=x=y
+        eval "$(getoptlong set)"
+        echo "data_count:${#data[@]}"
+        echo "data_x:${data[x]}"
+    '
+    assert_success
+    assert_line --index 0 "data_count:1"
+    assert_line --index 1 "data_x:y"
 }
 
 # Test: Integer validation (=i) - valid

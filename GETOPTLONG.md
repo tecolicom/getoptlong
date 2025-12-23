@@ -435,6 +435,8 @@ Accept multiple values as an array.
 
 *   **Initial Value:** Usually an empty array. An initial value can be set during definition (e.g., `]=(/default/path1 /default/path2)`).
 
+*   **Resetting with `no-` Prefix:** Specifying with `--no-include` resets the array to empty. This is useful for overriding default values. For example, `--no-include --include /new/path` clears any initial values and sets only `/new/path`.
+
 *   **Use Cases:** Multiple input files, multiple configuration items.
 
 #### 4.2.5. Hash Options (`%`)
@@ -453,6 +455,8 @@ Accept `key=value` pairs as an associative array (hash).
 *   **Variable Storage:** Specified keys and values are stored in a Bash associative array (e.g., `declare -A define_map="${define[@]}"; echo "${define_map[OS]}"`).
 
 *   **Initial Value:** Usually an empty associative array. An initial value can be set during definition (e.g., `]=([USER]=$(whoami))`).
+
+*   **Resetting with `no-` Prefix:** Specifying with `--no-define` resets the associative array to empty. This is useful for overriding default values. For example, `--no-define --define KEY=val` clears any initial values and sets only `KEY=val`.
 
 *   **Use Cases:** Environment variable-like settings, information managed as key-value pairs.
 

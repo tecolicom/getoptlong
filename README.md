@@ -185,8 +185,9 @@ was specified.
 
 Collects multiple values into an array. Multiple specifications accumulate.
 A single option can contain delimited values (default: space, tab, comma;
-see [DELIM](#configuration)). Access with `"${include[@]}"`. To clear the
-array before adding values, use `getoptlong callback --before`.
+see [DELIM](#configuration)). Access with `"${include[@]}"`. Use
+`--no-include` to reset the array to empty; this is useful for overriding
+default values (e.g., `--no-include --include /new/path`).
 
     [include|I@]=       # --include a --include b or --include a,b
 
@@ -195,8 +196,8 @@ array before adding values, use `getoptlong callback --before`.
 Collects `key=value` pairs into an associative array. Key without value
 is treated as `key=1`. Multiple pairs can be specified: `--define A=1,B=2`
 (see [DELIM](#configuration)). Access with `${define[KEY]}`, keys with
-`${!define[@]}`. To clear the hash before adding values, use
-`getoptlong callback --before`.
+`${!define[@]}`. Use `--no-define` to reset the hash to empty; this is
+useful for overriding default values (e.g., `--no-define --define KEY=val`).
 
     [define|D%]=        # --define KEY=VAL or --define KEY (KEY=1)
 
