@@ -14,7 +14,7 @@ load test_helper.bash
 
 # Test: Basic flag option (--verbose)
 @test "getoptlong: flag - long option --verbose" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         # getoptlong.sh is sourced above by the test file itself
         declare -A OPTS=([verbose|v]=)
@@ -29,7 +29,7 @@ load test_helper.bash
 
 # Test: Basic flag option (--verbose)
 @test "getoptlong: flag - long option --verbose (PERMUTE=)" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         # getoptlong.sh is sourced above by the test file itself
         declare -A OPTS=([verbose|v]=)
@@ -44,7 +44,7 @@ load test_helper.bash
 
 # Test: Basic flag option (-v)
 @test "getoptlong: flag - short option -v" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([verbose|v]=)
         getoptlong init OPTS
@@ -57,7 +57,7 @@ load test_helper.bash
 }
 
 @test "getoptlong: - in the option name --help-me" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([help-me|h]=)
         getoptlong init OPTS
@@ -71,7 +71,7 @@ load test_helper.bash
 
 # Test: Flag option, incrementing (-d -d)
 @test "getoptlong: flag - incrementing -d -d -dd --debug" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([debug|d]=0)
         getoptlong init OPTS
@@ -85,7 +85,7 @@ load test_helper.bash
 
 # Test: Flag option, negated (--no-feature)
 @test "getoptlong: flag - negated --no-feature" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([feature|f]=1)
         getoptlong init OPTS
@@ -99,7 +99,7 @@ load test_helper.bash
 
 # Test: Flag option, repeated long options
 @test "getoptlong: flag - repeated long --level --level --level" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([level|l]=0)
         getoptlong init OPTS
@@ -113,7 +113,7 @@ load test_helper.bash
 
 # Test: Flag option, repeated short options
 @test "getoptlong: flag - repeated short -l -l -l" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([level|l]=0)
         getoptlong init OPTS
@@ -127,7 +127,7 @@ load test_helper.bash
 
 # Test: Flag option, mixed long and short
 @test "getoptlong: flag - mixed --level -l --level" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([level|l]=0)
         getoptlong init OPTS
@@ -141,7 +141,7 @@ load test_helper.bash
 
 # Test: Option with required argument (--file data.txt)
 @test "getoptlong: required arg - long --file data.txt" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=)
         getoptlong init OPTS
@@ -155,7 +155,7 @@ load test_helper.bash
 
 # Test: Option with required argument (-f data.txt)
 @test "getoptlong: required arg - short -f data.txt" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=)
         getoptlong init OPTS
@@ -169,7 +169,7 @@ load test_helper.bash
 
 # Test: Option with required argument (-fdata.txt, attached)
 @test "getoptlong: required arg - short -fdata.txt (attached)" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=)
         getoptlong init OPTS
@@ -183,7 +183,7 @@ load test_helper.bash
 
 # Test: Option with required argument (not given, should retain default from OPTS array)
 @test "getoptlong: required arg - not given (retain default)" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=default)
         getoptlong init OPTS
@@ -197,7 +197,7 @@ load test_helper.bash
 
 # Test: Option with optional argument (--optarg=value)
 @test "getoptlong: optional arg - long --optarg=value" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([optarg|o?]=)
         getoptlong init OPTS
@@ -211,7 +211,7 @@ load test_helper.bash
 
 # Test: Option with optional argument (--optarg, no value provided)
 @test "getoptlong: optional arg - long --optarg (no value)" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([optarg|o?]=)
         getoptlong init OPTS
@@ -225,7 +225,7 @@ load test_helper.bash
 
 # Test: Array option (--item val1 --item val2)
 @test "getoptlong: array option - long --item val1 --item val2" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
@@ -239,7 +239,7 @@ load test_helper.bash
 
 # Test: Array option (-i val1 -i val2)
 @test "getoptlong: array option - short -i val1 -i val2" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
@@ -254,20 +254,20 @@ load test_helper.bash
 # Test: Array option (--item=val1,val2,val3 comma separated)
 # This test was identified as problematic due to EOF error, ensure quotes are correct.
 @test "getoptlong: array option - long --item=v1,v2,v3 (comma separated)" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
         getoptlong parse --item=v1,v2,v3
         eval "$(getoptlong set)"
         echo "item_vals:${item[*]}"
-    ' # Ensure this closing quote for bash -c is present and correct
+    ' # Ensure this closing quote for $BASH -c is present and correct
     assert_success
     assert_output "item_vals:v1 v2 v3"
 }
 
 @test "getoptlong: array option - long --item=v1,v2,v3 (DELIM=\$' \t')" {
-    run bash <<'    END'
+    run $BASH <<'    END'
         . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS DELIM=$' \t'
@@ -280,7 +280,7 @@ load test_helper.bash
 }
 
 @test "getoptlong: array option - long --item=v  1\nv  2\nv  3\n (newline separated)" {
-    run bash <<'    END'
+    run $BASH <<'    END'
         . ../script/getoptlong.sh
         declare -A OPTS=([item|i@]=)
         getoptlong init OPTS
@@ -294,7 +294,7 @@ load test_helper.bash
 
 # Test: Hash option (--data key1=val1 --data key2=val2)
 @test "getoptlong: hash option - long --data k1=v1 --data k2=v2" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
@@ -310,7 +310,7 @@ load test_helper.bash
 
 # Test: Hash option (-D k1=v1 -D k2=v2)
 @test "getoptlong: hash option - short -D k1=v1 -D k2=v2" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
@@ -325,7 +325,7 @@ load test_helper.bash
 }
 
 @test "getoptlong: hash option - short -D k1=v1,k2=v2" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
@@ -340,7 +340,7 @@ load test_helper.bash
 }
 
 @test "getoptlong: hash option - short -D F'k1=v  1,k2=v  2\n' (newline separated)" {
-    run bash << 'END'
+    run $BASH << 'END'
         . ../script/getoptlong.sh
         declare -A OPTS=([data|D%]=)
         getoptlong init OPTS
@@ -356,7 +356,7 @@ END
 
 # Test: Integer validation (=i) - valid
 @test "getoptlong: validation - integer (=i) - valid" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([count|c:=i]=0)
         getoptlong init OPTS
@@ -370,7 +370,7 @@ END
 
 # Test: Integer validation (=i) - invalid (check stderr)
 @test "getoptlong: validation - integer (=i) - invalid (stderr)" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([count|c:=i]=0)
         getoptlong init OPTS EXIT_ON_ERROR=1
@@ -385,7 +385,7 @@ END
     # However, need to ensure stdout is empty or also asserted.
     # Let's stick to simple failure for now, assuming error message goes to stderr.
     # To check stderr with bats-assert:
-    # run bash -c '...'
+    # run $BASH -c '...'
     # assert_failure
     # assert_output --stderr --partial "abc: not an integer"
     # For now, just:
@@ -399,7 +399,7 @@ END
 
 # Test: Float validation (=f) - valid
 @test "getoptlong: validation - float (=f) - valid" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([value|v:=f]=0)
         getoptlong init OPTS
@@ -413,7 +413,7 @@ END
 
 # Test: Regex validation (=(regex)) - valid
 @test "getoptlong: validation - regex (=(regex)) - valid" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([mode|m:=(^(fast|slow)$)]=)
         getoptlong init OPTS
@@ -427,7 +427,7 @@ END
 
 # Test: Callback execution
 @test "getoptlong: callback - basic execution" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         my_callback() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a:]=)
@@ -442,7 +442,7 @@ END
 }
 
 @test "getoptlong: callback --before" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         my_callback() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a:]=)
@@ -457,7 +457,7 @@ END
 }
 
 @test "getoptlong: callback type option" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         action() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a!]=)
@@ -470,7 +470,7 @@ END
 }
 
 @test "getoptlong: callback type option with arg" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         action() { echo "Callback invoked with value: $*"; }
         declare -A OPTS=([action|a:!]=)
@@ -484,7 +484,7 @@ END
 
 # Test: PREFIX option
 @test "getoptlong: configuration - PREFIX=test_" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([long|l]=)
         getoptlong init OPTS PREFIX=test_
@@ -498,7 +498,7 @@ END
 
 # Test: PERMUTE option for non-option arguments
 @test "getoptlong: configuration - PERMUTE" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([verbose|v]=)
         declare -a GOL_MYARGS=()
@@ -514,7 +514,7 @@ END
 }
 
 @test "getoptlong: configuration - PERMUTE=" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([debug|d]= [verbose|v]=)
         getoptlong init OPTS PERMUTE=
@@ -532,7 +532,7 @@ END
 }
 
 @test "getoptlong: stop by --" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([debug|d]= [verbose|v]=)
         getoptlong init OPTS
@@ -551,7 +551,7 @@ END
 
 # Test: Combined short options (-xvf value)
 @test "getoptlong: combined short options -xvf value" {
-  run bash -c '
+  run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([xflag|x]= [vflag|v]= [file|f:]=)
         getoptlong init OPTS
@@ -565,7 +565,7 @@ END
 
 # Test: Unknown long option (should produce error on stderr)
 @test "getoptlong: error - unknown long option" {
-  run bash -c '
+  run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([known]=)
         getoptlong init OPTS EXIT_ON_ERROR=1
@@ -579,7 +579,7 @@ END
 
 # Test: Option requires argument, but not given (stderr)
 @test "getoptlong: error - required arg missing" {
-  run bash -c '
+  run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([myfile|f:]=)
         getoptlong init OPTS EXIT_ON_ERROR=1
@@ -592,7 +592,7 @@ END
 
 # Test: --no-X prefix for required argument option sets empty string
 @test "getoptlong: required arg - negated --no-pager sets empty string" {
-  run bash -c '
+  run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([pager|p:]=default_pager)
         getoptlong init OPTS
@@ -606,7 +606,7 @@ END
 
 # Test: --no-X with short option alias for required argument option
 @test "getoptlong: required arg - negated --no-file sets empty string" {
-  run bash -c '
+  run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([file|f:]=original.txt)
         getoptlong init OPTS
@@ -620,7 +620,7 @@ END
 
 # Test: --no-X does not consume next argument
 @test "getoptlong: required arg - negated --no-pager does not consume next arg" {
-  run bash -c '
+  run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([pager|p:]=default)
         getoptlong init OPTS PERMUTE=

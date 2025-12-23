@@ -6,7 +6,7 @@ load test_helper.bash
 
 # Test: Basic flag option (--verbose)
 @test "getoptlong: flag - long option --verbose" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         # getoptlong.sh is sourced above by the test file itself
         declare -A OPTS=([verbose|v+VERB]=)
@@ -21,7 +21,7 @@ load test_helper.bash
 
 # Test: Basic flag option (-v)
 @test "getoptlong: flag - short option -v" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([verbose|v+VERB]=)
         getoptlong init OPTS
@@ -35,7 +35,7 @@ load test_helper.bash
 
 # Test: Flag option, incrementing (-d -d)
 @test "getoptlong: flag - incrementing -d -d -dd --debug" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([debug|d+DEB]=0)
         getoptlong init OPTS
@@ -49,7 +49,7 @@ load test_helper.bash
 
 # Test: Flag option, negated (--no-feature)
 @test "getoptlong: flag - negated --no-feature" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([feature|f+FEA]=1)
         getoptlong init OPTS
@@ -63,7 +63,7 @@ load test_helper.bash
 
 # Test: Option with required argument (--file data.txt)
 @test "getoptlong: required arg - long --file data.txt" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([file|f:FILE]=)
         getoptlong init OPTS
@@ -77,7 +77,7 @@ load test_helper.bash
 
 # Test: Option with optional argument (--optarg=value)
 @test "getoptlong: optional arg - long --optarg=value" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([optarg|o?ARG]=)
         getoptlong init OPTS
@@ -91,7 +91,7 @@ load test_helper.bash
 
 # Test: Array option (--item val1 --item val2)
 @test "getoptlong: array option - long --item val1 --item val2" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([item|i@ARRAY]=)
         getoptlong init OPTS
@@ -105,7 +105,7 @@ load test_helper.bash
 
 # Test: Hash option (--data key1=val1 --data key2=val2)
 @test "getoptlong: hash option - long --data k1=v1 --data k2=v2" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([data|D%HASH]=)
         getoptlong init OPTS
@@ -121,7 +121,7 @@ load test_helper.bash
 
 # Test: Variable name conflict - MARKS
 @test "getoptlong: destination variable - MARKS" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([verbose|v+MARKS]=)
         getoptlong init OPTS
@@ -135,7 +135,7 @@ load test_helper.bash
 
 # Test: Variable name conflict - CONFIG
 @test "getoptlong: destination variable - CONFIG" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([level|l+CONFIG]=0)
         getoptlong init OPTS
@@ -149,7 +149,7 @@ load test_helper.bash
 
 # Test: Variable name conflict - MATCH
 @test "getoptlong: destination variable - MATCH" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([count|c:MATCH=i]=)
         getoptlong init OPTS
@@ -163,7 +163,7 @@ load test_helper.bash
 
 # Test: Config variable as destination - DEBUG
 @test "getoptlong: destination variable - DEBUG" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([level|l+DEBUG]=0)
         getoptlong init OPTS
@@ -177,7 +177,7 @@ load test_helper.bash
 
 # Test: Config variable as destination - HELP
 @test "getoptlong: destination variable - HELP" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([message|m:HELP]=)
         getoptlong init OPTS
@@ -191,7 +191,7 @@ load test_helper.bash
 
 # Test: Config variable as destination - PREFIX
 @test "getoptlong: destination variable - PREFIX" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([namespace|n:PREFIX]=)
         getoptlong init OPTS
@@ -205,7 +205,7 @@ load test_helper.bash
 
 # Test: Config variable as destination - DELIM
 @test "getoptlong: destination variable - DELIM" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([separator|s:DELIM]= [values|v@]=)
         getoptlong init OPTS
@@ -221,7 +221,7 @@ load test_helper.bash
 
 # Test: Config variable as destination - PERMUTE
 @test "getoptlong: destination variable - PERMUTE" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([mode|m:PERMUTE]=)
         getoptlong init OPTS
@@ -235,7 +235,7 @@ load test_helper.bash
 
 # Test: Config variable as destination - REQUIRE
 @test "getoptlong: destination variable - REQUIRE" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([version|v:REQUIRE]=)
         getoptlong init OPTS
@@ -249,7 +249,7 @@ load test_helper.bash
 
 # Test: Config variable as destination - SILENT
 @test "getoptlong: destination variable - SILENT" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([quiet|q+SILENT]=)
         getoptlong init OPTS
@@ -263,7 +263,7 @@ load test_helper.bash
 
 # Test: Config variable as destination - EXIT_ON_ERROR
 @test "getoptlong: destination variable - EXIT_ON_ERROR" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([strict|s+EXIT_ON_ERROR]=)
         getoptlong init OPTS
@@ -277,7 +277,7 @@ load test_helper.bash
 
 # Test: Config variable as destination - USAGE
 @test "getoptlong: destination variable - USAGE" {
-    run bash -c '
+    run $BASH -c '
         . ../script/getoptlong.sh
         declare -A OPTS=([help-text|h:USAGE]=)
         getoptlong init OPTS

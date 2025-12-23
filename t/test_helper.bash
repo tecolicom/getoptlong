@@ -13,6 +13,8 @@ load 'bats-support/load.bash'
 # `assert_success`, `assert_failure`, etc.
 load 'bats-assert/load.bash'
 
+BASH="bash -u"
+
 # Any other global setup for tests can go here.
 # For example, if you had a common cleanup function or global variables.
 # export MY_GLOBAL_VAR="some_value"

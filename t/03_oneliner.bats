@@ -7,7 +7,7 @@ load test_helper.bash
 
 # Test: One-liner - basic auto-initialization
 @test "getoptlong: one-liner - auto initialization" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([verbose|v]=)
         . ../script/getoptlong.sh OPTS --verbose
         echo "verbose:$verbose"
@@ -18,7 +18,7 @@ load test_helper.bash
 
 # Test: One-liner - flag option with short and long forms
 @test "getoptlong: one-liner - flag option short and long" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([debug|d]=)
         . ../script/getoptlong.sh OPTS -d
         echo "debug:$debug"
@@ -29,7 +29,7 @@ load test_helper.bash
 
 # Test: One-liner - required argument
 @test "getoptlong: one-liner - required argument" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([file|f:]=)
         . ../script/getoptlong.sh OPTS --file input.txt
         echo "file:$file"
@@ -40,7 +40,7 @@ load test_helper.bash
 
 # Test: One-liner - multiple options
 @test "getoptlong: one-liner - multiple options" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=(
             [verbose|v]=
             [file|f:]=
@@ -59,7 +59,7 @@ load test_helper.bash
 
 # Test: One-liner - array option
 @test "getoptlong: one-liner - array option" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([item|i@]=)
         . ../script/getoptlong.sh OPTS --item val1 -i val2 --item val3
         echo "item_count:${#item[@]}"
@@ -76,7 +76,7 @@ load test_helper.bash
 
 # Test: One-liner - hash option
 @test "getoptlong: one-liner - hash option" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([data|d%]=)
         . ../script/getoptlong.sh OPTS --data key1=value1 -d key2=value2
         echo "data_key1:${data[key1]}"
@@ -89,7 +89,7 @@ load test_helper.bash
 
 # Test: One-liner - optional argument with value
 @test "getoptlong: one-liner - optional argument with value" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([opt|o?]=)
         . ../script/getoptlong.sh OPTS --opt=test_value
         echo "opt:$opt"
@@ -100,7 +100,7 @@ load test_helper.bash
 
 # Test: One-liner - optional argument without value
 @test "getoptlong: one-liner - optional argument without value" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([opt|o?]=)
         . ../script/getoptlong.sh OPTS --opt
         echo "opt:${opt:-unset}"
@@ -111,7 +111,7 @@ load test_helper.bash
 
 # Test: One-liner - passthru option
 @test "getoptlong: one-liner - passthru option" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([pass|p:>pass_array]=)
         declare -a pass_array=()
         . ../script/getoptlong.sh OPTS --pass value1 -p value2
@@ -131,7 +131,7 @@ load test_helper.bash
 
 # Test: One-liner - with validation (integer)
 @test "getoptlong: one-liner - integer validation" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([number|n:=i]=)
         . ../script/getoptlong.sh OPTS --number 42
         echo "number:$number"
@@ -142,7 +142,7 @@ load test_helper.bash
 
 # Test: One-liner - with validation failure
 @test "getoptlong: one-liner - validation failure" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([number|n:=i]=)
         . ../script/getoptlong.sh OPTS --number abc
     '
@@ -152,7 +152,7 @@ load test_helper.bash
 
 # Test: One-liner - combined short options
 @test "getoptlong: one-liner - combined short options" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=(
             [verbose|v]=
             [debug|d]=
@@ -171,7 +171,7 @@ load test_helper.bash
 
 # Test: One-liner - with remaining arguments
 @test "getoptlong: one-liner - remaining arguments" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([verbose|v]=)
         . ../script/getoptlong.sh OPTS --verbose arg1 arg2 arg3
         echo "verbose:$verbose"
@@ -186,7 +186,7 @@ load test_helper.bash
 
 # Test: One-liner - with double dash separator
 @test "getoptlong: one-liner - double dash separator" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([verbose|v]=)
         . ../script/getoptlong.sh OPTS --verbose -- --not-an-option
         echo "verbose:$verbose"
@@ -199,7 +199,7 @@ load test_helper.bash
 
 # Test: One-liner - negated option
 @test "getoptlong: one-liner - negated option" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([feature|f]=1)
         . ../script/getoptlong.sh OPTS --no-feature
         echo "feature:$feature"
@@ -210,7 +210,7 @@ load test_helper.bash
 
 # Test: One-liner - with initial values
 @test "getoptlong: one-liner - with initial values" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=(
             [count|c:]=5
             [mode|m:]=default
@@ -226,7 +226,7 @@ load test_helper.bash
 
 # Test: One-liner - complex real-world example
 @test "getoptlong: one-liner - complex example" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=(
             [verbose|v]=
             [quiet|q]=
@@ -278,7 +278,7 @@ load test_helper.bash
 
 # Test: One-liner - error handling for unknown option
 @test "getoptlong: one-liner - unknown option error" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=([verbose|v]=)
         . ../script/getoptlong.sh OPTS --unknown-option
     '
@@ -288,7 +288,7 @@ load test_helper.bash
 
 # Test: One-liner - help generation
 @test "getoptlong: one-liner - help with comments" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=(
             [verbose|v # Enable verbose output]=
             [file|f: # Input file path]=
@@ -304,7 +304,7 @@ load test_helper.bash
 
 # Test: One-liner with PERMUTE= (stop at first non-option)
 @test "getoptlong: one-liner - PERMUTE= stops at first non-option" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=(
             [&PERMUTE]=
             [debug|d]=
@@ -323,7 +323,7 @@ load test_helper.bash
 
 # Test: One-liner with PERMUTE= - remaining args with options
 @test "getoptlong: one-liner - PERMUTE= remaining args preserved" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=(
             [&PERMUTE]=
             [image|I:]=
@@ -341,7 +341,7 @@ load test_helper.bash
 
 # Test: One-liner with PERMUTE= - no remaining args
 @test "getoptlong: one-liner - PERMUTE= no remaining args" {
-    run bash -c '
+    run $BASH -c '
         declare -A OPTS=(
             [&PERMUTE]=
             [debug|d]=
