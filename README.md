@@ -8,14 +8,15 @@ getoptlong - Option parsing that does what you mean, for Bash
 **Option definition:**
 
     declare -A OPTS=(
-        [&USAGE]="command [options] file..."
-        [verbose |v+                 # Verbosity     ]=0
-        [output  |o:                 # Output file   ]=/dev/stdout
-        [config  |c?                 # Config file   ]=
-        [include |I@                 # Include paths ]=
-        [define  |D%                 # Definitions   ]=
-        [count   |n:=i               # Count integer ]=1
-        [mode    |m:=(^(fast|slow)$) # Mode          ]=fast
+        [ &USAGE ]="command [options] file..."
+        [ flag     | f                   # Boolean  ]=
+        [ counter  | c +                 # Counter  ]=0
+        [ required | r :                 # Required ]=/dev/stdout
+        [ optional | o ?                 # Optional ]=
+        [ array    | A @                 # Array    ]=
+        [ hash     | H %                 # Hash     ]=
+        [ integer  | i :=i               # Integer  ]=1
+        [ pattern  | p :=(^(fast|slow)$) # Regex    ]=fast
     )
 
 **One-liner:**
@@ -157,6 +158,10 @@ empty string. Bundling supported: `-vvv` equals `-v -v -v`.
 
 Numeric initial value (like `0`) enables counter display in help.
 
+There is no pure boolean type; all flags are counters. Use empty
+string test for boolean evaluation: `[[ $verbose ]]` is true when
+non-empty, false when empty.
+
 ## REQUIRED ARGUMENT (`:`)
 
 The option requires an argument; error if missing. Use `--no-X` to
@@ -185,21 +190,26 @@ was specified.
 
 Collects multiple values into an array. Multiple specifications accumulate.
 A single option can contain delimited values (default: space, tab, comma;
-see [DELIM](#configuration)). Access with `"${include[@]}"`. Use
-`--no-include` to reset the array to empty; this is useful for overriding
-default values (e.g., `--no-include --include /new/path`).
+see [DELIM](#configuration)). Access with `"${include[@]}"`.
 
     [include|I@]=       # --include a --include b or --include a,b
+
+To reset existing values: use `--no-include` on the command line
+(e.g., `--no-include --include /new/path`), or use `callback --before`
+to automatically reset before each new value.
 
 ## HASH (`%`)
 
 Collects `key=value` pairs into an associative array. Key without value
 is treated as `key=1`. Multiple pairs can be specified: `--define A=1,B=2`
 (see [DELIM](#configuration)). Access with `${define[KEY]}`, keys with
-`${!define[@]}`. Use `--no-define` to reset the hash to empty; this is
-useful for overriding default values (e.g., `--no-define --define KEY=val`).
+`${!define[@]}`.
 
     [define|D%]=        # --define KEY=VAL or --define KEY (KEY=1)
+
+To reset existing values: use `--no-define` on the command line
+(e.g., `--no-define --define KEY=val`), or use `callback --before`
+to automatically reset before each new value.
 
 ## CALLBACK (`!`)
 
@@ -277,7 +287,8 @@ work the same way with pass-through options.
 ## REGISTRATION
 
 Register callbacks with `getoptlong callback`. If function name is
-omitted or `-`, uses option name (hyphens to underscores).
+omitted or `-`, uses option name (hyphens to underscores). Additional
+`args` are passed to the callback function after the option name and value.
 
     getoptlong callback <option> [function] [args...]
     getoptlong callback --before <option> [function] [args...]

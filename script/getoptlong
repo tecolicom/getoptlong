@@ -12,14 +12,16 @@ fi
 
 cat <<EOF
 # declare -A $1=(
-#     [ count     | c :=i # repeat count              ]=1
-#     [ sleep     | i @=f # interval time             ]=
-#     [ paragraph | p ?   # print newline after cycle ]=
-#     [ trace     | x !   # trace execution           ]=
-#     [ debug     | d     # debug level               ]=0
-#     [ message   | m %=(^(BEGIN|END)=) # print message at BEGIN|END ]=
+#     [ &USAGE ]="command [options] file..."
+#     [ flag     | f                   # Boolean  ]=
+#     [ counter  | c +                 # Counter  ]=0
+#     [ required | r :                 # Required ]=/dev/stdout
+#     [ optional | o ?                 # Optional ]=
+#     [ array    | A @                 # Array    ]=
+#     [ hash     | H %                 # Hash     ]=
+#     [ integer  | i :=i               # Integer  ]=1
+#     [ pattern  | p :=(^(fast|slow)$) # Regex    ]=fast
 # )
-# trace() { [[ \$2 ]] && set -x || set +x ; }
 
 . getoptlong.sh $1 "\$@"
 
@@ -41,14 +43,15 @@ getoptlong - Option parsing that does what you mean, for Bash
 B<Option definition:>
 
     declare -A OPTS=(
-        [&USAGE]="command [options] file..."
-        [verbose |v+                 # Verbosity     ]=0
-        [output  |o:                 # Output file   ]=/dev/stdout
-        [config  |c?                 # Config file   ]=
-        [include |I@                 # Include paths ]=
-        [define  |D%                 # Definitions   ]=
-        [count   |n:=i               # Count integer ]=1
-        [mode    |m:=(^(fast|slow)$) # Mode          ]=fast
+        [ &USAGE ]="command [options] file..."
+        [ flag     | f                   # Boolean  ]=
+        [ counter  | c +                 # Counter  ]=0
+        [ required | r :                 # Required ]=/dev/stdout
+        [ optional | o ?                 # Optional ]=
+        [ array    | A @                 # Array    ]=
+        [ hash     | H %                 # Hash     ]=
+        [ integer  | i :=i               # Integer  ]=1
+        [ pattern  | p :=(^(fast|slow)$) # Regex    ]=fast
     )
 
 B<One-liner:>
@@ -194,6 +197,10 @@ empty string. Bundling supported: C<-vvv> equals C<-v -v -v>.
 
 Numeric initial value (like C<0>) enables counter display in help.
 
+There is no pure boolean type; all flags are counters. Use empty
+string test for boolean evaluation: C<[[ $verbose ]]> is true when
+non-empty, false when empty.
+
 =head2 REQUIRED ARGUMENT (C<:>)
 
 The option requires an argument; error if missing. Use C<--no-X> to
@@ -228,21 +235,26 @@ B<Syntax:>
 
 Collects multiple values into an array. Multiple specifications accumulate.
 A single option can contain delimited values (default: space, tab, comma;
-see L<DELIM|/CONFIGURATION>). Access with C<"${include[@]}">. Use
-C<--no-include> to reset the array to empty; this is useful for overriding
-default values (e.g., C<--no-include --include /new/path>).
+see L<DELIM|/CONFIGURATION>). Access with C<"${include[@]}">.
 
     [include|I@]=       # --include a --include b or --include a,b
+
+To reset existing values: use C<--no-include> on the command line
+(e.g., C<--no-include --include /new/path>), or use C<callback --before>
+to automatically reset before each new value.
 
 =head2 HASH (C<%>)
 
 Collects C<key=value> pairs into an associative array. Key without value
 is treated as C<key=1>. Multiple pairs can be specified: C<--define A=1,B=2>
 (see L<DELIM|/CONFIGURATION>). Access with C<${define[KEY]}>, keys with
-C<${!define[@]}>. Use C<--no-define> to reset the hash to empty; this is
-useful for overriding default values (e.g., C<--no-define --define KEY=val>).
+C<${!define[@]}>.
 
     [define|D%]=        # --define KEY=VAL or --define KEY (KEY=1)
+
+To reset existing values: use C<--no-define> on the command line
+(e.g., C<--no-define --define KEY=val>), or use C<callback --before>
+to automatically reset before each new value.
 
 =head2 CALLBACK (C<!>)
 
@@ -320,7 +332,8 @@ work the same way with pass-through options.
 =head2 REGISTRATION
 
 Register callbacks with C<getoptlong callback>. If function name is
-omitted or C<->, uses option name (hyphens to underscores).
+omitted or C<->, uses option name (hyphens to underscores). Additional
+C<args> are passed to the callback function after the option name and value.
 
     getoptlong callback <option> [function] [args...]
     getoptlong callback --before <option> [function] [args...]
