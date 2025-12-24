@@ -72,7 +72,10 @@ gol_init() { local _key ;
 gol_init_() { local _key _aliases _alias _help ;
     [[ $_REQUIRE && $(_gol_vstr $GOL_VERSION) < $(_gol_vstr $_REQUIRE) ]] && _gol_die "getoptlong version $GOL_VERSION < $_REQUIRE"
     for _key in "${!_opts[@]}" ; do
-	[[ $_key =~ ^[$_MARKS] ]] && continue
+	[[ $_key =~ ^( *)[$_MARKS] ]] && {
+	    [[ $_key != "${_key// /}" ]] && _opts[${_key// /}]="${_opts[$_key]}" && unset "_opts[$_key]"
+	    continue
+	}
 	_gol_init_entry "$_key"
     done
     if [[ $_HELP =~ ^( *)([[:alpha:]]+) ]] && _help=${_MATCH[2]} && [[ ! -v _opts[$_help] ]] ; then
