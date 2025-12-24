@@ -17,8 +17,8 @@ Let's create a simple script that accepts a few options:
     #!/usr/bin/env bash
 
     declare -A OPTS=(
-        [verbose|v]=
-        [output|o:]=/dev/stdout
+        [ verbose | v  ]=
+        [ output  | o :]=/dev/stdout
     )
 
     . getoptlong.sh OPTS "$@"
@@ -66,9 +66,9 @@ The first name is the "long" option (C<--verbose>), aliases after C<|>
 are typically short options (C<-v>). Hyphens in names become underscores
 in variable names.
 
-    [verbose|v]=       # --verbose or -v
-    [output|o]=        # --output or -o
-    [dry-run|n]=       # --dry-run or -n (variable becomes $dry_run)
+    [ verbose | v ]=       # --verbose or -v
+    [ output  | o ]=       # --output or -o
+    [ dry-run | n ]=       # --dry-run or -n (variable becomes $dry_run)
 
 =head2 Option Types
 
@@ -78,13 +78,13 @@ The type specifier after the option name determines how arguments are handled.
 
 A flag takes no argument. When specified, the variable is set to C<1>.
 
-    [verbose|v]=       # -v, --verbose sets $verbose to 1
+    [ verbose | v ]=       # -v, --verbose sets $verbose to 1
 
 =head3 Required Argument (C<:>)
 
 The colon means the option requires an argument.
 
-    [output|o:]=       # -o file.txt, --output=file.txt
+    [ output | o :]=       # -o file.txt, --output=file.txt
 
 =head3 Optional Argument (C<?>)
 
@@ -92,7 +92,7 @@ Question mark means the argument is optional. The variable is set to
 empty string if no argument given, or to the argument value if provided.
 Use C<[[ -v var ]]> to check if the option was specified.
 
-    [config|c?]=       # --config or --config=myfile.conf
+    [ config | c ?]=       # --config or --config=myfile.conf
 
 =head1 STEP-BY-STEP EXAMPLES
 
@@ -101,9 +101,9 @@ Use C<[[ -v var ]]> to check if the option was specified.
     #!/usr/bin/env bash
 
     declare -A OPTS=(
-        [verbose|v   # Show detailed output]=
-        [dry-run|n   # Show what would be done]=
-        [dest|d:     # Destination directory]=/backup
+        [ verbose | v    # Show detailed output ]=
+        [ dry-run | n    # Show what would be done ]=
+        [ dest    | d :  # Destination directory ]=/backup
     )
 
     . getoptlong.sh OPTS "$@"
@@ -138,8 +138,8 @@ Sometimes you need to accept the same option multiple times:
     #!/usr/bin/env bash
 
     declare -A OPTS=(
-        [include|I@]=
-        [exclude|X@]=
+        [ include | I @]=
+        [ exclude | X @]=
     )
 
     . getoptlong.sh OPTS "$@"
@@ -171,7 +171,7 @@ For configuration-style options:
     #!/usr/bin/env bash
 
     declare -A OPTS=(
-        [define|D%]=
+        [ define | D %]=
     )
 
     . getoptlong.sh OPTS "$@"
@@ -198,7 +198,7 @@ Use C<+> for incremental flags:
     #!/usr/bin/env bash
 
     declare -A OPTS=(
-        [verbose|v+]=0
+        [ verbose | v +]=0
     )
 
     . getoptlong.sh OPTS "$@"
@@ -231,10 +231,10 @@ set the synopsis line.
     #!/usr/bin/env bash
 
     declare -A OPTS=(
-        [input|i:   # Input file to process]=
-        [output|o:  # Output file (default: stdout)]=/dev/stdout
-        [verbose|v  # Enable verbose output]=
-        [&USAGE]="Usage: $(basename $0) [options] <files...>"
+        [ &USAGE ]="Usage: $(basename $0) [options] <files...>"
+        [ input   | i :  # Input file to process ]=
+        [ output  | o :  # Output file (default: stdout) ]=/dev/stdout
+        [ verbose | v    # Enable verbose output ]=
     )
 
     . getoptlong.sh OPTS "$@"
@@ -255,9 +255,9 @@ Output:
 Add validation to ensure correct input. Use C<=i> for integers, C<=f>
 for floats, or C<=(regex)> for pattern matching:
 
-    [count|c:=i]=1                        # Must be an integer
-    [ratio|r:=f]=0.5                      # Must be a number
-    [mode|m:=(^(fast|slow|auto)$)]=auto   # Must match regex
+    [ count | c :=i                    ]=1     # Must be an integer
+    [ ratio | r :=f                    ]=0.5   # Must be a number
+    [ mode  | m :=(^(fast|slow|auto)$) ]=auto  # Must match regex
 
 Invalid input produces an error:
 
@@ -275,8 +275,8 @@ yourself, configure advanced options, or process subcommands.
     . getoptlong.sh
 
     declare -A OPTS=(
-        [verbose|v]=
-        [output|o:]=
+        [ verbose | v  ]=
+        [ output  | o :]=
     )
 
     getoptlong init OPTS
