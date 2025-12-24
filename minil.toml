@@ -8,6 +8,7 @@ script_files   = [ "script/getoptlong", "script/getoptlong.sh" ]
 
 [release]
 branch = "main"
+tag_format = "v%v"
 hooks = [
     "perl -Ilib -MGetopt::Long::Bash -i -pE 's/^: \\$\\{GOL_VERSION:=\\K[\\d.]+/$Getopt::Long::Bash::VERSION/' script/getoptlong.sh",
     "perl -Ilib -MGetopt::Long::Bash -i -0777 -pE 's/(?<=^=head1 VERSION\\n\\n)[\\d.]+/$Getopt::Long::Bash::VERSION/m' script/getoptlong",
