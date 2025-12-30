@@ -199,7 +199,7 @@ _gol_getopts_store() { local _vals _v ;
     local _check=$(_gol_rule $_name)
     case $_vtype in
 	[$_IS_LIST]|[$_IS_HASH])
-	    [[ ${_non-} ]] && { declare -n __target__=$_vname ; __target__=() ; return ; }
+	    [[ $_non ]] && { declare -n __target__=$_vname ; __target__=() ; return ; }
 	    [[ $_val =~ $'\n' ]] && readarray -t _vals <<< ${_val%$'\n'} \
 				 || IFS="${_DELIM}" read -a _vals <<< ${_val}
 	    for _v in "${_vals[@]}" ; do
@@ -218,7 +218,7 @@ _gol_getopts_store() { local _vals _v ;
 }
 _gol_getopts_passthru() { local _options=() ;
     local _option=${_optname-$_opt}
-    (( ${#_option} > 1 || ${#_non} )) && _options=(--${_non-}$_option) || _options=(-$_option)
+    (( ${#_option} > 1 || ${#_non} )) && _options=(--$_non$_option) || _options=(-$_option)
     [[ $_vtype =~ [$_IS_REQ] ]] && _options+=($_val)
     _gol_add_array $_vname "${_options[@]}"
 }
