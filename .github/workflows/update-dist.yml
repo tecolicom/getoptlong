@@ -1,12 +1,21 @@
 name: Update dist branch
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Create Release"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name (e.g., v0.7.0)'
+        required: true
+        type: string
 
 jobs:
   update-dist:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write
 
@@ -21,8 +30,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          TAG="${{ inputs.tag || github.event.workflow_run.head_branch }}"
           # Get getoptlong.sh from the release tag
-          git show HEAD:script/getoptlong.sh > /tmp/getoptlong.sh
+          git show "${TAG}:script/getoptlong.sh" > /tmp/getoptlong.sh
 
           # Switch to dist branch
           git checkout dist
@@ -35,13 +45,13 @@ jobs:
             echo "No changes to commit"
           else
             git add getoptlong.sh
-            git commit -m "Update getoptlong.sh from ${{ github.ref_name }}"
+            git commit -m "Update getoptlong.sh from ${TAG}"
             git push origin dist
           fi
 
       - name: Update major version branch
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG="${{ inputs.tag || github.event.workflow_run.head_branch }}"
           # Extract major version (v1.2.3 -> v1)
           if [[ "$TAG" =~ ^v([0-9]+)\. ]]; then
             MAJOR="v${BASH_REMATCH[1]}"
