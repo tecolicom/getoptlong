@@ -95,7 +95,7 @@ _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
     unset _opts["$_entry"]
     [[ $_vtype =~ ([$_IS_ANY]*[$_IS_MOD]*)([_[:alnum:]]+)$ ]] && { _vtype=${_MATCH[1]} ; _vname=${_MATCH[2]} ; }
     [[ $_vtype =~ $_IS_PASS ]] && { _vtype=${_vtype//$_IS_PASS/} ; _pass="$_IS_PASS" ; }
-    [[ $_vtype =~ $_IS_HOOK ]] && { _vtype=${_vtype//$_IS_HOOK/} ; _gol_hook $_name ${_vname-$_name} ; }
+    [[ $_vtype =~ $_IS_HOOK ]] && { _vtype=${_vtype//$_IS_HOOK/} ; _gol_hook $_name ${_vname:-${_name//-/_}} ; }
     _gol_dest $_name ${_vname="${_PREFIX}${_name//-/_}"}
     : ${_vtype:=$_IS_FLAG} ${_dtype:=${_pass:+$_IS_LIST}}
     case ${_dtype:-$_vtype} in
