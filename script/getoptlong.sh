@@ -300,7 +300,7 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= ;
 	    }
 	done
 	: ${SAVEIND:=$OPTIND}
-	[[ ! $_PERMUTE || $OPTIND > $# || ${@:$(($OPTIND-1)):1} == -- ]] && break
+	[[ ! $_PERMUTE || $OPTIND -gt $# || ${@:$(($OPTIND-1)):1} == -- ]] && break
 	_gol_debug "SAVE PARAM: ${!OPTIND}"
 	SAVEARG+=("${!OPTIND}")
     done
