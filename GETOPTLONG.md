@@ -722,6 +722,8 @@ The generated help message generally has the following structure:
 
     *   The description may include the initial value (`(default: ...)`).
 
+    *   Negative aliases (defined with `~` prefix) are displayed with `~` for short options and `~~` for long options, instead of the usual `-`/`--` prefix. This visually distinguishes them from regular aliases.
+
 ```
 (Synopsis line, e.g., Usage: myscript [options] <file>)
 
@@ -730,7 +732,7 @@ Options:
   -f, --file <path>          Specify the input file. (default: input.txt)
       --force                Force operation without confirmation.
   -n, --count <number>       Number of times to operate. (integer, default: 1)
-  -v, --verbose              Enable verbose output. (counter, default: 0)
+  -v, --verbose ~q ~~quiet   Enable verbose output. (counter, default: 0)
       --version              Show version information.
 ```
 
