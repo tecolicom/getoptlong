@@ -283,13 +283,17 @@ _gol_show_help() { local _key _aliases _init= _default= _column _flag _msg ;
 }
 _gol_optize() { local _name _opt _optlist _eq ;
     for _name in "$@"; do
-	(( ${#_name} > 1 )) && _opt=--$_name _eq='=' || _opt=-$_name _eq=
-	case "$(_gol_type $_name)" in
-	    [$_IS_NEED]) _opt+="$_eq#" ;;
-	    [$_IS_LIST]) _opt+="$_eq#[,#]" ;;
-	    [$_IS_HASH]) _opt+="$_eq#=#" ;;
-	    [$_IS_MAYB]) (( ${#_name} > 1 )) && _opt+="[=#]" ;;
-	esac
+	if _gol_deny $_name > /dev/null 2>&1 ; then
+	    (( ${#_name} > 1 )) && _opt="~~$_name" || _opt="~$_name"
+	else
+	    (( ${#_name} > 1 )) && _opt=--$_name _eq='=' || _opt=-$_name _eq=
+	    case "$(_gol_type $_name)" in
+		[$_IS_NEED]) _opt+="$_eq#" ;;
+		[$_IS_LIST]) _opt+="$_eq#[,#]" ;;
+		[$_IS_HASH]) _opt+="$_eq#=#" ;;
+		[$_IS_MAYB]) (( ${#_name} > 1 )) && _opt+="[=#]" ;;
+	    esac
+	fi
 	_optlist+=("$_opt")
     done
     printf '%s\n' "${_optlist[*]}"
