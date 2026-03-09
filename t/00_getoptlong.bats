@@ -181,6 +181,92 @@ load test_helper.bash
     assert_output "verbose_val:[]"
 }
 
+# Test: Bundling with deny alias (-dF where F is deny)
+@test "getoptlong: flag - bundling with deny alias -dF" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([debug|d]=0 [feature|f|~F]=1)
+        getoptlong init OPTS
+        getoptlong parse -dF
+        eval "$(getoptlong set)"
+        echo "debug:$debug feature:[$feature]"
+    '
+    assert_success
+    assert_output "debug:1 feature:[]"
+}
+
+# Test: Counter incremented then deny alias resets
+@test "getoptlong: flag - counter -d -d -d then deny -D resets" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([debug|d|~D]=0)
+        getoptlong init OPTS
+        getoptlong parse -d -d -d -D
+        eval "$(getoptlong set)"
+        echo "debug:[$debug]"
+    '
+    assert_success
+    assert_output "debug:[]"
+}
+
+# Test: Long deny then long positive sequence restores
+@test "getoptlong: flag - --quiet --verbose sequence re-enables" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([verbose|v|~q|~quiet]=)
+        getoptlong init OPTS
+        getoptlong parse --quiet --verbose
+        eval "$(getoptlong set)"
+        echo "verbose:$verbose"
+    '
+    assert_success
+    assert_output "verbose:1"
+}
+
+# Test: Long deny alias on required arg does not consume next arg
+@test "getoptlong: required arg - long deny alias --mute clears without consuming arg" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([output|o|~mute:]=default)
+        getoptlong init OPTS
+        getoptlong parse --mute arg1
+        eval "$(getoptlong set)"
+        echo "output:[$output]"
+        echo "args:$*"
+    '
+    assert_success
+    assert_line --index 0 "output:[]"
+    assert_line --index 1 "args:arg1"
+}
+
+# Test: Deny alias only (no regular short alias)
+@test "getoptlong: flag - deny alias only [feature|~F]" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([feature|~F]=1)
+        getoptlong init OPTS
+        getoptlong parse -F
+        eval "$(getoptlong set)"
+        echo "feature:[$feature]"
+    '
+    assert_success
+    assert_output "feature:[]"
+}
+
+# Test: Multiple deny aliases
+@test "getoptlong: flag - multiple deny aliases -F and -G both negate" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([flag|f|~F|~G]=1)
+        getoptlong init OPTS
+        getoptlong parse -G
+        eval "$(getoptlong set)"
+        echo "flag:[$flag]"
+    '
+    assert_success
+    assert_output "flag:[]"
+}
+
 # Test: Flag option, repeated long options
 @test "getoptlong: flag - repeated long --level --level --level" {
     run $BASH -c '
