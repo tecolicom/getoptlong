@@ -175,6 +175,7 @@ _gol_getopts_long() { local _param ;
 	[[ $_EXIT_ON_ERROR ]] && _gol_die "no such option -- --$_optname" || return 2
     }
     _vtype=${_MATCH[1]} _pass="${_MATCH[2]}" _vname=${_MATCH[3]}
+    _gol_deny $_optname > /dev/null 2>&1 && { [[ $_non ]] && _non="" || _non="no-" ; }
     if [[ $_param ]] ; then
 	[[ $_vtype =~ [${_IS_REQ}${_IS_MAYB}] ]] || _gol_die "does not take an argument -- $_optname"
     else

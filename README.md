@@ -114,6 +114,8 @@ The key format is:
     Additional names separated by `|` (e.g., `verbose|v|V`).
     Prefix with `~` to create a negative alias that negates the option
     (e.g., `sweep|w|~W` makes `-W` equivalent to `--no-sweep`).
+    Works for both short and long aliases
+    (e.g., `verbose|v|~q|~quiet` makes `-q` and `--quiet` negate `--verbose`).
 
 - **TYPE**
 

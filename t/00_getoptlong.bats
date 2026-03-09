@@ -139,6 +139,48 @@ load test_helper.bash
     assert_output "feature_val:[]"
 }
 
+# Test: Long negative alias --quiet negates --verbose
+@test "getoptlong: flag - long negative alias --quiet clears flag" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([verbose|v|~q|~quiet]=1)
+        getoptlong init OPTS
+        getoptlong parse --quiet
+        eval "$(getoptlong set)"
+        echo "verbose_val:[$verbose]"
+    '
+    assert_success
+    assert_output "verbose_val:[]"
+}
+
+# Test: Long negative alias --no-quiet double-negates (re-enables)
+@test "getoptlong: flag - --no-quiet double negation re-enables" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([verbose|v|~q|~quiet]=)
+        getoptlong init OPTS
+        getoptlong parse --no-quiet
+        eval "$(getoptlong set)"
+        echo "verbose_val:$verbose"
+    '
+    assert_success
+    assert_output "verbose_val:1"
+}
+
+# Test: Short and long negative aliases together
+@test "getoptlong: flag - short -q and long --quiet both negate" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([verbose|v|~q|~quiet]=1)
+        getoptlong init OPTS
+        getoptlong parse -q
+        eval "$(getoptlong set)"
+        echo "verbose_val:[$verbose]"
+    '
+    assert_success
+    assert_output "verbose_val:[]"
+}
+
 # Test: Flag option, repeated long options
 @test "getoptlong: flag - repeated long --level --level --level" {
     run $BASH -c '
