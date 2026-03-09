@@ -18,6 +18,7 @@ _gol_opts() {
 }
 _gol_alias() { _gol_opts "$_MK_ALIAS" "$@" ; }
 _gol_saila() { _gol_opts "$_MK_SAILA" "$@" ; }
+_gol_deny()  { _gol_opts "$_MK_DENY"  "$@" ; }
 _gol_trig()  { _gol_opts "$_MK_TRIG"  "$@" ; }
 _gol_hook()  { _gol_opts "$_MK_HOOK"  "$@" ; }
 _gol_rule()  { _gol_opts "$_MK_RULE"  "$@" ; }
@@ -36,7 +37,7 @@ _gol_redirect() { local _name ;
     declare -n _opts=$GOL_OPTHASH
     declare -n _MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
-    local _MARKS='><()&=#^.' _MK_ALIAS='>' _MK_SAILA='<' _MK_TRIG='(' _MK_HOOK=')' _MK_CONF='&' _MK_RULE='=' _MK_HELP='#' _MK_INIT='^' _MK_DEST='.' \
+    local _MARKS='><()&=#^.~' _MK_ALIAS='>' _MK_SAILA='<' _MK_DENY='~' _MK_TRIG='(' _MK_HOOK=')' _MK_CONF='&' _MK_RULE='=' _MK_HELP='#' _MK_INIT='^' _MK_DEST='.' \
 	  _IS_ANY='+:?@%' _IS_MOD='!>' _IS_REQ=':@%' _IS_FLAG='+' _IS_NEED=':' _IS_MAYB='?' _IS_LIST='@' _IS_HASH='%' _IS_HOOK='!' _IS_PASS='>' \
 	  _CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE HELP)
     for _name in "${_CONFIG[@]}" ; do declare _$_name="${_opts[&$_name]=}" ; done
@@ -85,7 +86,7 @@ gol_init_() { local _key _aliases _alias _help ;
     return 0
 }
 _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
-    [[ $_entry =~ ^([-_ \|[:alnum:]]+)([$_IS_ANY]*[$_IS_MOD]*[_[:alnum:]]*)( *)(=([if]|\(.*\)))?( *)(# *(.*[^[:space:]]))? ]] \
+    [[ $_entry =~ ^([-_~ \|[:alnum:]]+)([$_IS_ANY]*[$_IS_MOD]*[_[:alnum:]]*)( *)(=([if]|\(.*\)))?( *)(# *(.*[^[:space:]]))? ]] \
 	|| _gol_die "[$_entry] -- invalid"
     local _names=${_MATCH[1]} _vtype=${_MATCH[2]} _type=${_MATCH[5]} _comment=${_MATCH[8]}
     local _initial="${_opts[$_entry]-}"
@@ -117,9 +118,11 @@ _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
     _opts[$_name]="${_vtype}${_pass}${_vname}"
     [[ $_type ]] && _gol_rule $_name "$_type"
     for _alias in "${_aliases[@]:1}" ; do
+	[[ $_alias == ~* ]] && { _alias=${_alias#\~} ; _gol_deny $_alias $_name ; }
 	_opts[$_alias]="${_opts[$_name]}"
 	_gol_alias $_alias $_name
     done
+    _aliases=("${_aliases[@]/#\~/}")
     _gol_saila $_name "${_aliases[*]:1}"
     [[ $_comment ]] && _gol_help "$_name" "$_comment"
     return 0
@@ -193,6 +196,7 @@ _gol_getopts_short() {
     }
     _vtype=${_MATCH[1]} _pass="${_MATCH[2]}" _vname=${_MATCH[3]}
     [[ $_vtype =~ [${_IS_MAYB}${_IS_REQ}] ]] && _val="${OPTARG:-}"
+    _gol_deny $_opt > /dev/null 2>&1 && { _non="no-" ; _val="" ; }
     return 0
 }
 _gol_getopts_store() { local _vals _v ;

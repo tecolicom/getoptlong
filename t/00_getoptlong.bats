@@ -97,6 +97,48 @@ load test_helper.bash
     assert_output "feature_val:"
 }
 
+# Test: Flag option, negated via negative alias (-F as ~F)
+@test "getoptlong: flag - negative alias -F clears flag" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([feature|f|~F]=1)
+        getoptlong init OPTS
+        getoptlong parse -F
+        eval "$(getoptlong set)"
+        echo "feature_val:[$feature]"
+    '
+    assert_success
+    assert_output "feature_val:[]"
+}
+
+# Test: Negative alias -F then positive -f re-enables
+@test "getoptlong: flag - negative alias -F then -f re-enables" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([feature|f|~F]=1)
+        getoptlong init OPTS
+        getoptlong parse -F -f
+        eval "$(getoptlong set)"
+        echo "feature_val:$feature"
+    '
+    assert_success
+    assert_output "feature_val:1"
+}
+
+# Test: Negative alias coexists with --no-option
+@test "getoptlong: flag - negative alias and --no-feature both work" {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([feature|f|~F]=1)
+        getoptlong init OPTS
+        getoptlong parse --no-feature
+        eval "$(getoptlong set)"
+        echo "feature_val:[$feature]"
+    '
+    assert_success
+    assert_output "feature_val:[]"
+}
+
 # Test: Flag option, repeated long options
 @test "getoptlong: flag - repeated long --level --level --level" {
     run $BASH -c '

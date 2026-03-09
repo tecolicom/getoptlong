@@ -112,6 +112,8 @@ The key format is:
 - **ALIAS**
 
     Additional names separated by `|` (e.g., `verbose|v|V`).
+    Prefix with `~` to create a negative alias that negates the option
+    (e.g., `sweep|w|~W` makes `-W` equivalent to `--no-sweep`).
 
 - **TYPE**
 
@@ -152,9 +154,11 @@ Each option type determines how arguments are handled and stored.
 A flag takes no argument. First use sets to `1`, subsequent uses
 increment (useful for verbosity levels). Use `--no-<name>` to reset to
 empty string. Bundling supported: `-vvv` equals `-v -v -v`.
+A negative alias (`~X`) provides a short option for negation.
 
     [verbose|v]=        # $verbose: 1 when specified
     [debug|d+]=0        # $debug: increments (-d -d -d or -ddd)
+    [sweep|w|~W]=1      # -w enables, -W disables (same as --no-sweep)
 
 Numeric initial value (like `0`) enables counter display in help.
 
