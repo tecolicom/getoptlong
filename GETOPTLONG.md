@@ -368,6 +368,7 @@ Act as switches that do not take arguments and can be used as both simple flags 
     *   `[debug|d+   # Debug level    ]=0` (Initial value for easier variable reference)
     *   `[feature|f  # Enable feature ]=`
     *   `[sweep|w|~W # Enable sweep   ]=1` (with negative alias `-W`)
+    *   `[verbose|v|~q|~quiet]=` (`-q`/`--quiet` negate, `--no-quiet` re-enables)
 
 *   **How to Specify:** `-v`, `--verbose`, `--debug`, `-d`, `--feature`
 
