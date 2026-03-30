@@ -11,6 +11,7 @@
 - Provides validation for integer, floating-point, and custom regular expression patterns
 - Enables registration of callback functions for each option for flexible processing
 - Supports multiple calls, which enables to use different options in subcommands or perform own option analysis within functions
+- Negative aliases (`~` prefix) for defining option names that negate the option
 - Automatic generation of help option and help messages. Help option is implemented without explicit definition. Help message is generated from the option definition.
 
 ## Table of Contents
