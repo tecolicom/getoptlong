@@ -6,8 +6,9 @@
 # MIT License: See <https://opensource.org/licenses/MIT>
 : ${GOL_VERSION:=0.8.1}
 ###############################################################################
-# Check for nameref support (bash 4.3+)
-declare -n > /dev/null 2>&1 || { echo "Does not support ${BASH_VERSION}" >&2 ; exit 1 ; }
+# Check bash version (4.4+ for nameref and ${parameter@Q})
+((BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 4))) ||
+    { echo "Requires bash 4.4 or later (found ${BASH_VERSION})" >&2 ; exit 1 ; }
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
 _gol_opts() {
