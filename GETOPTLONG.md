@@ -110,6 +110,17 @@ curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlon
 . ./getoptlong.sh
 ```
 
+### Embedding in a Script
+
+To ship a script as a single file, put the content of `getoptlong.sh` into it, before the option parsing, and call the subcommands explicitly.  The same script also works unbundled if it loads `getoptlong.sh` only when the functions are not defined yet:
+
+```bash
+declare -F getoptlong >/dev/null || . getoptlong.sh -
+getoptlong init OPTS && getoptlong parse "$@" && eval "$(getoptlong set)"
+```
+
+The `-` keeps the script's own arguments away from `getoptlong.sh` while it is loaded (the `getoptlong` manual recommends the same for the multi-step form).  The automatic initialization of the one-liner form (Section 3.1) runs only when `getoptlong.sh` is sourced as a file, so the embedded code never takes the script's arguments as an options array.
+
 ## 3. Basic Usage
 
 `getoptlong.sh` offers two primary ways to integrate option parsing into your scripts: a simplified one-liner approach and a standard multi-step approach.
