@@ -107,7 +107,7 @@ You can also download and use it locally:
 curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlong.sh -o getoptlong.sh
 
 # Source from your script
-. ./getoptlong.sh
+. ./getoptlong.sh -
 ```
 
 ### Embedding in a Script
@@ -197,10 +197,12 @@ declare -A OPTS=(
 Next, source the `getoptlong.sh` file from within your script using the `source` command (or the `.` command). This makes the `getoptlong` function and its subcommands available.
 
 ```bash
-. $(dirname $0)/getoptlong.sh # Replace with the actual path to getoptlong.sh
+. $(dirname $0)/getoptlong.sh - # Replace with the actual path to getoptlong.sh
 # Or, if getoptlong.sh is in your execution path:
-# . getoptlong.sh
+# . getoptlong.sh -
 ```
+
+The `-` argument keeps the script's own arguments away from the library while it is loaded.  Without any argument, `.` passes the current positional parameters, and if the first one happens to name an associative array, the library takes it for the one-liner form (Section 3.1).
 
 #### 3.2.3. Initializing getoptlong
 

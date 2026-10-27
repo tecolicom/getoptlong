@@ -272,7 +272,7 @@ yourself, configure advanced options, or process subcommands.
 
     #!/usr/bin/env bash
 
-    . getoptlong.sh
+    . getoptlong.sh -
 
     declare -A OPTS=(
         [ verbose | v  ]=
