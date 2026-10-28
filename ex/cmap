@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-define() { IFS='\n' read -r -d '' ${1} || true ; }
+define() { IFS= read -rd '' "$1" || : ; }
 
 . "${0%/*}"/../getoptlong.sh
 
