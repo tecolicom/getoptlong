@@ -480,7 +480,10 @@ See `ex/` directory for sample scripts:
 - `prefix.sh` - PREFIX setting
 - `dest.sh` - custom destination variables
 - `subcmd.sh` - subcommand handling
-- `cmap` - complex real-world example
+
+For a complex real-world example, see
+[t/cmap](https://github.com/tecolicom/Term-ANSIColor-Concise/blob/main/t/cmap) of
+Term::ANSIColor::Concise.
 
 # SEE ALSO
 

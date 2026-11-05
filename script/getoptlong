@@ -530,9 +530,11 @@ See C<ex/> directory for sample scripts:
 
 =item * C<subcmd.sh> - subcommand handling
 
-=item * C<cmap> - complex real-world example
-
 =back
+
+For a complex real-world example, see
+L<t/cmap|https://github.com/tecolicom/Term-ANSIColor-Concise/blob/main/t/cmap> of
+Term::ANSIColor::Concise.
 
 =head1 SEE ALSO
 
