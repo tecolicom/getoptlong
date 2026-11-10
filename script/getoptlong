@@ -312,6 +312,15 @@ C<[opt|o:!E<gt>array]>.
 
 After C<--pass foo>: C<collected=("--pass" "foo")>
 
+The value is added as one element as it is, even if it contains spaces
+or wildcard characters.  The value of an optional argument is added
+with its option as one element, because it would not be taken for the
+value as a separate one:
+
+    [mode|m?>collected]=    # Option with its value, if any
+
+After C<--mode=fast --mode>: C<collected=("--mode=fast" "--mode")>
+
 =head1 DESTINATION VARIABLE
 
 By default, values are stored in variables named after the option.

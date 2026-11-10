@@ -225,7 +225,11 @@ _gol_getopts_store() { local _vals _v ;
 _gol_getopts_passthru() { local _options=() ;
     local _option=${_optname-$_opt}
     (( ${#_option} > 1 || ${#_non} )) && _options=(--$_non$_option) || _options=(-$_option)
-    [[ $_vtype =~ [$_IS_REQ] ]] && _options+=($_val)
+    if [[ $_non ]] ; then :
+    elif [[ $_vtype =~ [$_IS_REQ] ]] ; then _options+=("$_val")
+    elif [[ $_vtype =~ [$_IS_MAYB] && ${_val-} ]] ; then
+	(( ${#_option} > 1 )) && _options=("--$_option=$_val") || _options=("-$_option$_val")
+    fi
     _gol_add_array $_vname "${_options[@]}"
 }
 _gol_value() {

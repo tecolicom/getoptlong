@@ -272,6 +272,15 @@ after `>`, uses the option name. Can combine with callback:
 
 After `--pass foo`: `collected=("--pass" "foo")`
 
+The value is added as one element as it is, even if it contains spaces
+or wildcard characters.  The value of an optional argument is added
+with its option as one element, because it would not be taken for the
+value as a separate one:
+
+    [mode|m?>collected]=    # Option with its value, if any
+
+After `--mode=fast --mode`: `collected=("--mode=fast" "--mode")`
+
 # DESTINATION VARIABLE
 
 By default, values are stored in variables named after the option.
