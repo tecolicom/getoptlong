@@ -218,6 +218,11 @@ _gol_getopts_store() { local _vals _v ;
 		esac
 	    done
 	    ;;
+	[$_IS_MAYB])
+	    # --no- takes the option back: the variable is unset, the
+	    # third state besides a value and the empty string
+	    [[ $_non ]] && { unset -v "$_vname" ; return ; }
+	    ;;&
 	*) [[ $_check ]] && _gol_validate "$_check" "$_val"
 	   _gol_value $_vname "$_val" ;;
     esac
