@@ -4,7 +4,7 @@
 # GetOptLong: Getopt Library for Bash Script
 # Copyright 2025-2026 Office TECOLI, LLC <https://github.com/tecolicom/getoptlong>
 # MIT License: See <https://opensource.org/licenses/MIT>
-: ${GOL_VERSION:=1.3.0}
+: ${GOL_VERSION:=1.4.0}
 ###############################################################################
 # Check bash version (4.4+ for nameref and ${parameter@Q})
 ((BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 4))) ||
@@ -209,7 +209,7 @@ _gol_getopts_store() { local _vals _v ;
 	[$_IS_LIST]|[$_IS_HASH])
 	    [[ $_non ]] && { declare -n __target__=$_vname ; __target__=() ; return ; }
 	    [[ $_val =~ $'\n' ]] && readarray -t _vals <<< ${_val%$'\n'} \
-				 || IFS="${_DELIM}" read -a _vals <<< ${_val}
+				 || IFS="${_DELIM}" read -ra _vals <<< ${_val}
 	    for _v in "${_vals[@]}" ; do
 		[[ $_check ]] && _gol_validate "$_check" "$_v"
 		case $_vtype in
