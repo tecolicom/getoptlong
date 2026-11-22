@@ -2,6 +2,11 @@ Revision history for Getopt-Long-Bash
 
 {{$NEXT}}
 
+1.4.0 2026-11-22T16:12:28Z
+
+    - Backslashes in the value of a list (@) or hash (%) option are
+      kept as is.  They were taken as escapes and removed (#4)
+
 1.3.0 2026-11-17T01:41:41Z
 
     - An option which takes an optional argument (?) can have an
