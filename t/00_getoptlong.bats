@@ -596,6 +596,33 @@ load test_helper.bash
     assert_output "item_vals: v  1 v  2 v  3"
 }
 
+# Test: backslashes in list option values are kept (issue #4)
+@test "getoptlong: array option - backslashes are kept" {
+    run $BASH <<'    END'
+        . ../script/getoptlong.sh
+        declare -A OPTS=([item|i@]=)
+        getoptlong init OPTS
+        getoptlong parse --item 'C:\path\to' --item 'a\nb,c\d'
+        eval "$(getoptlong set)"
+        printf '[%s]' "${item[@]}"; echo
+    END
+    assert_success
+    assert_output '[C:\path\to][a\nb][c\d]'
+}
+
+@test "getoptlong: hash option - backslashes are kept" {
+    run $BASH <<'    END'
+        . ../script/getoptlong.sh
+        declare -A OPTS=([data|D%]=)
+        getoptlong init OPTS
+        getoptlong parse --data 'k1=C:\path,k2=a\nb'
+        eval "$(getoptlong set)"
+        printf '[%s]' "${data[k1]}" "${data[k2]}"; echo
+    END
+    assert_success
+    assert_output '[C:\path][a\nb]'
+}
+
 # Test: Array option reset with --no-item
 @test "getoptlong: array option - --no-item resets array" {
     run $BASH -c '

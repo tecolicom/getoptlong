@@ -209,7 +209,7 @@ _gol_getopts_store() { local _vals _v ;
 	[$_IS_LIST]|[$_IS_HASH])
 	    [[ $_non ]] && { declare -n __target__=$_vname ; __target__=() ; return ; }
 	    [[ $_val =~ $'\n' ]] && readarray -t _vals <<< ${_val%$'\n'} \
-				 || IFS="${_DELIM}" read -a _vals <<< ${_val}
+				 || IFS="${_DELIM}" read -ra _vals <<< ${_val}
 	    for _v in "${_vals[@]}" ; do
 		[[ $_check ]] && _gol_validate "$_check" "$_v"
 		case $_vtype in
