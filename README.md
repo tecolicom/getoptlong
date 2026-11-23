@@ -424,6 +424,10 @@ Display the library version.
 
     getoptlong version
 
+The **getoptlong** command also shows it with `--version`.
+
+    $ getoptlong --version
+
 # CONFIGURATION
 
 Configuration parameters can be specified either as arguments to

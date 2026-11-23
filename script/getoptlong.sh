@@ -91,7 +91,7 @@ _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
 	|| _gol_die "[$_entry] -- invalid"
     local _names=${_MATCH[1]} _vtype=${_MATCH[2]} _type=${_MATCH[5]} _comment=${_MATCH[8]}
     local _initial="${_opts[$_entry]-}"
-    IFS=$' \t|' read -a _aliases <<< ${_names}
+    IFS=$' \t|' read -ra _aliases <<< ${_names}
     _name=${_aliases[0]}
     _gol_ival $_name "$_initial"
     unset _opts["$_entry"]
@@ -165,7 +165,7 @@ gol_getopts_() { local _non= _optname _val _vtype _vname _name _callback _trigge
     return 0
 }
 _gol_call_hook() {
-    local _call=($1)
+    local _call ; read -ra _call <<< "$1"
     local exec=("${_call[0]}" "$2" "${_call[@]:1}" "${@:3}")
     declare -F "${_call[0]}" > /dev/null \
 	&& "${exec[@]}" || _gol_die "callback function ${_call[0]}() is not defined"
@@ -261,7 +261,7 @@ gol_callback_() {
     while (($# > 0)) ; do
 	local _name=$1 _callback=${2:-$1}
 	[[ $_callback =~ ^[_[:alnum:]] ]] || _callback=$_name
-	local args=($_callback)
+	local args ; read -ra args <<< "$_callback"
 	$_setter "$_name" "${args[0]//-/_} ${args[@]:1}"
 	shift $(( $# >= 2 ? 2 : 1 ))
     done
@@ -273,7 +273,7 @@ gol_help_() {
     while (($# > 1)) ; do _gol_help "$1" "$2" ; shift 2 ; done
 }
 _gol_show_help() { local _key _aliases _init= _default= _column _flag _msg ;
-    echo "${1:-${_USAGE:-$(basename $0) [ options ] args}}"
+    echo "${1:-${_USAGE:-$(basename "$0") [ options ] args}}"
     _column=($(command -v column)) && _column+=(-s $'\t' -t) || _column=(cat)
     for _key in "${!_opts[@]}" ; do
 	_aliases="$(_gol_saila "$_key")" || continue
@@ -338,10 +338,10 @@ gol_set_() {
 }
 # Main entry point - dispatch to appropriate subcommand
 getoptlong () {
-    case $1 in
+    case ${1-} in
 	init|parse|set|configure|getopts|callback|dump|help) gol_$1 "${@:2}" ;;
 	version) echo ${GOL_VERSION} ;;
-	*) _gol_die "unknown subcommand -- $1" ;;
+	*) _gol_die "unknown subcommand -- ${1-}" ;;
     esac
 }
 # Auto-initialization if first argument is an associative array, only
