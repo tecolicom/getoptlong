@@ -169,7 +169,7 @@ _gol_call_hook() {
     declare -F "${_call[0]}" > /dev/null \
 	|| _gol_die "callback function ${_call[0]}() is not defined"
     # the callback handles its own errors: the return value is ignored
-    "${_call[0]}" "$2" "${_call[@]:1}" "${@:3}" || :
+    "${_call[@]}" "${@:2}" || :
 }
 _gol_getopts_long() { local _param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"

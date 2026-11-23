@@ -893,7 +893,7 @@ END
         getoptlong parse --action go
     END
     assert_success
-    assert_output '[action][*][?][go]'
+    assert_output '[*][?][action][go]'
 }
 
 # Test: Callback execution
@@ -909,7 +909,7 @@ END
         # Callback output should be part of stdout if it echos.
     '
     assert_success
-    assert_output --partial "Callback invoked with value: action --with-option perform_action"
+    assert_output --partial "Callback invoked with value: --with-option action perform_action"
 }
 
 @test "getoptlong: callback --before" {
@@ -924,7 +924,25 @@ END
         # Callback output should be part of stdout if it echos.
     '
     assert_success
-    assert_output --partial "Callback invoked with value: action --with-option"
+    assert_output --partial "Callback invoked with value: --with-option action"
+}
+
+# Test: a common callback function called with different fixed arguments
+@test "getoptlong: callback - common function with fixed arguments" {
+    run $BASH <<'    END'
+        . ../script/getoptlong.sh
+        set_level() { printf '[%s]' "$@" ; echo ; }
+        declare -A OPTS=([quiet|q]= [verbose|v]= [mode|m:]=)
+        getoptlong init OPTS
+        getoptlong callback quiet "set_level 0" verbose "set_level 2" mode "set_level 9 x"
+        getoptlong callback --before mode "set_level -1"
+        getoptlong parse -q --verbose --mode fast
+    END
+    assert_success
+    assert_line --index 0 '[0][quiet][1]'
+    assert_line --index 1 '[2][verbose][1]'
+    assert_line --index 2 '[-1][mode]'
+    assert_line --index 3 '[9][x][mode][fast]'
 }
 
 @test "getoptlong: callback type option" {

@@ -297,12 +297,21 @@ C<?!>, C<@!>, C<%!>).
 
 =head2 REGISTRATION
 
-Register callbacks with C<getoptlong callback>. If function name is
-omitted or C<->, uses option name (hyphens to underscores). Additional
-C<args> are passed to the callback function after the option name and value.
+Register callbacks with C<getoptlong callback>, giving pairs of an
+option and a function.  If function name is omitted or C<->, uses
+option name (hyphens to underscores).
 
-    getoptlong callback <option> [function] [args...]
-    getoptlong callback --before <option> [function] [args...]
+    getoptlong callback <option> [function] [<option> [function] ...]
+    getoptlong callback --before <option> [function] ...
+
+The function can be given with fixed arguments in one word, such as
+C<"func arg...">.  They are passed before the option name and value,
+so that a common function can be called from several options and
+behave differently by the arguments.  The arguments are split by
+white space, and cannot contain a space.
+
+    set_level() { level=$1 ; }
+    getoptlong callback quiet "set_level 0" verbose "set_level 2"
 
 =head2 CALLBACK TIMING
 
@@ -310,8 +319,8 @@ Normal callbacks are called B<after> value is set, receiving the option
 name and value. Pre-processing callbacks (C<--before>/C<-b>) are called
 B<before> value is set, without the value argument.
 
-    callback_func "option_name" "value" [args...]   # normal
-    callback_func "option_name" [args...]           # --before
+    callback_func [args...] "option_name" "value"   # normal
+    callback_func [args...] "option_name"           # --before
 
 =head2 ERROR HANDLING
 
@@ -441,9 +450,11 @@ Variables are actually set during C<parse>; this updates C<$@>.
 
 Register callback function for option. Use C<-b>/C<--before> to call
 before value is set. If C<func> is omitted, uses option name (hyphens
-to underscores). Additional C<args> are passed to the callback.
+to underscores). C<func> can have fixed arguments in one word
+(C<"func args...">), which are passed before the option name and
+value. More pairs of C<opt> and C<func> can follow.
 
-    getoptlong callback [-b|--before] <opt> [func] [args...]
+    getoptlong callback [-b|--before] <opt> [func] [<opt> [func] ...]
 
 =head2 getoptlong configure
 

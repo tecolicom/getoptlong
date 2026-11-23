@@ -250,12 +250,21 @@ to specify a custom function. Can combine with any type (`+!`, `:!`,
 
 ## REGISTRATION
 
-Register callbacks with `getoptlong callback`. If function name is
-omitted or `-`, uses option name (hyphens to underscores). Additional
-`args` are passed to the callback function after the option name and value.
+Register callbacks with `getoptlong callback`, giving pairs of an
+option and a function.  If function name is omitted or `-`, uses
+option name (hyphens to underscores).
 
-    getoptlong callback <option> [function] [args...]
-    getoptlong callback --before <option> [function] [args...]
+    getoptlong callback <option> [function] [<option> [function] ...]
+    getoptlong callback --before <option> [function] ...
+
+The function can be given with fixed arguments in one word, such as
+`"func arg..."`.  They are passed before the option name and value,
+so that a common function can be called from several options and
+behave differently by the arguments.  The arguments are split by
+white space, and cannot contain a space.
+
+    set_level() { level=$1 ; }
+    getoptlong callback quiet "set_level 0" verbose "set_level 2"
 
 ## CALLBACK TIMING
 
@@ -263,8 +272,8 @@ Normal callbacks are called **after** value is set, receiving the option
 name and value. Pre-processing callbacks (`--before`/`-b`) are called
 **before** value is set, without the value argument.
 
-    callback_func "option_name" "value" [args...]   # normal
-    callback_func "option_name" [args...]           # --before
+    callback_func [args...] "option_name" "value"   # normal
+    callback_func [args...] "option_name"           # --before
 
 ## ERROR HANDLING
 
@@ -394,9 +403,11 @@ Variables are actually set during `parse`; this updates `$@`.
 
 Register callback function for option. Use `-b`/`--before` to call
 before value is set. If `func` is omitted, uses option name (hyphens
-to underscores). Additional `args` are passed to the callback.
+to underscores). `func` can have fixed arguments in one word
+(`"func args..."`), which are passed before the option name and
+value. More pairs of `opt` and `func` can follow.
 
-    getoptlong callback [-b|--before] <opt> [func] [args...]
+    getoptlong callback [-b|--before] <opt> [func] [<opt> [func] ...]
 
 ## getoptlong configure
 
