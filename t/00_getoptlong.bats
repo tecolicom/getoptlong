@@ -816,6 +816,44 @@ END
     assert_output "mode_val:fast"
 }
 
+# Test: the value is not evaluated by the regex validation
+@test "getoptlong: validation - regex - value is not evaluated" {
+    run $BASH <<'    END'
+        . ../script/getoptlong.sh
+        declare -A OPTS=([mode|m:=(^(fast|slow)$)]=)
+        getoptlong init OPTS
+        getoptlong parse --mode '$(echo executed >&2)fast'
+        eval "$(getoptlong set)"
+        echo "mode_val:$mode"
+    END
+    assert_failure
+    assert_output '$(echo executed >&2)fast: invalid argument'
+}
+
+@test "getoptlong: validation - regex - value with quotes and backslash" {
+    run $BASH <<'    END'
+        . ../script/getoptlong.sh
+        declare -A OPTS=([name|n:=(^a.+z$)]=)
+        getoptlong init OPTS
+        getoptlong parse --name 'a"b`c\d$e z'
+        eval "$(getoptlong set)"
+        echo "name_val:$name"
+    END
+    assert_success
+    assert_output 'name_val:a"b`c\d$e z'
+}
+
+@test "getoptlong: validation - regex - invalid pattern" {
+    run $BASH <<'    END'
+        . ../script/getoptlong.sh
+        declare -A OPTS=([mode|m:=(^(a)]=)
+        getoptlong init OPTS
+        getoptlong parse --mode fast
+    END
+    assert_failure
+    assert_line '(^(a): something wrong'
+}
+
 # Test: the return value of a callback is ignored
 @test "getoptlong: callback - return value is ignored" {
     run $BASH <<'    END'
