@@ -166,9 +166,10 @@ gol_getopts_() { local _non= _optname _val _vtype _vname _name _callback _trigge
 }
 _gol_call_hook() {
     local _call ; read -ra _call <<< "$1"
-    local exec=("${_call[0]}" "$2" "${_call[@]:1}" "${@:3}")
     declare -F "${_call[0]}" > /dev/null \
-	&& "${exec[@]}" || _gol_die "callback function ${_call[0]}() is not defined"
+	|| _gol_die "callback function ${_call[0]}() is not defined"
+    # the callback handles its own errors: the return value is ignored
+    "${_call[0]}" "$2" "${_call[@]:1}" "${@:3}" || :
 }
 _gol_getopts_long() { local _param ;
     [[ $OPTARG =~ ^(no-)?([-_[:alnum:]]+)(=(.*))? ]] || _gol_die "$OPTARG: unrecognized option"
@@ -262,7 +263,7 @@ gol_callback_() {
 	local _name=$1 _callback=${2:-$1}
 	[[ $_callback =~ ^[_[:alnum:]] ]] || _callback=$_name
 	local args ; read -ra args <<< "$_callback"
-	$_setter "$_name" "${args[0]//-/_} ${args[@]:1}"
+	$_setter "$_name" "${args[0]//-/_} ${args[*]:1}"
 	shift $(( $# >= 2 ? 2 : 1 ))
     done
     return 0

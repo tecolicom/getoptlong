@@ -816,6 +816,48 @@ END
     assert_output "mode_val:fast"
 }
 
+# Test: the return value of a callback is ignored
+@test "getoptlong: callback - return value is ignored" {
+    run $BASH <<'    END'
+        . ../script/getoptlong.sh
+        declare -A OPTS=([action|a:!]=)
+        action() { echo "called:$2" ; return 1 ; }
+        getoptlong init OPTS
+        getoptlong parse --action go
+        eval "$(getoptlong set)"
+        echo "action_val:$action"
+    END
+    assert_success
+    assert_line --index 0 "called:go"
+    assert_line --index 1 "action_val:go"
+}
+
+@test "getoptlong: callback - undefined function" {
+    run $BASH <<'    END'
+        . ../script/getoptlong.sh
+        declare -A OPTS=([action|a:!]=)
+        getoptlong init OPTS
+        getoptlong parse --action go
+        echo "not reached"
+    END
+    assert_failure
+    assert_output "callback function action() is not defined"
+}
+
+# Test: callback arguments are not expanded as file name patterns
+@test "getoptlong: callback - argument is not globbed" {
+    run $BASH <<'    END'
+        . ../script/getoptlong.sh
+        show() { printf '[%s]' "$@" ; echo ; }
+        declare -A OPTS=([action|a:]=)
+        getoptlong init OPTS
+        getoptlong callback action 'show * ?'
+        getoptlong parse --action go
+    END
+    assert_success
+    assert_output '[action][*][?][go]'
+}
+
 # Test: Callback execution
 @test "getoptlong: callback - basic execution" {
     run $BASH -c '
