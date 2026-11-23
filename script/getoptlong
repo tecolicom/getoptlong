@@ -584,7 +584,7 @@ Term::ANSIColor::Concise.
 
 =item * L<Getopt::Long> - Perl module inspiration
 
-=item * L<https://github.com/tecolicom/getoptlong> - repository
+=item * L<https://github.com/tecolicom/getoptlong-bash> - repository
 
 =item * L<https://qiita.com/kaz-utashiro/items/75a7df9e1a1e92797376> - introduction article (Japanese)
 

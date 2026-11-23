@@ -5,7 +5,7 @@
 Please do not report a security vulnerability in a public issue.
 
 Report it privately with "Report a vulnerability" in the
-[Security tab](https://github.com/tecolicom/getoptlong/security/advisories/new)
+[Security tab](https://github.com/tecolicom/getoptlong-bash/security/advisories/new)
 of this repository.  The report is visible only to the maintainers,
 and is handled privately until a fixed version is released.
 
@@ -23,7 +23,7 @@ new release, and is not backported to older versions.
 ## Security Advisories
 
 Published advisories are listed in
-[Security Advisories](https://github.com/tecolicom/getoptlong/security/advisories).
+[Security Advisories](https://github.com/tecolicom/getoptlong-bash/security/advisories).
 A release with a security fix says so in the `Changes` file.
 
 ---
@@ -35,7 +35,7 @@ A release with a security fix says so in the `Changes` file.
 セキュリティ上の脆弱性は、公開の issue には書かないでください。
 
 このリポジトリの
-[Security タブ](https://github.com/tecolicom/getoptlong/security/advisories/new)
+[Security タブ](https://github.com/tecolicom/getoptlong-bash/security/advisories/new)
 にある「Report a vulnerability」から、非公開で報告してください。
 報告はメンテナだけが見ることができ、修正版がリリースされるまで非公開で扱います。
 
@@ -53,5 +53,5 @@ A release with a security fix says so in the `Changes` file.
 ## セキュリティアドバイザリ
 
 公開したアドバイザリは
-[Security Advisories](https://github.com/tecolicom/getoptlong/security/advisories)
+[Security Advisories](https://github.com/tecolicom/getoptlong-bash/security/advisories)
 にあります。セキュリティ修正を含むリリースは、`Changes` ファイルにその旨を書きます。

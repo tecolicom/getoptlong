@@ -297,7 +297,7 @@ L<getoptlong> - Complete reference manual
 
 L<Getopt::Long::Bash>
 
-L<https://github.com/tecolicom/getoptlong>
+L<https://github.com/tecolicom/getoptlong-bash>
 
 =head1 AUTHOR
 

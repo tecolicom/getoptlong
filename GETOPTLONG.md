@@ -89,13 +89,13 @@ You can use `getoptlong.sh` by sourcing it directly from GitHub without download
 
 ```bash
 # Latest stable version (recommended)
-source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlong.sh)
+source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong-bash/dist/getoptlong.sh)
 
 # Specific version
-source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/v0.2/getoptlong.sh)
+source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong-bash/v0.2/getoptlong.sh)
 
 # Latest major version (always gets the newest 0.x release)
-source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/v0/getoptlong.sh)
+source <(curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong-bash/v0/getoptlong.sh)
 ```
 
 ### Local Installation
@@ -104,7 +104,7 @@ You can also download and use it locally:
 
 ```bash
 # Download to your project
-curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong/dist/getoptlong.sh -o getoptlong.sh
+curl -fsSL https://raw.githubusercontent.com/tecolicom/getoptlong-bash/dist/getoptlong.sh -o getoptlong.sh
 
 # Source from your script
 . ./getoptlong.sh -

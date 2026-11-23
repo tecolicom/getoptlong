@@ -1,4 +1,4 @@
-[![Actions Status](https://github.com/tecolicom/getoptlong/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/tecolicom/getoptlong/actions?workflow=test) [![MetaCPAN Release](https://badge.fury.io/pl/Getopt-Long-Bash.svg)](https://metacpan.org/release/Getopt-Long-Bash)
+[![Actions Status](https://github.com/tecolicom/getoptlong-bash/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/tecolicom/getoptlong-bash/actions?workflow=test) [![MetaCPAN Release](https://badge.fury.io/pl/Getopt-Long-Bash.svg)](https://metacpan.org/release/Getopt-Long-Bash)
 # NAME
 
 getoptlong - Option parsing that does what you mean, for Bash
@@ -521,7 +521,7 @@ Term::ANSIColor::Concise.
 - [Getopt::Long::Bash::Tutorial](https://metacpan.org/pod/Getopt%3A%3ALong%3A%3ABash%3A%3ATutorial) - getting started guide
 - [Getopt::Long::Bash](https://metacpan.org/pod/Getopt%3A%3ALong%3A%3ABash) - module information
 - [Getopt::Long](https://metacpan.org/pod/Getopt%3A%3ALong) - Perl module inspiration
-- [https://github.com/tecolicom/getoptlong](https://github.com/tecolicom/getoptlong) - repository
+- [https://github.com/tecolicom/getoptlong-bash](https://github.com/tecolicom/getoptlong-bash) - repository
 - [https://qiita.com/kaz-utashiro/items/75a7df9e1a1e92797376](https://qiita.com/kaz-utashiro/items/75a7df9e1a1e92797376) - introduction article (Japanese)
 
 # AUTHOR
