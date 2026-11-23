@@ -215,11 +215,11 @@ getoptlong init OPTS
 
 During initialization, you can also specify various configuration parameters that control option parsing behavior. See Section "7.1. `getoptlong init ...`" for details.
 
-Example: Store non-option arguments in the `ARGS` array and prevent the script from exiting on a parse error.
+Example: Store non-option arguments in the `ARGS` array, and leave undefined options in it instead of exiting with an error.
 
 ```bash
 declare -a ARGS # It's good practice to declare the array specified by PERMUTE beforehand
-getoptlong init OPTS PERMUTE=ARGS EXIT_ON_ERROR=0
+getoptlong init OPTS PERMUTE=ARGS EXIT_ON_ERROR=
 ```
 
 #### 3.2.4. Parsing Command-Line Arguments
@@ -227,15 +227,10 @@ getoptlong init OPTS PERMUTE=ARGS EXIT_ON_ERROR=0
 Pass all script arguments (`"$@"`) to the `getoptlong parse` command to parse them based on your definitions.
 
 ```bash
-if ! getoptlong parse "$@"; then
-    # Handle parse error (if EXIT_ON_ERROR=0)
-    echo "Failed to parse arguments." >&2
-    getoptlong help "Usage: $(basename "$0") [options] arguments..." # Display help on error
-    exit 1
-fi
+getoptlong parse "$@"
 ```
 
-`getoptlong parse` returns an exit code of `0` on successful parsing and non-zero otherwise. If `EXIT_ON_ERROR` is `1` (default), the script will automatically exit on a parse error.
+On a parse error, such as an undefined option or a missing required argument, `getoptlong parse` displays an error message and exits the script (`EXIT_ON_ERROR`, enabled by default).  If `EXIT_ON_ERROR` is disabled, undefined options are left in the arguments instead.  See Section "7.2. `getoptlong parse`" for details.
 
 #### 3.2.5. Setting Positional Parameters
 
@@ -543,7 +538,7 @@ Validates if the argument is an integer.
 
 *   **Definition Example:** `[count|c:COUNT=i # Number of iterations]` (assuming COUNT is the destination variable) or `[count|c:=i # Number of iterations]` (if using default variable name).
 
-*   **Behavior:** If the argument is not an integer, an error message is displayed, and the script exits (default behavior, if `EXIT_ON_ERROR=1`).
+*   **Behavior:** If the argument is not an integer, an error message is displayed, and the script exits.  This does not depend on `EXIT_ON_ERROR`.
 
 *   Applicable to array options (`@...=i`) and the value part of hash options (`%...=i`).
 
@@ -868,9 +863,9 @@ This method is suitable when you want to pass all arguments after a certain poin
 
 *   **Handling Undefined Options:**
 
-    *   By default, if an option not defined in the `OPTS` array is passed, it results in an error (if `EXIT_ON_ERROR=1`).
+    *   By default, if an option not defined in the `OPTS` array is passed, it is an error, and the script exits.
 
-    *   By setting `EXIT_ON_ERROR=0` and checking the return value of `getoptlong parse`, you can process an argument list containing undefined options. `getoptlong.sh` does not have a direct feature to "ignore undefined options and collect them into a specific array." In this case, you need to use `PERMUTE` and `--`, or preprocess the argument list yourself.
+    *   If `EXIT_ON_ERROR` is disabled (`EXIT_ON_ERROR=`), undefined options are not errors: they are left in the arguments, together with the non-option arguments, in the array specified by `PERMUTE` (or `GOL_ARGV`), and `getoptlong parse` returns `0`.  An undefined short option is still reported by `getopts`; set `SILENT` to suppress it.  An argument given to an undefined option as a separate word is left as another argument.  See `ex/silent.sh` for an example.
 
 *   **How to Achieve Pass-through (General Approaches):**
 
@@ -949,16 +944,13 @@ Some parameters set with `getoptlong init` can be changed later using the `getop
 *   **Example:**
 
     ```bash
-    getoptlong init OPTS EXIT_ON_ERROR=1
+    getoptlong init OPTS
     # ... some processing ...
-    # Temporarily prevent exiting on error
-    getoptlong configure EXIT_ON_ERROR=0
-    # The following parse will not exit on error (check return value of parse for success)
-    if ! getoptlong parse "${some_args[@]}"; then
-        echo "Warning: Parsing some_args failed but script continues." >&2
-    fi
+    # Temporarily leave undefined options in the arguments instead of exiting
+    getoptlong configure EXIT_ON_ERROR= SILENT=1
+    getoptlong parse "${some_args[@]}"
     # Revert
-    getoptlong configure EXIT_ON_ERROR=1
+    getoptlong configure EXIT_ON_ERROR=1 SILENT=
     ```
 
 *   **Note:** Not all parameters are suitable for runtime changes. It's safest to use this for changing flags that control parsing behavior (`EXIT_ON_ERROR`, `SILENT`, `DEBUG`, `DELIM`). Parameters like `PREFIX` or those affecting option definitions themselves might not work as expected if changed after `init`.
@@ -1015,13 +1007,15 @@ Initializes the library, loading option definitions and settings. This command m
 
     *   **`USAGE=<string>`**: Specifies the synopsis string for the help message. See Section "4.3.1. Customizing Synopsis (`USAGE` Setting)" for details. If not set, the synopsis is typically not displayed unless `getoptlong help` is called with an argument.
 
-    *   **`EXIT_ON_ERROR=<BOOL>`**: Whether to exit the script on a parse error (`1` to exit, `0` not to exit).  Default is `1` (exit). If `0`, you must check the return value of `getoptlong parse` to detect errors.
+    *   **`EXIT_ON_ERROR=<BOOL>`**: Whether to exit the script on a parse error.  Default is enabled (exit).  If disabled, undefined options are left in the arguments instead of being errors.  See Section "7.2. `getoptlong parse`" for details.
 
     *   **`DELIM=<string>`**: Specifies the set of characters used to delimit multiple values or pairs within a single argument string for array (`@`) or hash (`%`) options.  Default is space, tab, comma (behavior similar to Bash's IFS). For example, `DELIM=,:` would delimit by comma and colon.
 
-    *   **`SILENT=<BOOL>`**: Whether to suppress error messages (`1` to suppress, `0` to display).  Default is `0` (display).
+    *   **`SILENT=<BOOL>`**: Whether to suppress error messages of `getopts`.  Default is disabled (display).
 
-    *   **`DEBUG=<BOOL>`**: Whether to enable debug messages (`1` to enable, `0` to disable).  Default is `0` (disable).
+    *   **`DEBUG=<BOOL>`**: Whether to enable debug messages.  Default is disabled.
+
+    A `<BOOL>` parameter is enabled by a non-empty value, such as `1`, and disabled by an empty string, such as `EXIT_ON_ERROR=`.  Note that `0` is a non-empty value, and enables it.
 
 ### 7.2. `getoptlong parse "$@"`
 
@@ -1031,10 +1025,9 @@ Parses command-line arguments according to the defined options.
 
 *   **Return Value**:
 
-    *   Returns exit code `0` on successful parsing.
-    *   Returns a non-zero exit code on parsing failure (undefined option, missing required argument, etc.).
-    *   If `EXIT_ON_ERROR=1` (default), this command will cause the script to exit on a parse error, so checking the return value is usually unnecessary.
-    *   If `EXIT_ON_ERROR=0`, you must check the return value of this command to handle errors.
+    *   Returns exit code `0`.  On a parse error, such as an undefined option or a missing required argument, it displays an error message and exits the script, as `EXIT_ON_ERROR` is enabled by default.  There is no need to check the return value.
+    *   If `EXIT_ON_ERROR` is disabled, an undefined option and a short option without its required argument are not errors: they are left in the arguments, and the command returns `0`.  An error message of `getopts` is displayed for a short option unless `SILENT` is set.
+    *   A long option without its required argument and a validation error exit the script regardless of `EXIT_ON_ERROR`.
 
 ### 7.3. `getoptlong set`
 
@@ -1068,7 +1061,7 @@ Registers a callback function for a specified option or modifies the settings of
 
 Dynamically changes global configuration parameter values (set by `getoptlong init`) during parsing or at other points.
 
-*   **`<CONFIG_PARAM=VALUE>`**: (Required) Specifies a configuration parameter available in `getoptlong init` and its new value (e.g., `EXIT_ON_ERROR=0`).
+*   **`<CONFIG_PARAM=VALUE>`**: (Required) Specifies a configuration parameter available in `getoptlong init` and its new value (e.g., `EXIT_ON_ERROR=`).
 
 *   **Note**: Not all parameters are suitable for runtime modification. It's safest to change flags controlling parsing behavior (`EXIT_ON_ERROR`, `SILENT`, `DEBUG`, `DELIM`). Parameters like `PREFIX` or those related to option definitions themselves might not work as expected if changed after `init`.
 
@@ -1205,8 +1198,9 @@ declare -A GlobalOPTS=(
 )
 getoptlong init GlobalOPTS
 declare -a RemainingArgs
-# Parse only global options. Do not exit on error, store the rest in RemainingArgs.
-getoptlong configure EXIT_ON_ERROR=0 PERMUTE=RemainingArgs
+# Parse only global options. Leave the rest, including the options of
+# the subcommand, in RemainingArgs without error messages.
+getoptlong configure EXIT_ON_ERROR= SILENT=1 PERMUTE=RemainingArgs
 getoptlong parse "$@"
 eval "$(getoptlong set)" # Set variables for global options
 

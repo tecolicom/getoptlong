@@ -333,10 +333,11 @@ Option values can be validated using type specifiers or regex patterns:
 definition, including any `)` in the description. Avoid using `)`
 in comments when using regex validation.
 
-Validation occurs before the value is stored or callbacks are invoked.
+Validation occurs before the value is stored and normal callbacks are
+invoked; `--before` callbacks are called before validation.
 For array options, each element is validated; for hash options, each
-`key=value` pair is matched as a whole. Error on validation failure
-(see [EXIT\_ON\_ERROR](#configuration)).
+`key=value` pair is matched as a whole. A validation failure exits
+the script with an error message, regardless of `EXIT_ON_ERROR`.
 
 # HELP MESSAGE
 
@@ -380,19 +381,21 @@ See ["CONFIGURATION"](#configuration) for available parameters.
 
 ## getoptlong parse
 
-Parse arguments. Returns 0 on success, non-zero on error. Always
-quote `"$@"`. By default, script exits on error.
+Parse arguments. Always quote `"$@"`. On a parse error, such as an
+undefined option or a missing required argument, the script exits
+with an error message.
 
     getoptlong parse "$@"
 
-To handle errors manually, disable `EXIT_ON_ERROR`
-(see ["CONFIGURATION"](#configuration)) and check return value:
+To leave undefined options in the arguments instead, disable
+`EXIT_ON_ERROR` (see ["CONFIGURATION"](#configuration)).  They are kept with the
+non-option arguments, and `parse` returns 0.  A short option without
+its required argument is left as well.  A long option without its
+required argument and a validation failure still exit the script.
+Set `SILENT` to suppress the error messages of **getopts**.
 
-    getoptlong configure EXIT_ON_ERROR=
-    if ! getoptlong parse "$@"; then
-        echo "Parse error" >&2
-        exit 1
-    fi
+    getoptlong configure EXIT_ON_ERROR= SILENT=1
+    getoptlong parse "$@"
 
 ## getoptlong set
 
@@ -473,8 +476,9 @@ Configuration parameters can be specified either as arguments to
 - **EXIT\_ON\_ERROR**
 
     Exit immediately on parse error. Default: enabled.
-    Set to empty string to disable and handle errors manually by checking
-    return value.
+    Set to empty string to disable: undefined options are left in the
+    arguments (see ["getoptlong parse"](#getoptlong-parse)).  Note that `0` is not empty,
+    and does not disable it.
 
 - **SILENT**
 
