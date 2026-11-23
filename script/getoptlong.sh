@@ -29,8 +29,8 @@ _gol_dest()  {
     [[ $1 =~ ^[[:alpha:]] ]] || _gol_die "$1: variable name must start with alphabet"
     _gol_opts "$_MK_DEST"  "$@"
 }
-_gol_type()  { [[ ${_opts["$1"]} =~ ^([^[:alnum:]]+) ]] && echo "${_MATCH[1]}" || _gol_die "$1: unexpected" ; }
-_gol_debug() { [[ ${_opts["&DEBUG"]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
+_gol_type()  { [[ ${_opts[$1]} =~ ^([^[:alnum:]]+) ]] && echo "${_MATCH[1]}" || _gol_die "$1: unexpected" ; }
+_gol_debug() { [[ ${_opts[&DEBUG]:-} ]] && _gol_warn DEBUG: "${@}" || : ; }
 _gol_plusone() { [[ $1 =~ ^[0-9]+$ ]] && echo $(( $1 + 1 )) || echo 1 ; }
 _gol_vstr() { printf "%03d." ${1//./ } ; }
 # Main redirection function - sets up environment and delegates to implementation
@@ -248,10 +248,10 @@ _gol_add_array() { declare -n __target__="$1" ; __target__+=("${@:2}") ; }
 _gol_set_hash()  { declare -n __target__="$1" ; __target__["$2"]="$3" ; }
 _gol_validate() {
     case $1 in
-	i)   [[ "$2" =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
-	f)   [[ "$2" =~ ^[-+]?[0-9]*(\.[0-9]+)?$ ]] || _gol_die "$2: not a number" ;;
-	\(*) local _regex="$1" error=([1]="$2: invalid argument" [2]="$1: something wrong")
-	     [[ $2 =~ $_regex ]] || _gol_die "${error[$?]}" ;;
+	i)   [[ $2 =~ ^[-+]?[0-9]+$ ]]            || _gol_die "$2: not an integer" ;;
+	f)   [[ $2 =~ ^[-+]?[0-9]*(\.[0-9]+)?$ ]] || _gol_die "$2: not a number" ;;
+	\(*) declare -a error=([1]="$2: invalid argument" [2]="$1: something wrong")
+	     [[ $2 =~ $1 ]] || _gol_die "${error[$?]}" ;;
 	*)   _gol_die "$1: unknown validation pattern" ;;
     esac
 }
@@ -281,7 +281,7 @@ _gol_show_help() { local _key _aliases _init= _default= _column _flag _msg ;
 	_msg="$(_gol_help $_key)" || {
 	    _init="$(_gol_ival $_key)" && _default="${_init:+ (default:$_init)}"
 	    [[ $_init =~ ^[0-9]+$ ]] && _flag=bump || _flag=enable
-	    [[ "${_opts[$_key]}" =~ ([^[:alnum:]]+)(.*) ]] || _gol_die "${_opts[$_key]}: invalid entry"
+	    [[ ${_opts[$_key]} =~ ([^[:alnum:]]+)(.*) ]] || _gol_die "${_opts[$_key]}: invalid entry"
 	    case "${_MATCH[1]}" in
 		*[$_IS_PASS]) _msg="passthrough to ${_MATCH[2]^^}" ;;
 		*[$_IS_FLAG]) _msg="$_flag ${_key^^}$_default" ;;
