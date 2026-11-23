@@ -152,7 +152,7 @@ gol_getopts () { _gol_redirect "$@" ; }
 gol_getopts_() { local _non= _optname _val _vtype _vname _name _callback _trigger _pass ;
     local _opt="$1"; shift;
     case $_opt in
-	[:?]) _callback=$(_gol_hook "$_opt") && [[ $_callback ]] && $_callback "$OPTARG"
+	[:?]) _callback=$(_gol_hook "$_opt") && [[ $_callback ]] && _gol_call_hook "$_callback" "$OPTARG"
 	      [[ $_EXIT_ON_ERROR ]] && exit 1 || return 1 ;;
 	-) _gol_getopts_long "$@" || return $? ;;
 	*) _gol_getopts_short || return $? ;;
@@ -256,17 +256,19 @@ _gol_validate() {
     esac
 }
 gol_callback () { _gol_redirect "$@" ; }
-gol_callback_() {
-    local _setter=_gol_hook
+gol_callback_() { local _setter=_gol_hook _name _func _arg ;
     case ${1-} in -b|--before) _setter=_gol_trig ; shift ;; esac
-    while (($# > 0)) ; do
-	local _name=$1 _callback=${2:-$1}
-	[[ $_callback =~ ^[_[:alnum:]] ]] || _callback=$_name
-	local args ; read -ra args <<< "$_callback"
-	$_setter "$_name" "${args[0]//-/_} ${args[*]:1}"
-	shift $(( $# >= 2 ? 2 : 1 ))
+    (($# > 0)) || _gol_die "callback: option name is required"
+    _name=$(_gol_alias "$1") || _name=$1
+    [[ $_name == [:?] ]] || _gol_opts "$_MK_DEST" "$_name" > /dev/null \
+	|| _gol_die "$1: no such option"
+    _func=${2:-$_name}
+    [[ $_func =~ ^[_[:alnum:]] ]] || _func=$_name
+    [[ $_func =~ [[:space:]] ]] && _gol_die "$_func: invalid function name"
+    for _arg in "${@:3}" ; do
+	[[ $_arg =~ ^[^[:space:]]+$ ]] || _gol_die "${_arg@Q}: invalid callback argument"
     done
-    return 0
+    $_setter "$_name" "${_func//-/_} ${*:3}"
 }
 gol_help () { _gol_redirect "$@" ; }
 gol_help_() {

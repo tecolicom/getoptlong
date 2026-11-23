@@ -66,7 +66,7 @@
   - [7.1. `getoptlong init <opts_array_name> [CONFIGURATIONS...]`](#71-getoptlong-init-opts_array_name-configurations)
   - [7.2. `getoptlong parse "$@"`](#72-getoptlong-parse--)
   - [7.3. `getoptlong set`](#73-getoptlong-set)
-  - [7.4. `getoptlong callback [-b|--before] <opt_name> [callback_function] ...`](#74-getoptlong-callback--b---before-opt_name-callback_function--)
+  - [7.4. `getoptlong callback [-b|--before] <opt_name> [callback_function [args...]]`](#74-getoptlong-callback--b--before-opt_name-callback_function-args)
   - [7.5. `getoptlong configure <CONFIG_PARAM=VALUE> ...`](#75-getoptlong-configure-config_paramvalue--)
   - [7.6. `getoptlong dump [-a|--all]`](#76-getoptlong-dump--a---all)
   - [7.7. `getoptlong help <SYNOPSIS>`](#77-getoptlong-help-synopsis)
@@ -768,7 +768,7 @@ By default, callback functions are called **after** the option's value has been 
 
 *   **Call Format:** `callback_function [registered_arg1 registered_arg2 ...] "option_name" "option_value"`
 
-    *   Registered arguments: If fixed arguments were registered with the function in one word, as `getoptlong callback <opt_name> "<func_name> arg1 arg2..."`, they are passed first.  See Section "7.4. `getoptlong callback ...`".
+    *   Registered arguments: If fixed arguments were registered after the function, as `getoptlong callback <opt_name> <func_name> arg1 arg2...`, they are passed first.  See Section "7.4. `getoptlong callback ...`".
 
     *   Then the long name of the option (e.g., `my-option`).  Without registered arguments, it is `$1`.
 
@@ -792,7 +792,7 @@ By default, callback functions are called **after** the option's value has been 
         fi
     }
     # getoptlong callback process-item process_item_callback # Registered by default, but can be explicit
-    # getoptlong callback process-item "process_item_callback arg1" # Fixed arguments come before $1 and $2
+    # getoptlong callback process-item process_item_callback arg1 # Fixed arguments come before $1 and $2
 
     getoptlong init OPTS
     getoptlong parse "$@" && eval "$(getoptlong set)"
@@ -804,7 +804,7 @@ By specifying the `--before` (or `-b`) option with the `getoptlong callback` com
 
 *   **Call Format:** `callback_function [registered_arg1 registered_arg2 ...] "option_name"`
 
-    *   Registered arguments: If fixed arguments were registered with the function in one word, as `getoptlong callback -b <opt_name> "<func_name> arg1 arg2..."`, they are passed first.
+    *   Registered arguments: If fixed arguments were registered after the function, as `getoptlong callback -b <opt_name> <func_name> arg1 arg2...`, they are passed first.
 
     *   Then the long name of the option.  Without registered arguments, it is `$1`.
 
@@ -1041,28 +1041,27 @@ Generates a series of `eval`-able shell command strings to standard output, whic
 
 *   Typically used as `eval "$(getoptlong set)"`. This sets variables corresponding to options in the current shell environment.  (e.g., `--file /tmp/f` → `file="/tmp/f"`)
 
-### 7.4. `getoptlong callback [-b|--before] <opt_name> [callback_function] ...`
+### 7.4. `getoptlong callback [-b|--before] <opt_name> [callback_function [args...]]`
 
 Registers a callback function for a specified option or modifies the settings of an already registered callback.
 
 *   **`-b` or `--before`**:
 
-    If this flag is specified, the callback function is called **before** the option's value is internally set.  The option's value is not passed to pre-processing callbacks. See Section "5.1.2. Pre-processing Callbacks" for details.
+    If this flag is specified, the callback function is called **before** the option's value is internally set.  The option's value is not passed to pre-processing callbacks. See Section "6.1.2. Pre-processing Callbacks" for details.
 
-*   **`<opt_name>`**: (Required) The long name of the option to register the callback for (e.g., `my-option`).
+*   **`<opt_name>`**: (Required) The name of the option to register the callback for (e.g., `my-option`).  An alias name can also be used.  An undefined option is an error.
 
 *   **`[callback_function]`**:
 
     The name of the shell function to call.  If omitted or if `-` is specified, a function name is automatically generated from `<opt_name>` (hyphens `-` converted to underscores `_`, e.g., `my_option`) and becomes the default callback function name.  If the `!` suffix was used in the option definition, the callback is automatically registered with this default name.
 
-*   **Fixed arguments**: (Optional) The function can be given with fixed arguments in one word, such as `"func_name arg1 arg2"`.  They are passed **before** the option name and the option value, so that a common function can be called from several options and behave differently by the arguments.  The arguments are split by white space, and cannot contain a space.
+*   **`[args...]`**: (Optional) Fixed arguments for the function.  They are passed **before** the option name and the option value, so that a common function can be called from several options and behave differently by the arguments.  Each argument must be a word without white space; an argument with white space or an empty argument is an error.  To give fixed arguments to the default function, specify `-` as the function name.
 
     ```bash
     set_level() { level=$1 ; }   # $1: fixed argument, $2: option name, $3: value
-    getoptlong callback quiet "set_level 0" verbose "set_level 2"
+    getoptlong callback quiet   set_level 0
+    getoptlong callback verbose set_level 2
     ```
-
-*   **`...`**: (Optional) More pairs of `<opt_name>` and `[callback_function]` can follow, to register several callbacks at once.  An argument after a function is taken as the next option name, not as an argument of the function.
 
 ### 7.5. `getoptlong configure <CONFIG_PARAM=VALUE> ...`
 
