@@ -69,7 +69,8 @@
   - [7.4. `getoptlong callback [-b|--before] <opt_name> [callback_function [args...]]`](#74-getoptlong-callback--b--before-opt_name-callback_function-args)
   - [7.5. `getoptlong configure <CONFIG_PARAM=VALUE> ...`](#75-getoptlong-configure-config_paramvalue--)
   - [7.6. `getoptlong dump [-a|--all]`](#76-getoptlong-dump--a---all)
-  - [7.7. `getoptlong help <SYNOPSIS>`](#77-getoptlong-help-synopsis)
+  - [7.7. `getoptlong help [SYNOPSIS]`](#77-getoptlong-help-synopsis)
+  - [7.8. `getoptlong version`](#78-getoptlong-version)
 - [8. Practical Examples](#8-practical-examples)
   - [8.1. Combining Required Options and Optional Arguments](#81-combining-required-options-and-optional-arguments)
   - [8.2. Script with Subcommands (Simple Version)](#82-script-with-subcommands-simple-version)
@@ -260,7 +261,7 @@ Option variables are automatically set during `getoptlong parse`. Use these vari
 # If the help option was processed (automatically or manually),
 # the script usually exits during 'getoptlong parse' or 'getoptlong set',
 # but you can also check explicitly (e.g., for custom help processing).
-if [[ -n "${help:-}" ]]; then
+if [[ -n ${help:-} ]]; then
     # (Usually not reached if 'getoptlong help' was called)
     # Custom help display processing, etc.
     exit 0
@@ -268,11 +269,11 @@ fi
 
 echo "Verbose output level: ${verbose:-0}" # Display 0 if not set
 
-if [[ "$output" != "/dev/stdout" ]]; then
+if [[ $output != "/dev/stdout" ]]; then
     echo "Output destination: $output"
 fi
 
-if [[ -n "${config:-}" ]]; then # Check if config is not an empty string or unset
+if [[ -n ${config:-} ]]; then # Check if config is not an empty string or unset
     echo "Loading configuration file: $config..."
     # source "$config" or other processing
 elif [[ -v config ]]; then # If config option was specified but has no value (set to empty string)
@@ -563,7 +564,7 @@ Validates if the argument matches the specified Bash extended regular expression
 *   **Definition Examples:**
     *   `[mode|m:=(^(fast|slow|debug)$)]` (one of fast, slow, debug)
     *   `[name|N@=(^[A-Za-z_]+$)]` (each element contains only letters and underscores)
-    *   `[param|P%:=(^[a-z_]+=[0-9]+$)]` (key is lowercase letters and _, value is numbers)
+    *   `[param|P%=(^[a-z_]+=[0-9]+$)]` (key is lowercase letters and _, value is numbers)
 
 *   **Behavior:** If the argument does not match the regex, an error message is displayed, and the script exits.
 
@@ -711,7 +712,7 @@ You can manually display the help message from anywhere in your script using the
     *   **`[SYNOPSIS_ARGUMENT]`:** (Optional) If provided, this string is used as the synopsis line for this specific invocation of the help message. It takes precedence over any `&USAGE` or `USAGE` settings.
 
         ```bash
-        if [[ "$some_error_condition" == "true" ]]; then
+        if [[ $some_error_condition == "true" ]]; then
             getoptlong help "Error: Invalid input. Usage: $(basename "$0") --input <file>" >&2
             exit 1
         fi
@@ -786,7 +787,7 @@ By default, callback functions are called **after** the option's value has been 
         local item_id="$2"
         echo "Callback: Option '$opt_name' was specified with value '$item_id'."
         # Perform processing using item_id here
-        if [[ ! -f "$item_id" ]]; then
+        if [[ ! -f $item_id ]]; then
             echo "Error: File '$item_id' not found." >&2
             # exit 1 # Exit with error if necessary
         fi
@@ -1083,6 +1084,22 @@ Manually displays the generated help message based on the current option definit
 
 This command is also executed internally when the automatic help option (e.g., `--help`) is invoked.
 
+### 7.8. `getoptlong version`
+
+Prints the version of the library.
+
+```bash
+getoptlong version
+```
+
+The `getoptlong` command also prints it with the `--version` option.
+
+```console
+$ getoptlong --version
+```
+
+To require a minimum version of the library, use the `REQUIRE` configuration (see Section "9. Configuration Keys").
+
 ## 8. Practical Examples
 
 Previous sections have explained individual features of `getoptlong.sh`.  This section shows some practical examples and usage in more complex scenarios.  Also, refer to the `ex/` directory for more sample scripts.
@@ -1112,7 +1129,7 @@ declare -A OPTS=(
 format_callback() {
     local opt_name="$1"
     local val="$2"
-    if [[ -n "$val" ]]; then
+    if [[ -n $val ]]; then
         format="${val^^}" # Directly modify the global 'format' variable
         (( verbose > 0 )) && echo "Debug: Format set to '$format' via callback." >&2
     else
@@ -1131,7 +1148,7 @@ fi
 eval "$(getoptlong set)"
 
 # Check for required options
-if [[ -z "$input" ]] || [[ -z "$output" ]]; then
+if [[ -z $input ]] || [[ -z $output ]]; then
     echo "Error: Input file (-i) and output file (-o) are required." >&2
     getoptlong help # Display help on error
     exit 1
@@ -1142,14 +1159,14 @@ echo "Input file: $input"
 echo "Output file: $output"
 
 if [[ -v format ]]; then # If format option was used (with value or empty string)
-    if [[ -n "$format" ]]; then
+    if [[ -n $format ]]; then
         echo "Output format: $format"
     else
         echo "Output format: (not specified)" # Case of --format only
     fi
 fi
 
-if [[ -n "$compress" ]]; then
+if [[ -n $compress ]]; then
     echo "Compression: Enabled (Level: $level)"
     # Compression processing...
 else
@@ -1194,7 +1211,7 @@ getoptlong parse "$@"
 eval "$(getoptlong set)" # Set variables for global options
 
 # If global help requested or no subcommand, show overall help
-if [[ -n "$help" ]] || (( ${#RemainingArgs[@]} == 0 )); then
+if [[ -n $help ]] || (( ${#RemainingArgs[@]} == 0 )); then
     echo "Usage: $(basename "$0") [global_options] <subcommand> [subcommand_options]"
     echo ""
     echo "Global Options:"
@@ -1222,14 +1239,14 @@ case "$subcommand" in
         if ! getoptlong parse "${SubcommandArgs[@]}"; then exit 1; fi
         eval "$(getoptlong set)" # Set variables for commit
 
-        if [[ -n "$help" ]]; then # Subcommand help
+        if [[ -n $help ]]; then # Subcommand help
              getoptlong help "Usage: $(basename "$0") commit [options]"
              exit 0
         fi
 
         echo "Subcommand: commit"
-        [[ -n "$message" ]] && echo "  Message: $message"
-        [[ -n "$all" ]] && echo "  All: enabled"
+        [[ -n $message ]] && echo "  Message: $message"
+        [[ -n $all ]] && echo "  All: enabled"
         (( verbose > 0 )) && echo "  Verbose (global): $verbose"
         # e.g., execute git commit
         ;;
@@ -1243,14 +1260,14 @@ case "$subcommand" in
         if ! getoptlong parse "${SubcommandArgs[@]}"; then exit 1; fi
         eval "$(getoptlong set)"
 
-        if [[ -n "$help" ]]; then
+        if [[ -n $help ]]; then
              getoptlong help "Usage: $(basename "$0") push [options]"
              exit 0
         fi
 
         echo "Subcommand: push"
         echo "  Remote: ${remote}"
-        [[ -n "$force" ]] && echo "  Force: enabled"
+        [[ -n $force ]] && echo "  Force: enabled"
         (( verbose > 0 )) && echo "  Verbose (global): $verbose"
         # e.g., execute git push
         ;;

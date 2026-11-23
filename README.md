@@ -283,7 +283,7 @@ Callbacks must handle their own errors. `EXIT_ON_ERROR` only applies
 to parsing errors, not callback failures. Use explicit `exit` if needed.
 
     validate_file() {
-        [[ -r "$2" ]] || { echo "Cannot read: $2" >&2; exit 1; }
+        [[ -r $2 ]] || { echo "Cannot read: $2" >&2; exit 1; }
     }
     getoptlong callback input-file validate_file
 
