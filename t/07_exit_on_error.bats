@@ -177,3 +177,48 @@ parse_with() {
     assert_line --index 0 "status:1"
     assert_line --index 1 "lateral:1 args:"
 }
+
+@test "exit_on_error: disabled - long option given an argument it does not take" {
+    parse_with '' 1 --lateral=1
+    assert_success
+    assert_line --index 0 "does not take an argument -- lateral"
+    assert_line --index 1 "parse:1 lateral: pane: argv:untouched"
+}
+
+# regex validation
+regex_with() {
+    run $BASH -c '
+        . ../script/getoptlong.sh
+        declare -A OPTS=([size|s:=($2)]=)
+        getoptlong init OPTS EXIT_ON_ERROR="$1"
+        shift 2
+        getoptlong parse "$@"
+        echo "parse:$? size:$size"
+    ' _ "$@"
+}
+
+@test "exit_on_error: enabled - regex validation error" {
+    regex_with 1 '^[0-9]+$' --size abc
+    assert_failure
+    assert_output "abc: invalid argument"
+}
+
+@test "exit_on_error: disabled - regex validation error" {
+    regex_with '' '^[0-9]+$' --size abc
+    assert_success
+    assert_line --index 0 "abc: invalid argument"
+    assert_line --index 1 "parse:1 size:"
+}
+
+@test "exit_on_error: disabled - regex validation passes" {
+    regex_with '' '^[0-9]+$' --size 12
+    assert_success
+    assert_output "parse:0 size:12"
+}
+
+@test "exit_on_error: disabled - an invalid regex still exits" {
+    regex_with '' '^[0-9+$' --size 12
+    assert_failure
+    assert_output --partial "(^[0-9+$): something wrong"
+    refute_output --partial "parse:"
+}
