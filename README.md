@@ -336,8 +336,9 @@ in comments when using regex validation.
 Validation occurs before the value is stored and normal callbacks are
 invoked; `--before` callbacks are called before validation.
 For array options, each element is validated; for hash options, each
-`key=value` pair is matched as a whole. A validation failure exits
-the script with an error message, regardless of `EXIT_ON_ERROR`.
+`key=value` pair is matched as a whole. A validation failure is a
+parse error, which exits the script unless `EXIT_ON_ERROR` is
+disabled (see ["getoptlong parse"](#getoptlong-parse)).
 
 # HELP MESSAGE
 
@@ -382,20 +383,29 @@ See ["CONFIGURATION"](#configuration) for available parameters.
 ## getoptlong parse
 
 Parse arguments. Always quote `"$@"`. On a parse error, such as an
-undefined option or a missing required argument, the script exits
-with an error message.
+undefined option, a missing required argument or a validation
+failure, the script exits with an error message.
 
     getoptlong parse "$@"
 
-To leave undefined options in the arguments instead, disable
-`EXIT_ON_ERROR` (see ["CONFIGURATION"](#configuration)).  They are kept with the
-non-option arguments, and `parse` returns 0.  A short option without
-its required argument is left as well.  A long option without its
-required argument and a validation failure still exit the script.
-Set `SILENT` to suppress the error messages of **getopts**.
+To handle the error in the script, disable `EXIT_ON_ERROR` (see
+["CONFIGURATION"](#configuration)).  Then `parse` stops at the first error, and
+returns 1 after the error message.  The arguments are left as they
+are; the options before the error have been set.  Set `SILENT` to
+suppress the error messages of **getopts**.
 
     getoptlong configure EXIT_ON_ERROR= SILENT=1
-    getoptlong parse "$@"
+    getoptlong parse "$@" || { echo "see --help" >&2; exit 2; }
+    eval "$(getoptlong set)"
+
+In the one-liner form, the status of `parse` is the status of the
+`.` command:
+
+    . getoptlong.sh OPTS "$@" || exit 2
+
+Undefined options are not left in the arguments.  To leave the
+options of a subcommand to it, disable `PERMUTE`: `parse` stops at
+the first non-option argument, the name of the subcommand.
 
 ## getoptlong set
 
@@ -476,9 +486,9 @@ Configuration parameters can be specified either as arguments to
 - **EXIT\_ON\_ERROR**
 
     Exit immediately on parse error. Default: enabled.
-    Set to empty string to disable: undefined options are left in the
-    arguments (see ["getoptlong parse"](#getoptlong-parse)).  Note that `0` is not empty,
-    and does not disable it.
+    Set to empty string to disable: `parse` returns 1 on an error (see
+    ["getoptlong parse"](#getoptlong-parse)).  Note that `0` is not empty, and does not
+    disable it.
 
 - **SILENT**
 

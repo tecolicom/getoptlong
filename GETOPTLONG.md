@@ -216,7 +216,7 @@ getoptlong init OPTS
 
 During initialization, you can also specify various configuration parameters that control option parsing behavior. See Section "7.1. `getoptlong init ...`" for details.
 
-Example: Store non-option arguments in the `ARGS` array, and leave undefined options in it instead of exiting with an error.
+Example: Store non-option arguments in the `ARGS` array, and return from `getoptlong parse` on an error instead of exiting.
 
 ```bash
 declare -a ARGS # It's good practice to declare the array specified by PERMUTE beforehand
@@ -231,7 +231,7 @@ Pass all script arguments (`"$@"`) to the `getoptlong parse` command to parse th
 getoptlong parse "$@"
 ```
 
-On a parse error, such as an undefined option or a missing required argument, `getoptlong parse` displays an error message and exits the script (`EXIT_ON_ERROR`, enabled by default).  If `EXIT_ON_ERROR` is disabled, undefined options are left in the arguments instead.  See Section "7.2. `getoptlong parse`" for details.
+On a parse error, such as an undefined option or a missing required argument, `getoptlong parse` displays an error message and exits the script (`EXIT_ON_ERROR`, enabled by default).  If `EXIT_ON_ERROR` is disabled, it returns `1` instead, and the script handles the error.  See Section "7.2. `getoptlong parse`" for details.
 
 #### 3.2.5. Setting Positional Parameters
 
@@ -539,7 +539,7 @@ Validates if the argument is an integer.
 
 *   **Definition Example:** `[count|c:COUNT=i # Number of iterations]` (assuming COUNT is the destination variable) or `[count|c:=i # Number of iterations]` (if using default variable name).
 
-*   **Behavior:** If the argument is not an integer, an error message is displayed, and the script exits.  This does not depend on `EXIT_ON_ERROR`.
+*   **Behavior:** If the argument is not an integer, an error message is displayed, and the script exits.  This is a parse error: with `EXIT_ON_ERROR` disabled, `getoptlong parse` returns `1` instead.
 
 *   Applicable to array options (`@...=i`) and the value part of hash options (`%...=i`).
 
@@ -866,7 +866,7 @@ This method is suitable when you want to pass all arguments after a certain poin
 
     *   By default, if an option not defined in the `OPTS` array is passed, it is an error, and the script exits.
 
-    *   If `EXIT_ON_ERROR` is disabled (`EXIT_ON_ERROR=`), undefined options are not errors: they are left in the arguments, together with the non-option arguments, in the array specified by `PERMUTE` (or `GOL_ARGV`), and `getoptlong parse` returns `0`.  An undefined short option is still reported by `getopts`; set `SILENT` to suppress it.  An argument given to an undefined option as a separate word is left as another argument.  See `ex/silent.sh` for an example.
+    *   If `EXIT_ON_ERROR` is disabled (`EXIT_ON_ERROR=`), `getoptlong parse` stops at the undefined option and returns `1`, leaving the arguments as they are.  Undefined options are not left in the arguments: to give options to another command, use `--`, or disable `PERMUTE` so that parsing stops at the first non-option argument (see Section "8.2. Script with Subcommands (Simple Version)" and `ex/silent.sh`).
 
 *   **How to Achieve Pass-through (General Approaches):**
 
@@ -947,9 +947,9 @@ Some parameters set with `getoptlong init` can be changed later using the `getop
     ```bash
     getoptlong init OPTS
     # ... some processing ...
-    # Temporarily leave undefined options in the arguments instead of exiting
+    # Temporarily handle a parse error here instead of exiting
     getoptlong configure EXIT_ON_ERROR= SILENT=1
-    getoptlong parse "${some_args[@]}"
+    getoptlong parse "${some_args[@]}" || echo "invalid options in some_args" >&2
     # Revert
     getoptlong configure EXIT_ON_ERROR=1 SILENT=
     ```
@@ -1008,7 +1008,7 @@ Initializes the library, loading option definitions and settings. This command m
 
     *   **`USAGE=<string>`**: Specifies the synopsis string for the help message. See Section "5.3.1. Customizing Synopsis (Usage Line)" for details. If not set, the synopsis is typically not displayed unless `getoptlong help` is called with an argument.
 
-    *   **`EXIT_ON_ERROR=<BOOL>`**: Whether to exit the script on a parse error.  Default is enabled (exit).  If disabled, undefined options are left in the arguments instead of being errors.  See Section "7.2. `getoptlong parse`" for details.
+    *   **`EXIT_ON_ERROR=<BOOL>`**: Whether to exit the script on a parse error.  Default is enabled (exit).  If disabled, `getoptlong parse` returns `1` on an error.  See Section "7.2. `getoptlong parse`" for details.
 
     *   **`DELIM=<string>`**: Specifies the set of characters used to delimit multiple values or pairs within a single argument string for array (`@`) or hash (`%`) options.  Default is space, tab, comma (behavior similar to Bash's IFS). For example, `DELIM=,:` would delimit by comma and colon.
 
@@ -1026,9 +1026,9 @@ Parses command-line arguments according to the defined options.
 
 *   **Return Value**:
 
-    *   Returns exit code `0`.  On a parse error, such as an undefined option or a missing required argument, it displays an error message and exits the script, as `EXIT_ON_ERROR` is enabled by default.  There is no need to check the return value.
-    *   If `EXIT_ON_ERROR` is disabled, an undefined option and a short option without its required argument are not errors: they are left in the arguments, and the command returns `0`.  An error message of `getopts` is displayed for a short option unless `SILENT` is set.
-    *   A long option without its required argument and a validation error exit the script regardless of `EXIT_ON_ERROR`.
+    *   Returns exit code `0`.  On a parse error, such as an undefined option, a missing required argument or a validation error, it displays an error message and exits the script, as `EXIT_ON_ERROR` is enabled by default.  There is no need to check the return value.
+    *   If `EXIT_ON_ERROR` is disabled, it stops at the first error, displays the error message, and returns `1`.  The arguments are left as they are, and the options before the error have been set.  The error messages of `getopts`, for short options, are suppressed by `SILENT`.
+    *   In the one-liner form, the return value is that of the `.` command: `. getoptlong.sh OPTS "$@" || exit 2`.
 
 ### 7.3. `getoptlong set`
 
@@ -1197,16 +1197,15 @@ declare -A GlobalOPTS=(
     [verbose|v+ # Verbose output ]=0
     [help|h     # Display help ]=
 )
-getoptlong init GlobalOPTS
-declare -a RemainingArgs
-# Parse only global options. Leave the rest, including the options of
-# the subcommand, in RemainingArgs without error messages.
-getoptlong configure EXIT_ON_ERROR= SILENT=1 PERMUTE=RemainingArgs
+# Parse only global options.  With PERMUTE disabled, parsing stops at
+# the first non-option argument, the subcommand, and leaves it and its
+# options in the arguments.
+getoptlong init GlobalOPTS PERMUTE=
 getoptlong parse "$@"
-eval "$(getoptlong set)" # Set variables for global options
+eval "$(getoptlong set)" # Set variables for global options, and shift them
 
 # If global help requested or no subcommand, show overall help
-if [[ -n $help ]] || (( ${#RemainingArgs[@]} == 0 )); then
+if [[ -n $help ]] || (( $# == 0 )); then
     echo "Usage: $(basename "$0") [global_options] <subcommand> [subcommand_options]"
     echo ""
     echo "Global Options:"
@@ -1218,9 +1217,9 @@ if [[ -n $help ]] || (( ${#RemainingArgs[@]} == 0 )); then
     exit 0
 fi
 
-subcommand="${RemainingArgs[0]}"
-# Subcommand arguments are RemainingArgs excluding the subcommand itself
-SubcommandArgs=("${RemainingArgs[@]:1}")
+subcommand="$1"
+# Subcommand arguments are the arguments after the subcommand
+SubcommandArgs=("${@:2}")
 
 case "$subcommand" in
     commit)
@@ -1281,7 +1280,7 @@ esac
 
 *   Calling `getoptlong init` and `parse` multiple times.
 
-*   Using `PERMUTE` to separate the subcommand and its arguments.
+*   Disabling `PERMUTE` to stop at the subcommand: global options are given before it, and the options after it are left to the subcommand.
 
 *   Consideration for per-subcommand help display (defining `help|h` in each OPTS).
 

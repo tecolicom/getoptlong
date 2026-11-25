@@ -383,8 +383,9 @@ in comments when using regex validation.
 Validation occurs before the value is stored and normal callbacks are
 invoked; C<--before> callbacks are called before validation.
 For array options, each element is validated; for hash options, each
-C<key=value> pair is matched as a whole. A validation failure exits
-the script with an error message, regardless of C<EXIT_ON_ERROR>.
+C<key=value> pair is matched as a whole. A validation failure is a
+parse error, which exits the script unless C<EXIT_ON_ERROR> is
+disabled (see L</getoptlong parse>).
 
 =head1 HELP MESSAGE
 
@@ -429,20 +430,29 @@ See L</CONFIGURATION> for available parameters.
 =head2 getoptlong parse
 
 Parse arguments. Always quote C<"$@">. On a parse error, such as an
-undefined option or a missing required argument, the script exits
-with an error message.
+undefined option, a missing required argument or a validation
+failure, the script exits with an error message.
 
     getoptlong parse "$@"
 
-To leave undefined options in the arguments instead, disable
-C<EXIT_ON_ERROR> (see L</CONFIGURATION>).  They are kept with the
-non-option arguments, and C<parse> returns 0.  A short option without
-its required argument is left as well.  A long option without its
-required argument and a validation failure still exit the script.
-Set C<SILENT> to suppress the error messages of B<getopts>.
+To handle the error in the script, disable C<EXIT_ON_ERROR> (see
+L</CONFIGURATION>).  Then C<parse> stops at the first error, and
+returns 1 after the error message.  The arguments are left as they
+are; the options before the error have been set.  Set C<SILENT> to
+suppress the error messages of B<getopts>.
 
     getoptlong configure EXIT_ON_ERROR= SILENT=1
-    getoptlong parse "$@"
+    getoptlong parse "$@" || { echo "see --help" >&2; exit 2; }
+    eval "$(getoptlong set)"
+
+In the one-liner form, the status of C<parse> is the status of the
+C<.> command:
+
+    . getoptlong.sh OPTS "$@" || exit 2
+
+Undefined options are not left in the arguments.  To leave the
+options of a subcommand to it, disable C<PERMUTE>: C<parse> stops at
+the first non-option argument, the name of the subcommand.
 
 =head2 getoptlong set
 
@@ -525,9 +535,9 @@ Default: C<scriptname [ options ] args>.
 =item B<EXIT_ON_ERROR>
 
 Exit immediately on parse error. Default: enabled.
-Set to empty string to disable: undefined options are left in the
-arguments (see L</getoptlong parse>).  Note that C<0> is not empty,
-and does not disable it.
+Set to empty string to disable: C<parse> returns 1 on an error (see
+L</getoptlong parse>).  Note that C<0> is not empty, and does not
+disable it.
 
 =item B<SILENT>
 
