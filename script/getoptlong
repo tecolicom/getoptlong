@@ -166,11 +166,12 @@ Prefix with C<~> to create a B<negative alias> that negates the option
 
 Argument type specifier:
 
-    (none) or +  Flag (counter)
+    + or (none)  Flag (counter)
     :            Required argument
     ?            Optional argument
     @            Array (multiple values)
     %            Hash (key=value pairs)
+    *            Arguments up to --
 
 =item B<MOD (MODIFIER)>
 
@@ -280,6 +281,26 @@ To reset existing values: use C<--no-define> on the command line
 (e.g., C<--no-define --define KEY=val>), or use C<callback --before>
 to automatically reset before each new value.
 
+=head2 ARGUMENTS UP TO C<--> (C<*>)
+
+Collects the arguments up to C<--> into an array, as they are: they
+are not parsed as options, and not split by C<DELIM>.  This is for
+the options given to another command.  The C<--> is consumed; it is
+an error if it is missing.
+
+    [column-opts|X*]=   # --column-opts -w 170 -s ' ' -- file
+
+    ansicolumn "${column_opts[@]}" file
+
+C<--column-opts=value> takes only the value.  The short form takes
+the first argument as an ordinary option argument (C<-X -w 170 -->
+or C<-X-w 170 -->).  Multiple specifications accumulate, and
+C<--no-column-opts> empties the array, as with C<@>.  A validation is
+applied to each argument.
+
+C<--> cannot be one of the arguments.  To end the options after
+them, write another C<-->: C<--column-opts -w 170 -- -- -file>.
+
 =head1 CALLBACKS
 
 Callback functions are called when an option is parsed. The value is
@@ -290,7 +311,8 @@ work the same way with pass-through options.
 Calls a function when the option is parsed. Default function name is the
 option name with hyphens converted to underscores; use C<getoptlong callback>
 to specify a custom function. Can combine with any type (C<+!>, C<:!>,
-C<?!>, C<@!>, C<%!>).
+C<?!>, C<@!>, C<%!>, C<*!>).  The C<*> type gives the arguments as
+separate arguments in place of the value.
 
     [action|a!]=        # Calls action() when specified
     [file|f:!]=         # Calls file() with argument

@@ -121,11 +121,12 @@ The key format is:
 
     Argument type specifier:
 
-        (none) or +  Flag (counter)
+        + or (none)  Flag (counter)
         :            Required argument
         ?            Optional argument
         @            Array (multiple values)
         %            Hash (key=value pairs)
+        *            Arguments up to --
 
 - **MOD (MODIFIER)**
 
@@ -233,6 +234,26 @@ To reset existing values: use `--no-define` on the command line
 (e.g., `--no-define --define KEY=val`), or use `callback --before`
 to automatically reset before each new value.
 
+## ARGUMENTS UP TO `--` (`*`)
+
+Collects the arguments up to `--` into an array, as they are: they
+are not parsed as options, and not split by `DELIM`.  This is for
+the options given to another command.  The `--` is consumed; it is
+an error if it is missing.
+
+    [column-opts|X*]=   # --column-opts -w 170 -s ' ' -- file
+
+    ansicolumn "${column_opts[@]}" file
+
+`--column-opts=value` takes only the value.  The short form takes
+the first argument as an ordinary option argument (`-X -w 170 --`
+or `-X-w 170 --`).  Multiple specifications accumulate, and
+`--no-column-opts` empties the array, as with `@`.  A validation is
+applied to each argument.
+
+`--` cannot be one of the arguments.  To end the options after
+them, write another `--`: `--column-opts -w 170 -- -- -file`.
+
 # CALLBACKS
 
 Callback functions are called when an option is parsed. The value is
@@ -243,7 +264,8 @@ work the same way with pass-through options.
 Calls a function when the option is parsed. Default function name is the
 option name with hyphens converted to underscores; use `getoptlong callback`
 to specify a custom function. Can combine with any type (`+!`, `:!`,
-`?!`, `@!`, `%!`).
+`?!`, `@!`, `%!`, `*!`).  The `*` type gives the arguments as
+separate arguments in place of the value.
 
     [action|a!]=        # Calls action() when specified
     [file|f:!]=         # Calls file() with argument

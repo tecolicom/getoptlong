@@ -35,7 +35,8 @@
     - [4.2.3. Optional Argument Options (`?`)](#423-optional-argument-options-)
     - [4.2.4. Array Options (`@`)](#424-array-options-)
     - [4.2.5. Hash Options (`%`)](#425-hash-options-)
-    - [4.2.6. Callback Options (`!`)](#426-callback-options-)
+    - [4.2.6. Options Taking Arguments up to `--` (`*`)](#426-options-taking-arguments-up-to----)
+    - [4.2.7. Callback Options (`!`)](#427-callback-options-)
   - [4.3. Specifying Destination Variable Name](#43-specifying-destination-variable-name)
   - [4.4. Value Validation](#44-value-validation)
     - [4.4.1. Integer Validation (`=i`)](#441-integer-validation-i)
@@ -477,9 +478,29 @@ Accept `key=value` pairs as an associative array (hash).
 
 *   **Use Cases:** Environment variable-like settings, information managed as key-value pairs.
 
-#### 4.2.6. Callback Options (`!`)
+#### 4.2.6. Options Taking Arguments up to `--` (`*`)
 
-When the option is parsed, the specified callback function is called. This `!` specifier can be appended to any of the above option types (`+`, `:`, `?`, `@`, `%`).
+Accept the arguments up to `--` as an array, as they are.  This is for the options given to another command.
+
+*   **Definition Example:** `[column-opts|X* # Options for ansicolumn]`
+
+*   **How to Specify Values:**
+    *   `--column-opts -w 170 -s ' ' -- file`, `-X -w 170 --`, `-X-w 170 --`
+    *   The arguments are not parsed as options, and not split by `DELIM`: `-w`, `170`, `-s` and `' '` are stored as they are.
+    *   The `--` is consumed.  It is an error if it is missing.
+    *   `--column-opts=value` takes only the value.
+
+*   **Variable Storage:** The arguments are stored in a Bash array (e.g., `ansicolumn "${column_opts[@]}" file`).
+
+*   **Multiple Specifications:** They accumulate, as with array options.  `--no-column-opts` resets the array to empty.
+
+*   **The `--`:** `--` cannot be one of the arguments.  To end the options after them, write another `--`: `--column-opts -w 170 -- -- -file`.
+
+*   **Use Cases:** Options passed to a command used inside the script.
+
+#### 4.2.7. Callback Options (`!`)
+
+When the option is parsed, the specified callback function is called. This `!` specifier can be appended to any of the above option types (`+`, `:`, `?`, `@`, `%`, `*`).
 
 *   **Definition Examples:**
     *   `[execute|x! # Execute a command]` (flag type callback)
@@ -496,7 +517,7 @@ When the option is parsed, the specified callback function is called. This `!` s
 
 By default, `getoptlong.sh` stores the value of a parsed option (e.g., `--my-option value`) into a shell variable derived from the option's long name (e.g., `$my_option`, with hyphens replaced by underscores).  However, you can specify a custom variable name for an option's value directly within its definition string.
 
-This is achieved by writing the desired variable name directly after the option type specifier (e.g., `+`, `:`, `?`, `@`, `%`) and any modifiers (e.g., `!`, `-`).
+This is achieved by writing the desired variable name directly after the option type specifier (e.g., `+`, `:`, `?`, `@`, `%`, `*`) and any modifiers (e.g., `!`, `-`).
 
 *   **Syntax in Option Definition:** Refer back to Section "4.1. Basic Syntax" for the full structure: `long_name[|short_name...][<type_char>[<modifiers>]][DEST_VAR_NAME][=<validation_type>] # Description` The `DEST_VAR_NAME` is the custom variable name.
 
@@ -769,7 +790,7 @@ By default, callback functions are called **after** the option's value has been 
 
     *   Then the long name of the option (e.g., `my-option`).  Without registered arguments, it is `$1`.
 
-    *   Then the parsed value of the option. For flags, it's `1` (or an empty string if specified with `no-`). For options taking arguments, it's the argument value. For arrays or hashes, it's the last parsed element or pair.  Without registered arguments, it is `$2`.
+    *   Then the parsed value of the option. For flags, it's `1` (or an empty string if specified with `no-`). For options taking arguments, it's the argument value. For arrays or hashes, it's the last parsed element or pair.  For the `*` type, the arguments up to `--` are given as separate arguments.  Without registered arguments, it is `$2`.
 
 *   **Example:**
 
@@ -914,7 +935,7 @@ To use this feature, append a greater-than symbol (`>`) to the option type speci
     *   The array where options are collected is determined by the string following the `>` (and other type specifiers like `!` or `:`).  For example, in `[myopt|m:>destination_array]`, options will be collected into the `destination_array`.
     *   If no array name is specified after the `>` (e.g., `[myopt|m:>]`), the options are collected into an array named after the option's long name, with hyphens converted to underscores (e.g., `myopt` would collect into `myopt` array, or if defined as `my-opt`, it would collect into `my_opt` array).
 
-*   **Combining with Other Types:** The `>` specifier must appear *after* any primary type specifier (`+`, `:`, `?`, `@`, `%`).  It can be combined with the callback modifier `!`. The primary type specifier cannot be omitted when using `>`, as this would make it ambiguous with a hyphen in a long option name.
+*   **Combining with Other Types:** The `>` specifier must appear *after* any primary type specifier (`+`, `:`, `?`, `@`, `%`, `*`).  It can be combined with the callback modifier `!`. The primary type specifier cannot be omitted when using `>`, as this would make it ambiguous with a hyphen in a long option name.
 
     *   Correct: `[myopt|m:!>log_array # Log this option then collect it (flag type)]`
         The `+` (flag type) is explicitly stated. The callback `!` executes, then the option is passed to `log_array`.
