@@ -42,7 +42,7 @@ _gol_redirect() { local _name ;
     declare -n _MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local _MARKS='><()&=#^.~' _MK_ALIAS='>' _MK_SAILA='<' _MK_DENY='~' _MK_TRIG='(' _MK_HOOK=')' _MK_CONF='&' _MK_RULE='=' _MK_HELP='#' _MK_INIT='^' _MK_DEST='.' \
-	  _IS_ANY='+:?@*%' _IS_MOD='!>' _IS_REQ=':@*%' _IS_FLAG='+' _IS_NEED=':' _IS_MAYB='?' _IS_LIST='@' _IS_HASH='%' _IS_REST='*' _IS_HOOK='!' _IS_PASS='>' \
+	  _IS_ANY='+:?@*%' _IS_MOD='!>' _IS_REQ=':@*%' _IS_FLAG='+' _IS_NEED=':' _IS_MAYB='?' _IS_LIST='@' _IS_HASH='%' _IS_VARG='*' _IS_HOOK='!' _IS_PASS='>' \
 	  _CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE HELP)
     for _name in "${_CONFIG[@]}" ; do declare _$_name="${_opts[&$_name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
@@ -108,13 +108,13 @@ _gol_init_entry() { local _entry="$1" _pass= _name _vname _dtype ;
 	    # the initial value is the default, which --no- unsets;
 	    # without it, the variable is left as it is
 	    [[ $_initial ]] && _gol_value $_vname "$_initial" ;;
-	"$_IS_LIST"|"$_IS_HASH"|"$_IS_REST")
-	    [[ $_vtype == [$_IS_LIST$_IS_REST] && ! -v $_vname ]] && declare -ga $_vname
+	"$_IS_LIST"|"$_IS_HASH"|"$_IS_VARG")
+	    [[ $_vtype == [$_IS_LIST$_IS_VARG] && ! -v $_vname ]] && declare -ga $_vname
 	    [[ $_vtype == $_IS_HASH && ! -v $_vname ]] && declare -gA $_vname
 	    if [[ $_initial =~ ^\(.*\)$ ]] ; then
 		eval "$_vname=$_initial"
 	    else
-		[[ $_vtype == [$_IS_LIST$_IS_REST] ]] && _gol_add_array $_vname ${_initial:+"$_initial"}
+		[[ $_vtype == [$_IS_LIST$_IS_VARG] ]] && _gol_add_array $_vname ${_initial:+"$_initial"}
 		[[ $_vtype == $_IS_HASH ]] && [[ $_initial ]] && _gol_die "$_initial: invalid hash data"
 	    fi
 	    ;;
@@ -152,7 +152,7 @@ gol_optstring_() { local _key _string ;
     echo "${_SILENT:+:}${_string:- }-:"
 }
 gol_getopts () { _gol_redirect "$@" ; }
-gol_getopts_() { local _non= _optname _val _vtype _vname _name _callback _trigger _pass _rest=() ;
+gol_getopts_() { local _non= _optname _val _vtype _vname _name _callback _trigger _pass _vargs=() ;
     local _opt="$1"; shift;
     case $_opt in
 	[:?]) _callback=$(_gol_hook "$_opt") && [[ $_callback ]] && _gol_call_hook "$_callback" "$OPTARG"
@@ -166,8 +166,8 @@ gol_getopts_() { local _non= _optname _val _vtype _vname _name _callback _trigge
     if [[ $_pass ]] ; then _gol_getopts_passthru ; else _gol_getopts_store || return ; fi
     if _callback="$(_gol_hook $_name)" ; then
 	# the * type gives the arguments, the others give the value
-	[[ $_vtype == "$_IS_REST" ]] || _rest=("$_val")
-	_gol_call_hook "$_callback" "$_name" "${_rest[@]}"
+	[[ $_vtype == "$_IS_VARG" ]] || _vargs=("$_val")
+	_gol_call_hook "$_callback" "$_name" "${_vargs[@]}"
     fi
     return 0
 }
@@ -188,11 +188,11 @@ _gol_getopts_long() { local _param ;
     _gol_deny $_optname > /dev/null 2>&1 && { [[ $_non ]] && _non="" || _non="no-" ; }
     if [[ $_param ]] ; then
 	[[ $_vtype =~ [${_IS_REQ}${_IS_MAYB}] ]] || { _gol_fail "does not take an argument -- $_optname" ; return ; }
-	[[ $_vtype == "$_IS_REST" ]] && _rest=("$_val")
+	[[ $_vtype == "$_IS_VARG" ]] && _vargs=("$_val")
     else
 	case $_vtype in
 	    [$_IS_MAYB]) _val= ;;
-	    [$_IS_REST]) _val= ; [[ $_non ]] || _gol_getopts_rest $_optname "$@" || return ;;
+	    [$_IS_VARG]) _val= ; [[ $_non ]] || _gol_getopts_varargs $_optname "$@" || return ;;
 	    [$_IS_REQ])
 		if [[ $_non ]] ; then _val= ; else
 		    (( OPTIND > $# )) && { _gol_fail "option requires an argument -- $_optname" ; return ; }
@@ -208,32 +208,35 @@ _gol_getopts_short() {
 	|| { _gol_fail "no such option -- -$_opt" ; return ; }
     _vtype=${_MATCH[1]} _pass="${_MATCH[2]}" _vname=${_MATCH[3]}
     [[ $_vtype =~ [${_IS_MAYB}${_IS_REQ}] ]] && _val="${OPTARG:-}"
-    if [[ $_vtype == "$_IS_REST" ]] ; then
-	# getopts has taken the first argument, which may be the --
-	_val= ; if [[ $OPTARG == -- ]] ; then RESTIND=$OPTIND
-	else _rest=("$OPTARG") ; _gol_getopts_rest $_opt "$@" || return ; fi
+    if [[ $_vtype == "$_IS_VARG" ]] ; then
+	# a value joined to the option is the only one, as --opt=value;
+	# a separate one is the first of the arguments up to --
+	_val=
+	if [[ ${@:$((OPTIND-1)):1} != "$OPTARG" ]] ; then _vargs=("$OPTARG")
+	elif [[ $OPTARG == -- ]] ; then VARGIND=$OPTIND
+	else _vargs=("$OPTARG") ; _gol_getopts_varargs $_opt "$@" || return ; fi
     fi
     _gol_deny $_opt > /dev/null 2>&1 && { _non="no-" ; _val="" ; }
     return 0
 }
-# take the arguments up to -- into _rest, and the -- itself
-_gol_getopts_rest() { local _optname="$1" ; shift
+# take the arguments up to -- into _vargs, and the -- itself
+_gol_getopts_varargs() { local _optname="$1" ; shift
     while (( OPTIND <= $# )) ; do
-	# RESTIND tells parse that the -- does not end the options
-	[[ ${!OPTIND} == -- ]] && { OPTIND=$((OPTIND + 1)) RESTIND=$OPTIND ; return 0 ; }
-	_rest+=("${!OPTIND}") ; OPTIND=$((OPTIND + 1))
+	# VARGIND tells parse that the -- does not end the options
+	[[ ${!OPTIND} == -- ]] && { OPTIND=$((OPTIND + 1)) VARGIND=$OPTIND ; return 0 ; }
+	_vargs+=("${!OPTIND}") ; OPTIND=$((OPTIND + 1))
     done
     _gol_fail "option requires terminating -- -- $_optname"
 }
 _gol_getopts_store() { local _vals _v ;
     local _check=$(_gol_rule $_name)
     case $_vtype in
-	[$_IS_REST])
+	[$_IS_VARG])
 	    [[ $_non ]] && { declare -n __target__=$_vname ; __target__=() ; return ; }
-	    for _v in "${_rest[@]}" ; do
+	    for _v in "${_vargs[@]}" ; do
 		[[ ! $_check ]] || _gol_validate "$_check" "$_v" || return
 	    done
-	    _gol_add_array $_vname "${_rest[@]}"
+	    _gol_add_array $_vname "${_vargs[@]}"
 	    ;;
 	[$_IS_LIST]|[$_IS_HASH])
 	    [[ $_non ]] && { declare -n __target__=$_vname ; __target__=() ; return ; }
@@ -262,7 +265,7 @@ _gol_getopts_passthru() { local _options=() ;
     local _option=${_optname-$_opt}
     (( ${#_option} > 1 || ${#_non} )) && _options=(--$_non$_option) || _options=(-$_option)
     if [[ $_non ]] ; then :
-    elif [[ $_vtype == "$_IS_REST" ]] ; then _options+=("${_rest[@]}" --)
+    elif [[ $_vtype == "$_IS_VARG" ]] ; then _options+=("${_vargs[@]}" --)
     elif [[ $_vtype =~ [$_IS_REQ] ]] ; then _options+=("$_val")
     elif [[ $_vtype =~ [$_IS_MAYB] && ${_val-} ]] ; then
 	(( ${#_option} > 1 )) && _options=("--$_option=$_val") || _options=("-$_option$_val")
@@ -317,7 +320,7 @@ _gol_show_help() { local _key _aliases _init= _default= _column _flag _msg ;
 	    [[ ${_opts[$_key]} =~ ([^[:alnum:]]+)(.*) ]] || _gol_die "${_opts[$_key]}: invalid entry"
 	    case "${_MATCH[1]}" in
 		*[$_IS_PASS]) _msg="passthrough to ${_MATCH[2]^^}" ;;
-		*[$_IS_REST]) _msg="add arguments up to -- to ${_key^^}" ;;
+		*[$_IS_VARG]) _msg="add arguments up to -- to ${_key^^}" ;;
 		*[$_IS_FLAG]) _msg="$_flag ${_key^^}$_default" ;;
 		*[$_IS_NEED]) _msg="set ${_key^^}$_default" ;;
 		*[$_IS_LIST]) _msg="add item(s) to ${_key^^}" ;;
@@ -337,7 +340,7 @@ _gol_optize() { local _name _opt _optlist _eq ;
 	    case "$(_gol_type $_name)" in
 		[$_IS_NEED]) _opt+="$_eq#" ;;
 		[$_IS_LIST]) _opt+="$_eq#[,#]" ;;
-		[$_IS_REST]) _opt+=" #... --" ;;
+		[$_IS_VARG]) _opt+=" #... --" ;;
 		[$_IS_HASH]) _opt+="$_eq#=#" ;;
 		[$_IS_MAYB]) (( ${#_name} > 1 )) && _opt+="[=#]" ;;
 	    esac
@@ -347,7 +350,7 @@ _gol_optize() { local _name _opt _optlist _eq ;
     printf '%s\n' "${_optlist[*]}"
 }
 gol_parse () { _gol_redirect "$@" ; }
-gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= RESTIND= ;
+gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= VARGIND= ;
     local optstring="$(gol_optstring_)" ; _gol_debug "OPTSTRING=$optstring" ;
     for (( OPTIND=1 ; OPTIND <= $# ; OPTIND++ )) ; do
 	while getopts "$optstring" gol_OPT ; do
@@ -356,7 +359,7 @@ gol_parse_() { local gol_OPT SAVEARG=() SAVEIND= RESTIND= ;
 	done
 	: ${SAVEIND:=$OPTIND}
 	[[ ! $_PERMUTE || $OPTIND -gt $# ]] && break
-	[[ ${@:$(($OPTIND-1)):1} == -- && $OPTIND != "$RESTIND" ]] && break
+	[[ ${@:$(($OPTIND-1)):1} == -- && $OPTIND != "$VARGIND" ]] && break
 	_gol_debug "SAVE PARAM: ${!OPTIND}"
 	SAVEARG+=("${!OPTIND}")
     done
