@@ -1012,7 +1012,7 @@ Initializes the library, loading option definitions and settings. This command m
 
     *   **`DELIM=<string>`**: Specifies the set of characters used to delimit multiple values or pairs within a single argument string for array (`@`) or hash (`%`) options.  Default is space, tab, comma (behavior similar to Bash's IFS). For example, `DELIM=,:` would delimit by comma and colon.
 
-    *   **`SILENT=<BOOL>`**: Whether to suppress error messages of `getopts`.  Default is disabled (display).
+    *   **`SILENT=<BOOL>`**: Whether to suppress error messages of `getopts`, for short options.  With `EXIT_ON_ERROR` disabled, all the error messages of parsing are suppressed.  Default is disabled (display).
 
     *   **`DEBUG=<BOOL>`**: Whether to enable debug messages.  Default is disabled.
 
@@ -1027,7 +1027,7 @@ Parses command-line arguments according to the defined options.
 *   **Return Value**:
 
     *   Returns exit code `0`.  On a parse error, such as an undefined option, a missing required argument or a validation error, it displays an error message and exits the script, as `EXIT_ON_ERROR` is enabled by default.  There is no need to check the return value.
-    *   If `EXIT_ON_ERROR` is disabled, it stops at the first error, displays the error message, and returns `1`.  The arguments are left as they are, and the options before the error have been set.  The error messages of `getopts`, for short options, are suppressed by `SILENT`.
+    *   If `EXIT_ON_ERROR` is disabled, it stops at the first error, displays the error message, and returns `1`.  The arguments are left as they are, and the options before the error have been set.  All the error messages are suppressed by `SILENT`.
     *   In the one-liner form, the return value is that of the `.` command: `. getoptlong.sh OPTS "$@" || exit 2`.
 
 ### 7.3. `getoptlong set`

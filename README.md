@@ -392,7 +392,7 @@ To handle the error in the script, disable `EXIT_ON_ERROR` (see
 ["CONFIGURATION"](#configuration)).  Then `parse` stops at the first error, and
 returns 1 after the error message.  The arguments are left as they
 are; the options before the error have been set.  Set `SILENT` to
-suppress the error messages of **getopts**.
+suppress the error messages, and show your own.
 
     getoptlong configure EXIT_ON_ERROR= SILENT=1
     getoptlong parse "$@" || { echo "see --help" >&2; exit 2; }
@@ -492,7 +492,9 @@ Configuration parameters can be specified either as arguments to
 
 - **SILENT**
 
-    Suppress error messages. Default: disabled.
+    Suppress the error messages of **getopts**, for short options.  With
+    `EXIT_ON_ERROR` disabled, suppress all the error messages of parsing.
+    Default: disabled.
     Set to non-empty value to enable.
 
 - **DEBUG**

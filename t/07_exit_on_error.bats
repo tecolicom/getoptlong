@@ -133,12 +133,23 @@ parse_with() {
 @test "exit_on_error: disabled, silent - unknown long option" {
     parse_with '' 1 --width
     assert_success
-    assert_line --index 0 "no such option -- --width"
-    assert_line --index 1 "parse:1 lateral: pane: argv:untouched"
+    assert_output "parse:1 lateral: pane: argv:untouched"
 }
 
 @test "exit_on_error: disabled, silent - short option without its argument" {
     parse_with '' 1 -C
+    assert_success
+    assert_output "parse:1 lateral: pane: argv:untouched"
+}
+
+@test "exit_on_error: disabled, silent - long option without its argument" {
+    parse_with '' 1 --pane
+    assert_success
+    assert_output "parse:1 lateral: pane: argv:untouched"
+}
+
+@test "exit_on_error: disabled, silent - validation error" {
+    parse_with '' 1 -C x
     assert_success
     assert_output "parse:1 lateral: pane: argv:untouched"
 }
@@ -179,7 +190,7 @@ parse_with() {
 }
 
 @test "exit_on_error: disabled - long option given an argument it does not take" {
-    parse_with '' 1 --lateral=1
+    parse_with '' '' --lateral=1
     assert_success
     assert_line --index 0 "does not take an argument -- lateral"
     assert_line --index 1 "parse:1 lateral: pane: argv:untouched"

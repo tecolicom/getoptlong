@@ -11,8 +11,9 @@
     { echo "Requires bash 4.4 or later (found ${BASH_VERSION})" >&2 ; exit 1 ; }
 _gol_warn() { echo "$@" >&2 ; }
 _gol_die()  { _gol_warn "$@" ; exit 1 ; }
-# an error in the arguments: it exits only with EXIT_ON_ERROR
-_gol_fail() { _gol_warn "$@" ; [[ $_EXIT_ON_ERROR ]] && exit 1 ; return 1 ; }
+# an error in the arguments: it exits only with EXIT_ON_ERROR, and
+# the message is suppressed by SILENT without EXIT_ON_ERROR
+_gol_fail() { [[ $_EXIT_ON_ERROR || ! $_SILENT ]] && _gol_warn "$@" ; [[ $_EXIT_ON_ERROR ]] && exit 1 ; return 1 ; }
 _gol_opts() {
     local _key="$1"
     [[ $_key =~ ^[$_MARKS]$ ]] && _key+="$2" && shift

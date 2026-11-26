@@ -18,7 +18,7 @@ declare -A OPTS=(
     [ message | m % ]=
 )
 # Without EXIT_ON_ERROR, parse returns 1 on an error, and leaves the
-# arguments as they are; SILENT drops the message of getopts, and the
+# arguments as they are; SILENT drops the error messages, and the
 # script gives its own.  PERMUTE= stops at the subcommand, so that its
 # options are left to the subcommand.
 getoptlong init OPTS EXIT_ON_ERROR= SILENT=1 PERMUTE= DEBUG=${DEBUGME:-}
