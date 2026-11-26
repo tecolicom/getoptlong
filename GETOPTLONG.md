@@ -34,7 +34,7 @@
     - [4.2.2. Required Argument Options (`:`)](#422-required-argument-options-)
     - [4.2.3. Optional Argument Options (`?`)](#423-optional-argument-options-)
     - [4.2.4. Array Options (`@`)](#424-array-options-)
-    - [4.2.5. Options Taking Arguments up to `--` (`*`)](#425-options-taking-arguments-up-to----)
+    - [4.2.5. Varargs Array Options (`*`)](#425-varargs-array-options-)
     - [4.2.6. Hash Options (`%`)](#426-hash-options-)
     - [4.2.7. Callback Options (`!`)](#427-callback-options-)
   - [4.3. Specifying Destination Variable Name](#43-specifying-destination-variable-name)
@@ -457,25 +457,45 @@ Accept multiple values as an array.
 
 *   **Use Cases:** Multiple input files, multiple configuration items.
 
-#### 4.2.5. Options Taking Arguments up to `--` (`*`)
+#### 4.2.5. Varargs Array Options (`*`)
 
-Accept the arguments up to `--` as an array, as they are.  This is for the options given to another command.
+Take a variable number of arguments, up to `--`, into an array.
 
-*   **Definition Example:** `[column-opts|X* # Options for ansicolumn]`
+```bash
+declare -A OPTS=(
+    [ names | N* # Names to greet ]=
+)
+```
 
-*   **How to Specify Values:**
-    *   `--column-opts -w 170 -s ' ' -- file`, `-X -w 170 --`, `-X-w 170 --`
-    *   The arguments are not parsed as options, and not split by `DELIM`: `-w`, `170`, `-s` and `' '` are stored as they are.
-    *   The `--` is consumed.  It is an error if it is missing.
-    *   `--column-opts=value` takes only the value.
+```
+$ script --names alice bob -- file
+```
 
-*   **Variable Storage:** The arguments are stored in a Bash array (e.g., `ansicolumn "${column_opts[@]}" file`).
+```bash
+for name in "${names[@]}" ; do echo "$name" ; done    # alice, bob
+```
 
-*   **Multiple Specifications:** They accumulate, as with array options.  `--no-column-opts` resets the array to empty.
+*   **Stored as They Are:** Every argument up to `--` is a value, as it is: one starting with `-` is not taken as an option, as in `--names a -x b --`, and one with a space is not split by `DELIM`.
 
-*   **The `--`:** `--` cannot be one of the arguments.  To end the options after them, write another `--`: `--column-opts -w 170 -- -- -file`.
+*   **The `--`:** It ends the arguments and is removed.  It is required: without it, parse fails, instead of taking the files after it by mistake.
 
-*   **Use Cases:** Options passed to a command used inside the script.
+*   **Ways to Give the Arguments:**
+
+    | Arguments         | Stored    |                 |
+    |-------------------|-----------|-----------------|
+    | `--names a b --`  | `a b`     | up to `--`      |
+    | `-N a b --`       | `a b`     | short form      |
+    | `--names --`      | (none)    | no arguments    |
+
+*   **A Value in One Argument:** When the option and a value are given in one argument, in either form, only that value is taken, and `--` is not needed: `--names=value` and `-Nvalue` store `value`.
+
+*   **After the `--`:** The `--` ends only the arguments: the options and files after it are parsed as usual.  To end the options too, write another `--`: `--names a b -- -- -file`.  `--` itself cannot be one of the arguments.
+
+*   **As with Array Options:** Multiple specifications accumulate, `--no-names` empties the array, and a validation is applied to each argument.
+
+*   **Callback:** A callback is called once for the option, with all the arguments in place of the value: `--names a 'b c' --` calls `callback names a 'b c'`, where `callback` is the function.  With no arguments, it gets only the option name.
+
+*   **Use Cases:** A list of values given as separate arguments.
 
 #### 4.2.6. Hash Options (`%`)
 
@@ -790,7 +810,7 @@ By default, callback functions are called **after** the option's value has been 
 
     *   Then the long name of the option (e.g., `my-option`).  Without registered arguments, it is `$1`.
 
-    *   Then the parsed value of the option. For flags, it's `1` (or an empty string if specified with `no-`). For options taking arguments, it's the argument value. For arrays or hashes, it's the last parsed element or pair.  For the `*` type, the arguments up to `--` are given as separate arguments.  Without registered arguments, it is `$2`.
+    *   Then the parsed value of the option. For flags, it's `1` (or an empty string if specified with `no-`). For options taking arguments, it's the argument value. For arrays or hashes, it's the last parsed element or pair.  For the `*` type, all the arguments up to `--` are given in place of the value, in one call; with no arguments, nothing is given.  Without registered arguments, it is `$2`.
 
 *   **Example:**
 

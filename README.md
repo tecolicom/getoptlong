@@ -15,6 +15,7 @@ getoptlong - Option parsing that does what you mean, for Bash
         [ optional | o ?                 # Optional ]=
         [ verbose  | v | ~q              # Deny     ]=
         [ array    | A @                 # Array    ]=
+        [ varargs  | V *                 # Varargs  ]=
         [ hash     | H %                 # Hash     ]=
         [ integer  | i :=i               # Integer  ]=1
         [ pattern  | p :=(^(fast|slow)$) # Regex    ]=fast
@@ -125,7 +126,7 @@ The key format is:
         :            Required argument
         ?            Optional argument
         @            Array (multiple values)
-        *            Arguments up to --
+        *            Varargs array (up to --)
         %            Hash (key=value pairs)
 
 - **MOD (MODIFIER)**
@@ -221,25 +222,49 @@ To reset existing values: use `--no-include` on the command line
 (e.g., `--no-include --include /new/path`), or use `callback --before`
 to automatically reset before each new value.
 
-## ARGUMENTS UP TO `--` (`*`)
+## VARARGS ARRAY (`*`)
 
-Collects the arguments up to `--` into an array, as they are: they
-are not parsed as options, and not split by `DELIM`.  This is for
-the options given to another command.  The `--` is consumed; it is
-an error if it is missing.
+Takes a variable number of arguments, up to `--`, into an array.
 
-    [column-opts|X*]=   # --column-opts -w 170 -s ' ' -- file
+    [names|N*]=
 
-    ansicolumn "${column_opts[@]}" file
+    $ script --names alice bob -- file
+    for name in "${names[@]}" ; do echo "$name" ; done    # alice, bob
 
-`--column-opts=value` takes only the value.  The short form takes
-the first argument as an ordinary option argument (`-X -w 170 --`
-or `-X-w 170 --`).  Multiple specifications accumulate, and
-`--no-column-opts` empties the array, as with `@`.  A validation is
-applied to each argument.
+Every argument up to `--` is a value, as it is: one starting with
+`-` is not taken as an option, as in `--names a -x b --`, and one
+with a space is not split by `DELIM`.
 
-`--` cannot be one of the arguments.  To end the options after
-them, write another `--`: `--column-opts -w 170 -- -- -file`.
+The `--` ends the arguments and is removed.  It is required: without
+it, parse fails, instead of taking the files after it by mistake.
+
+Ways to give the arguments:
+
+    --names a b --              a b        up to --
+    -N a b --                   a b        short form
+    --names --                  (none)     no arguments
+
+When the option and a value are given in one argument, in either form,
+only that value is taken, and `--` is not needed:
+
+    --names=value               value
+    -Nvalue                     value
+
+The `--` ends only the arguments: the options and files after it are
+parsed as usual.  To end the options too, write another `--`:
+
+    --names a b -- -- -file
+
+`--` itself cannot be one of the arguments.
+
+As with `@`, multiple specifications accumulate, `--no-names`
+empties the array, and a validation is applied to each argument.
+
+A callback is called once for the option, with all the arguments in
+place of the value; with no arguments, it gets only the option name:
+
+    callback names a 'b c'      # --names a 'b c' --
+    callback names              # --names --
 
 ## HASH (`%`)
 
@@ -264,8 +289,8 @@ work the same way with pass-through options.
 Calls a function when the option is parsed. Default function name is the
 option name with hyphens converted to underscores; use `getoptlong callback`
 to specify a custom function. Can combine with any type (`+!`, `:!`,
-`?!`, `@!`, `*!`, `%!`).  The `*` type gives the arguments as
-separate arguments in place of the value.
+`?!`, `@!`, `*!`, `%!`).  The `*` type gives all the arguments
+in place of the value, in one call.
 
     [action|a!]=        # Calls action() when specified
     [file|f:!]=         # Calls file() with argument

@@ -26,6 +26,7 @@ cat <<EOF
 #     [ optional | o ?                 # Optional ]=
 #     [ verbose  | v | ~q              # Deny     ]=
 #     [ array    | A @                 # Array    ]=
+#     [ varargs  | V *                 # Varargs  ]=
 #     [ hash     | H %                 # Hash     ]=
 #     [ integer  | i :=i               # Integer  ]=1
 #     [ pattern  | p :=(^(fast|slow)$) # Regex    ]=fast
@@ -58,6 +59,7 @@ B<Option definition:>
         [ optional | o ?                 # Optional ]=
         [ verbose  | v | ~q              # Deny     ]=
         [ array    | A @                 # Array    ]=
+        [ varargs  | V *                 # Varargs  ]=
         [ hash     | H %                 # Hash     ]=
         [ integer  | i :=i               # Integer  ]=1
         [ pattern  | p :=(^(fast|slow)$) # Regex    ]=fast
@@ -170,7 +172,7 @@ Argument type specifier:
     :            Required argument
     ?            Optional argument
     @            Array (multiple values)
-    *            Arguments up to --
+    *            Varargs array (up to --)
     %            Hash (key=value pairs)
 
 =item B<MOD (MODIFIER)>
@@ -268,25 +270,49 @@ To reset existing values: use C<--no-include> on the command line
 (e.g., C<--no-include --include /new/path>), or use C<callback --before>
 to automatically reset before each new value.
 
-=head2 ARGUMENTS UP TO C<--> (C<*>)
+=head2 VARARGS ARRAY (C<*>)
 
-Collects the arguments up to C<--> into an array, as they are: they
-are not parsed as options, and not split by C<DELIM>.  This is for
-the options given to another command.  The C<--> is consumed; it is
-an error if it is missing.
+Takes a variable number of arguments, up to C<-->, into an array.
 
-    [column-opts|X*]=   # --column-opts -w 170 -s ' ' -- file
+    [names|N*]=
 
-    ansicolumn "${column_opts[@]}" file
+    $ script --names alice bob -- file
+    for name in "${names[@]}" ; do echo "$name" ; done    # alice, bob
 
-C<--column-opts=value> takes only the value.  The short form takes
-the first argument as an ordinary option argument (C<-X -w 170 -->
-or C<-X-w 170 -->).  Multiple specifications accumulate, and
-C<--no-column-opts> empties the array, as with C<@>.  A validation is
-applied to each argument.
+Every argument up to C<--> is a value, as it is: one starting with
+C<-> is not taken as an option, as in C<--names a -x b -->, and one
+with a space is not split by C<DELIM>.
 
-C<--> cannot be one of the arguments.  To end the options after
-them, write another C<-->: C<--column-opts -w 170 -- -- -file>.
+The C<--> ends the arguments and is removed.  It is required: without
+it, parse fails, instead of taking the files after it by mistake.
+
+Ways to give the arguments:
+
+    --names a b --              a b        up to --
+    -N a b --                   a b        short form
+    --names --                  (none)     no arguments
+
+When the option and a value are given in one argument, in either form,
+only that value is taken, and C<--> is not needed:
+
+    --names=value               value
+    -Nvalue                     value
+
+The C<--> ends only the arguments: the options and files after it are
+parsed as usual.  To end the options too, write another C<-->:
+
+    --names a b -- -- -file
+
+C<--> itself cannot be one of the arguments.
+
+As with C<@>, multiple specifications accumulate, C<--no-names>
+empties the array, and a validation is applied to each argument.
+
+A callback is called once for the option, with all the arguments in
+place of the value; with no arguments, it gets only the option name:
+
+    callback names a 'b c'      # --names a 'b c' --
+    callback names              # --names --
 
 =head2 HASH (C<%>)
 
@@ -311,8 +337,8 @@ work the same way with pass-through options.
 Calls a function when the option is parsed. Default function name is the
 option name with hyphens converted to underscores; use C<getoptlong callback>
 to specify a custom function. Can combine with any type (C<+!>, C<:!>,
-C<?!>, C<@!>, C<*!>, C<%!>).  The C<*> type gives the arguments as
-separate arguments in place of the value.
+C<?!>, C<@!>, C<*!>, C<%!>).  The C<*> type gives all the arguments
+in place of the value, in one call.
 
     [action|a!]=        # Calls action() when specified
     [file|f:!]=         # Calls file() with argument
