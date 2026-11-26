@@ -125,8 +125,8 @@ The key format is:
         :            Required argument
         ?            Optional argument
         @            Array (multiple values)
-        %            Hash (key=value pairs)
         *            Arguments up to --
+        %            Hash (key=value pairs)
 
 - **MOD (MODIFIER)**
 
@@ -221,19 +221,6 @@ To reset existing values: use `--no-include` on the command line
 (e.g., `--no-include --include /new/path`), or use `callback --before`
 to automatically reset before each new value.
 
-## HASH (`%`)
-
-Collects `key=value` pairs into an associative array. Key without value
-is treated as `key=1`. Multiple pairs can be specified: `--define A=1,B=2`
-(see [DELIM](#configuration)). Access with `${define[KEY]}`, keys with
-`${!define[@]}`.
-
-    [define|D%]=        # --define KEY=VAL or --define KEY (KEY=1)
-
-To reset existing values: use `--no-define` on the command line
-(e.g., `--no-define --define KEY=val`), or use `callback --before`
-to automatically reset before each new value.
-
 ## ARGUMENTS UP TO `--` (`*`)
 
 Collects the arguments up to `--` into an array, as they are: they
@@ -254,6 +241,19 @@ applied to each argument.
 `--` cannot be one of the arguments.  To end the options after
 them, write another `--`: `--column-opts -w 170 -- -- -file`.
 
+## HASH (`%`)
+
+Collects `key=value` pairs into an associative array. Key without value
+is treated as `key=1`. Multiple pairs can be specified: `--define A=1,B=2`
+(see [DELIM](#configuration)). Access with `${define[KEY]}`, keys with
+`${!define[@]}`.
+
+    [define|D%]=        # --define KEY=VAL or --define KEY (KEY=1)
+
+To reset existing values: use `--no-define` on the command line
+(e.g., `--no-define --define KEY=val`), or use `callback --before`
+to automatically reset before each new value.
+
 # CALLBACKS
 
 Callback functions are called when an option is parsed. The value is
@@ -264,7 +264,7 @@ work the same way with pass-through options.
 Calls a function when the option is parsed. Default function name is the
 option name with hyphens converted to underscores; use `getoptlong callback`
 to specify a custom function. Can combine with any type (`+!`, `:!`,
-`?!`, `@!`, `%!`, `*!`).  The `*` type gives the arguments as
+`?!`, `@!`, `*!`, `%!`).  The `*` type gives the arguments as
 separate arguments in place of the value.
 
     [action|a!]=        # Calls action() when specified

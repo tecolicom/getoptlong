@@ -42,7 +42,7 @@ _gol_redirect() { local _name ;
     declare -n _MATCH=BASH_REMATCH
     _gol_debug "${FUNCNAME[1]}(${@@Q})"
     local _MARKS='><()&=#^.~' _MK_ALIAS='>' _MK_SAILA='<' _MK_DENY='~' _MK_TRIG='(' _MK_HOOK=')' _MK_CONF='&' _MK_RULE='=' _MK_HELP='#' _MK_INIT='^' _MK_DEST='.' \
-	  _IS_ANY='+:?@%*' _IS_MOD='!>' _IS_REQ=':@%*' _IS_FLAG='+' _IS_NEED=':' _IS_MAYB='?' _IS_LIST='@' _IS_HASH='%' _IS_REST='*' _IS_HOOK='!' _IS_PASS='>' \
+	  _IS_ANY='+:?@*%' _IS_MOD='!>' _IS_REQ=':@*%' _IS_FLAG='+' _IS_NEED=':' _IS_MAYB='?' _IS_LIST='@' _IS_HASH='%' _IS_REST='*' _IS_HOOK='!' _IS_PASS='>' \
 	  _CONFIG=(EXIT_ON_ERROR SILENT PERMUTE REQUIRE DEBUG PREFIX DELIM USAGE HELP)
     for _name in "${_CONFIG[@]}" ; do declare _$_name="${_opts[&$_name]=}" ; done
     "${FUNCNAME[1]}_" "$@"
